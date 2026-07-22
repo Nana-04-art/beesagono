@@ -1,3 +1,5 @@
+# Functional & Non-Functional Requirements — Beesagono
+
 ## 1. Functional Requirements (FR)
 
 ### Grid & Visual Representation
@@ -5,29 +7,37 @@
 - **FR-02 (Hexagon Visual States):**
   - **Center Hexagon:** Highlighted with a distinct golden/amber theme to denote mandatory usage.
   - **Outer Hexagon:** Standard tile styling with active/hover animation states.
-  - **Mielegram (Pangram):** Gold animation effects triggered when a word using all 7 letters is discovered or played.
+  - **Mielegramma (Pangram):** Gold celebration effects triggered when a word using all 7 daily letters is discovered.
 
 ### User Input Management
-- **FR-03 (Keyboard Input):** Support physical keyboard inputs (letter keys, Backspace, Enter).
-- **FR-04 (Mouse/Touch Input):** Support clicking on SVG/Canvas hexagons, alongside action controls (Delete, Shuffle, Submit).
-- **FR-05 (Shuffle Mechanism):** Shuffling must re-organize the 6 outer letters visually while keeping the center letter fixed.
+- **FR-03 (Unified Input Handling):** The application must process all letter entries—whether coming from physical keyboard presses, mouse clicks, or touch screen taps on SVG hexagons—through a single, unified input handler method (`handleInput`).
+- **FR-04 (Action Controls):** Provide dedicated control handlers for non-character interactions (*Delete*, *Shuffle*, *Submit*).
+- **FR-05 (Shuffle Mechanism):** Shuffling must re-organize the 6 outer letters visually on the grid while keeping the mandatory center letter fixed.
+
+### Daily Game Specifications
+- **FR-ALG-01 (Midnight Puzzle Renewal):** At midnight (00:00) or upon the first application launch of the day, the system automatically clears the previous session and generates a brand-new daily puzzle (1 center letter and 6 outer letters).
+- **FR-ALG-02 (Pre-Calculated Daily Sets):** Upon puzzle generation, `GameService` extracts:
+  1. `targetWords`: All valid dictionary words containing the center letter and using only the 7 daily letters (length ≥ 4).
+  2. `mielegrammi`: Words in `targetWords` that use all 7 unique daily letters.
+- **FR-ALG-03 (Zero-Lag In-Memory Validation):** `GameService` holds `targetWords` in an in-memory `Set` for instant $O(1)$ validation without querying external services during gameplay.
 
 ### Word Validation Rules
-- **FR-06 (Validation Constraints):** Upon submission, check rules in order:
+- **FR-06 (Validation Constraints):** Upon submission, check constraints in sequence:
   1. Minimum length (at least 4 letters).
-  2. Must contain the center mandatory letter.
-  3. Must only use letters from the daily set of 7.
-  4. Must not be a previously submitted word.
-  5. Must exist in the official dictionary.
-- **FR-07 (Error Feedback):** Display specific toast/toastlet errors (e.g., "Missing center letter", "Too short", "Not in dictionary") with a visual shake animation.
+  2. Contains the mandatory center letter.
+  3. Uses only allowed letters from the daily set of 7.
+  4. Is not already in the `foundWords` set.
+  5. Exists in today's pre-calculated `targetWords` set.
+- **FR-07 (Error Feedback):** Display specific error toasts (e.g., *"Missing center letter"*, *"Too short"*, *"Not in word list"*) alongside a visual shake animation on the input field.
 
 ### Scoring & Game Progress
 - **FR-08 (Scoring Engine):**
   - 4-letter words = 1 point.
   - Words > 4 letters = 1 point per letter.
-  - **Mielegram Bonus:** Extra bonus points awarded when all 7 distinct letters are used.
-- **FR-09 (Discovered Words List):** Display a accordion/scrollable list of correctly found words.
-- **FR-10 (Local Persistence):** Automatically store current score and found words list in `localStorage`.
+  - **Mielegramma Bonus:** +7 bonus points awarded when all 7 distinct letters are used.
+- **FR-09 (Discovered Words List):** Display a scrollable list of correctly found words and highlight discovered Mielegrammi.
+- **FR-10 (Local Persistence):** Automatically persist current date, score, and found words set in `localStorage` keyed by today's date string.
+- **FR-11 (End Game Screen):** Display a completion summary modal when all words are found or the game ends, showing final statistics and a share score feature.
 
 ---
 
