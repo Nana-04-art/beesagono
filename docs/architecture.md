@@ -6,7 +6,7 @@ This document defines the high-level technical architecture, framework choices, 
 
 ## 1. Architectural Overview
 
-**Beesagono** is designed as a lightweight, single-page progressive web application (PWA) built with **Angular 21**. It follows a **Client-Side Only Architecture** where all game logic, dictionary searching, and state management run directly within the user's browser.
+**Beesagono** is designed as a lightweight, single-page progressive web application (PWA) built with **Angular 21**. It follows a **Client-Side Only Architecture** where all game logic, daily puzzle generation, and state management run directly within `GameService` inside the user's browser.
 
 ```text
 +-------------------------------------------------------------------+
@@ -14,21 +14,22 @@ This document defines the high-level technical architecture, framework choices, 
 |                                                                   |
 |   +-----------------------------------------------------------+   |
 |   |                    PRESENTATION LAYER                     |   |
-|   |   (Standalone Components: SVG Honeycomb, UI Controls)     |   |
+|   | (Standalone Components: SVG Honeycomb, Controls, End Game)|   |
 |   +-----------------------------+-----------------------------+   |
 |                                 |                                 |
 |                                 v                                 |
 |   +-----------------------------------------------------------+   |
-|   |                       STATE LAYER                         |   |
-|   |             (GameService with Angular Signals)            |   |
+|   |                      SERVICE LAYER                        |   |
+|   |GameService (Loads dictionary.json, generates daily puzzle,|   |
+|   |         extracts targetWords & Mielegrammi Sets)          |   |
 |   +-----------------------------+-----------------------------+   |
 |                                 |                                 |
 |                 +---------------+---------------+                 |
 |                 |                               |                 |
 |                 v                               v                 |
 |   +---------------------------+   +---------------------------+   |
-|   |      DICTIONARY ENGINE    |   |     PERSISTENCE LAYER     |   |
-|   |  (In-Memory Set/HashTable)|   |    (Browser LocalStorage) |   |
+|   |  IN-MEMORY TARGET SETS    |   |     PERSISTENCE LAYER     |   |
+|   | (Instant O(1) Validation) |   |    (Browser LocalStorage) |   |
 |   +---------------------------+   +---------------------------+   |
 +-------------------------------------------------------------------+
 ```
