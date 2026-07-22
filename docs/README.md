@@ -8,11 +8,11 @@
 
 The complete software analysis and technical architecture are fully documented within the [`/docs`](./docs) directory:
 
-* [Functional & Non-Functional Requirements](./docs/requirements.md)
-* [Use Cases](./docs/use-cases.md)
-* [Logic Flowchart](./docs/flowchart.md)
-* [System Architecture & Signals](./docs/architecture.md)
-* [UI Structure & SVG Layout](./docs/ui-structure.md)
+* [Functional & Non-Functional Requirements](requirements.md)
+* [Use Cases](use-cases.md)
+* [Logic Flowchart](flowchart.md)
+* [System Architecture & Signals](architecture.md)
+* [UI Structure & SVG Layout](ui-structure.md)
 
 ---
 
