@@ -2,42 +2,53 @@
 
 ```mermaid
 graph TD
-    A[Start Game / Load Daily Puzzle] --> B{Saved State in LocalStorage?}
-    B -->|Yes| C[Restore Score & Found Words]
-    B -->|No| D[Initialize Empty Game State]
+    A[Start Game / Get Current Date YYYY-MM-DD] --> B[Generate Daily Puzzle]
+    B --> C[Extract 7 Letters, Center Letter, Target Words Set & Mielegrammi Set]
     
-    C --> E[Render 7-Hexagon Honeycomb Grid]
-    D --> E
+    C --> D{Saved State for Today in LocalStorage?}
+    D -->|Yes| E[Restore Score, Found Words & Mielegrammi]
+    D -->|No| F[Initialize Fresh Daily Game State]
     
-    E --> F[Wait for User Input]
+    E --> G[Render 7-Hexagon Honeycomb Grid]
+    F --> G
     
-    F -->|Physical Keyboard / Hexagon Click| G[Append Letter to Active Input]
-    G --> F
+    G --> H[Wait for User Input]
     
-    F -->|Click Shuffle| H[Reorder 6 Outer SVG Hexagons]
-    H --> F
+    %% Input handlers (Keyboard, Click, Touch) channelled to a unified input handler
+    H -->|Physical Keyboard Input| INP[Unified Input Handler: handleInput]
+    H -->|Mouse Click Tile| INP
+    H -->|Touch Screen Tap| INP
     
-    F -->|Press Enter / Click Submit| I{Length >= 4?}
+    INP --> I[Append Letter to Active Input]
+    I --> H
     
-    I -->|No| ERR1[Toast: Too Short]
-    I -->|Yes| J{Contains Center Letter?}
+    H -->|Click Shuffle| J[Reorder 6 Outer SVG Hexagons]
+    J --> H
     
-    J -->|No| ERR2[Toast: Missing Center Letter]
-    J -->|Yes| K{Uses Only Allowed 7 Letters?}
+    H -->|Press Enter / Click Submit| K{Length >= 4?}
     
-    K -->|No| ERR3[Toast: Invalid Letters]
-    K -->|Yes| L{Already Found?}
+    K -->|No| ERR1[Toast: Too Short]
+    K -->|Yes| L{Contains Center Letter?}
     
-    L -->|Yes| ERR4[Toast: Already Found]
-    L -->|No| M{In Dictionary?}
+    L -->|No| ERR2[Toast: Missing Center Letter]
+    L -->|Yes| M{Uses Only Allowed 7 Letters?}
     
-    M -->|No| ERR5[Toast: Not in Dictionary]
-    M -->|Yes| N[Calculate Score & Check Mielegramma]
+    M -->|No| ERR3[Toast: Invalid Letters]
+    M -->|Yes| N{Already Found?}
     
-    ERR1 & ERR2 & ERR3 & ERR4 & ERR5 --> O[Trigger Input Shake & Show Error Toast]
-    O --> F
+    N -->|Yes| ERR4[Toast: Already Found]
+    N -->|No| O{In Today's Target Words Set?}
     
-    N --> P[Add to Found Words List]
-    P --> Q[Update Score & LocalStorage]
-    Q --> R[Clear Input Field]
-    R --> F
+    O -->|No| ERR5[Toast: Not in Word List]
+    O -->|Yes| P[Calculate Points & Check Mielegramma +7 Bonus]
+    
+    ERR1 & ERR2 & ERR3 & ERR4 & ERR5 --> Q[Trigger Input Shake & Show Error Toast]
+    Q --> H
+    
+    P --> R[Add to Found Words Set & Check if Mielegramma]
+    R --> S[Update Score & LocalStorage]
+    S --> T[Clear Input Field]
+    
+    T --> U{All Target Words Found OR User Ended Game?}
+    U -->|No| H
+    U -->|Yes| V[Display End Game Summary Screen / Modal]
