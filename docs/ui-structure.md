@@ -42,12 +42,20 @@ The UI is organized as a single-page responsive application centered vertically 
 
 ### A. Header Component (`HeaderComponent`)
 - **Logo & Title:** Displays the game title (*Beesagono*).
-- **Rank & Score Indicator:** Displays current points and player rank progression.
+- **Rank & Score Indicator:** Displays current points and player rank progression. Rank label is derived reactively from `score / maxScore` (see rank threshold table in `data-models.md`, Section 5) — e.g. *Iniziato → Mente Fresca → Principiante → Avanzato → Esperto → Eccellente → Genio → Maestro → Ape Regina*.
 - **Game Info Button:** Opens modal with rules and scoring details.
+- **Storage Warning Banner:** Non-blocking banner shown once per session if `localStorage` is unavailable, warning that progress won't persist across reloads.
 
 ### B. Input Display & Toast Component (`WordDisplayComponent`)
 - **Active Input:** Live rendering of `currentInput`.
-- **Feedback Toasts:** Floating overlay messages for invalid entries.
+- **Feedback Toasts:** Floating overlay messages for invalid entries, mapped to `ValidationErrorType` (see `data-models.md`, Section 6):
+  | `errorType` | Toast copy (IT) |
+  | :--- | :--- |
+  | `TOO_SHORT` | "Parola troppo corta" |
+  | `MISSING_CENTER` | "Manca la lettera centrale" |
+  | `INVALID_LETTERS` | "Lettere non valide" |
+  | `ALREADY_FOUND` | "Già trovata" |
+  | `NOT_IN_DICTIONARY` | "Non è nella lista delle parole" |
 - **Shake Animation:** Triggers CSS keyframe shake on validation error.
 
 ### C. Honeycomb Grid Component (`HoneycombGridComponent`)
@@ -80,7 +88,12 @@ The UI is organized as a single-page responsive application centered vertically 
 
 ---
 
-## 4. Responsive Design Guidelines
+## 4. Loading & Transition States
+
+- **Initial Load Overlay:** Full-screen spinner with the text *"Preparazione dell'alveare..."*, shown while `dictionary.json` is fetched/parsed and the daily puzzle is generated. Dismissed only once both are complete.
+- **Midnight Rollover Toast:** *"È iniziato un nuovo giorno! Caricamento del nuovo puzzle..."*, shown when the app detects a date change while open (see UC-06).
+
+## 5. Responsive Design Guidelines
 
 - **Mobile First:** Stacked layout optimized for touch interaction.
 - **Desktop:** Centered fixed-width viewport (max-width `500px`).
