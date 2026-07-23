@@ -2,11 +2,15 @@
 
 ```mermaid
 graph TD
-    A[Start Game / Get Current Date YYYY-MM-DD] --> B[Generate Daily Puzzle]
-    B --> C[Extract 7 Letters, Center Letter, Target Words Set & Mielegrammi Set]
-    
-    C --> D{Saved State for Today in LocalStorage?}
-    D -->|Yes| E[Restore Score, Found Words & Mielegrammi]
+    A[Start Game / Get Current Date YYYY-MM-DD] --> A2[Seed PRNG from Date String]
+    A2 --> B[Generate Candidate 7-Letter Set]
+    B --> C[Extract Target Words Set & Mielegrammi Set per Candidate Center Letter]
+    C --> QG{Quality Gate:<br/>Target Words >= 15<br/>AND Mielegrammi >= 1?}
+    QG -->|No, retry next seed| B
+    QG -->|Yes| D{Saved State for Today in LocalStorage?}
+    D -->|Yes| DR{LocalStorage Read OK?}
+    DR -->|Yes| E[Restore Score, Found Words & Mielegrammi]
+    DR -->|No, fallback| F
     D -->|No| F[Initialize Fresh Daily Game State]
     
     E --> G[Render 7-Hexagon Honeycomb Grid]
@@ -52,3 +56,8 @@ graph TD
     T --> U{All Target Words Found OR User Ended Game?}
     U -->|No| H
     U -->|Yes| V[Display End Game Summary Screen / Modal]
+
+    %% Midnight rollover, independent of gameplay loop
+    H -.->|App Regains Foreground: visibilitychange| MC{Current Local Date<br/>!= Loaded Puzzle Date?}
+    MC -->|No| H
+    MC -->|Yes| MT[Toast: New Day Started] --> A
