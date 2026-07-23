@@ -4,12 +4,16 @@
 - **Actor:** Player
 - **Precondition:** Application is opened in the browser.
 - **Main Flow:**
-  1. System checks current date string (`YYYY-MM-DD`).
-  2. System generates today's daily puzzle (1 center letter, 6 outer letters, total available words set, and daily Mielegrammi set).
-  3. System checks `localStorage` for saved progress corresponding to today's date string.
-  4. If saved state for today exists, system restores score, found words list, and unlocked Mielegrammi.
-  5. If saved state belongs to a previous date, system clears stale data and loads the new daily game.
-  6. System renders the 7-hexagon honeycomb grid (Center letter in gold).
+  1. System checks current date string (`YYYY-MM-DD`), local to the browser.
+  2. System deterministically generates today's daily puzzle using a PRNG seeded by the date string (1 center letter, 6 outer letters, total available words set, and daily Mielegrammi set), retrying with successive seeds until the puzzle satisfies the minimum quality gate (≥15 target words, ≥1 Mielegramma).
+  3. While generation and dictionary loading are in progress, system displays a full-screen loading overlay ("Preparazione dell'alveare...").
+  4. System checks `localStorage` for saved progress corresponding to today's date string, falling back to an in-memory store if `localStorage` is unavailable.
+  5. If saved state for today exists, system restores score, found words list, and unlocked Mielegrammi.
+  6. If saved state belongs to a previous date, system clears stale data and loads the new daily game.
+  7. System renders the 7-hexagon honeycomb grid (Center letter in gold).
+
+- **Alternate Flow (Storage Unavailable):**
+  - If `localStorage` read/write fails (private browsing, quota exceeded), system proceeds as if no saved state exists, uses an in-memory store for the session, and shows a non-blocking banner warning that progress won't be saved.
 
 ---
 
@@ -65,4 +69,22 @@
   1. System sets `isCompleted` state flag to `true`.
   2. System displays the **Game Completed Modal / End Game Screen**.
   3. System presents final summary statistics: total score achieved out of max score, percentage of words found, list of Mielegrammi found vs total Mielegrammi available, and time elapsed.
-  4. System provides a "Share Score" button to copy daily results to clipboard.
+  4. System provides a "Share Score" button that copies a Wordle-style plain-text summary to the clipboard, e.g.:
+     ```
+     Beesagono 23/07/2026
+     Punteggio: 42/85 pts
+     Parole trovate: 12
+     Mielegrammi: 1/1
+     ```
+
+---
+
+## UC-06: Daily Puzzle Rollover While App Is Open
+- **Actor:** Player
+- **Precondition:** Player has the app open (foreground or background) when local midnight passes.
+- **Main Flow:**
+  1. App regains foreground visibility (`visibilitychange` event fires).
+  2. System compares current local date string against the date of the currently loaded puzzle.
+  3. If they differ, system shows a toast: *"È iniziato un nuovo giorno! Caricamento del nuovo puzzle..."*
+  4. System persists the previous day's final state as-is (no further writes).
+  5. System generates and loads the new daily puzzle per UC-01, resetting score, found words, and Mielegrammi.
