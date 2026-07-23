@@ -13,6 +13,7 @@ The complete software analysis and technical architecture are fully documented w
 * [Logic Flowchart](flowchart.md)
 * [System Architecture & Signals](architecture.md)
 * [UI Structure & SVG Layout](ui-structure.md)
+* [Data Models](data-models.md)
 
 ---
 
