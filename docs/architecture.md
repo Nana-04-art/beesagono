@@ -6,7 +6,7 @@ This document defines the high-level technical architecture, framework choices, 
 
 ## 1. Architectural Overview
 
-**Beesagono** is designed as a lightweight, single-page progressive web application (PWA) built with **Angular 21**. It follows a **Client-Side Only Architecture** where all game logic, daily puzzle generation, and state management run directly within `GameService` inside the user's browser.
+**Beesagono** is designed as a lightweight, single-page progressive web application (PWA) built with **Angular 21**. It follows a **Client-Side Only Architecture** where all game logic, daily puzzle generation, and state management run directly within `GameService` inside the user's browser. Daily puzzle generation is **deterministic**: a PRNG seeded by the local date string (`YYYY-MM-DD`) ensures every player gets the identical puzzle on the same calendar day with no server involved. See `data-models.md` for the full generation algorithm and quality-gate retry logic.
 
 ```text
 +-------------------------------------------------------------------+
@@ -29,7 +29,11 @@ This document defines the high-level technical architecture, framework choices, 
 |                 v                               v                 |
 |   +---------------------------+   +---------------------------+   |
 |   |  IN-MEMORY TARGET SETS    |   |     PERSISTENCE LAYER     |   |
-|   | (Instant O(1) Validation) |   |    (Browser LocalStorage) |   |
+|   | (Instant O(1) Validation) |   |  StorageService:          |   |
+|   |                           |   |  localStorage, with       |   |
+|   |                           |   |  automatic in-memory      |   |
+|   |                           |   |  fallback on write/read   |   |
+|   |                           |   |  failure (quota/blocked)  |   |
 |   +---------------------------+   +---------------------------+   |
 +-------------------------------------------------------------------+
 ```
@@ -69,7 +73,10 @@ All business logic resides within `GameService`, providing centralized reactive 
 2. **Shuffle Logic:** Randomly shuffles array indices for the 6 outer `HexTile` positions while keeping index 0 (center) immutable.
 3. **Validation Pipeline:** Evaluates submitted words against game rules (Length $\ge 4$, mandatory center letter, dictionary existence, duplicate check).
 4. **Scoring Engine:** Calculates earned points (1 pt for 4-letter words, 1 pt per letter for $>4$ letters) and evaluates **Mielegramma** bonus (+7 pts).
-5. **Auto-Save Sync:** Uses an Angular `effect()` to automatically mirror state changes into `localStorage`.
+5. **Auto-Save Sync:** Uses an Angular `effect()` to automatically mirror state changes into `localStorage` via `StorageService`.
+
+### `StorageService`
+A dedicated service wrapping all `localStorage` reads/writes in `try/catch`. On failure (blocked storage, quota exceeded), it transparently falls back to an in-memory store for the session and surfaces a non-blocking warning banner. It also owns schema-version checks on read, discarding and regenerating state if a saved object's `version` doesn't match the current schema (see `data-models.md`, Section 10).
 
 ---
 
