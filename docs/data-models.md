@@ -216,8 +216,13 @@ The puzzle is fully deterministic: the **client's local date string** (`YYYY-MM-
 3. LOOP (max GAME_RULES.MAX_GENERATION_ATTEMPTS iterations):
    a. rng = PRNG(seed + attempt)
    b. candidateLetters = pick REQUIRED_LETTERS_COUNT (7) unique letters
-      from the dictionary's alphabet using rng, ensuring at least 1 vowel
-      is included
+      using rng, weighted by each letter's real frequency of occurrence
+      across the dictionary (letters appearing in more words are
+      proportionally more likely to be picked), restricted to letters
+      that actually appear in the dictionary, ensuring at least 1 vowel
+      is included. Uniform random selection from the full alphabet is
+      NOT used — it produces unplayable boards far too often given
+      natural language letter-frequency skew (verified empirically).
    c. FOR EACH letter L in candidateLetters (as a candidate center):
         - compute targetWords(L) = filter dictionary where:
             * word.length >= GAME_RULES.MIN_WORD_LENGTH
