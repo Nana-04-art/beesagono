@@ -43,9 +43,9 @@
   - Words > 4 letters = 1 point per letter.
   - **Mielegramma Bonus:** +7 bonus points awarded when all 7 distinct letters are used.
 - **FR-09 (Discovered Words List):** Display a scrollable list of correctly found words and highlight discovered Mielegrammi.
-- **FR-10 (Local Persistence):** Automatically persist current date, score, and found words set in `localStorage` keyed by today's date string (`beesagono:game:{YYYY-MM-DD}`), including a `version` field for future schema migrations.
+- **FR-10 (Local Persistence):** Automatically persist current date and found words array in `localStorage` keyed by today's date string (`beesagono:game:{YYYY-MM-DD}`). Upon read, types are validated, words are sanitized against today's target words, and derived score/status are recomputed.
 - **FR-10a (Persistence Failure Fallback):** If `localStorage` is unavailable or blocked (e.g. Safari private browsing, quota exceeded), the app must fall back transparently to an in-memory store for the current session and display a non-blocking warning that progress will not survive a page reload.
-- **FR-11 (End Game Screen):** Display a completion summary modal when all words are found or the game ends, showing final statistics and a share score feature.
+- **FR-11 (End Game Screen):** Display a completion summary modal when all target words are found, showing final statistics and a share score feature.
 - **FR-11a (Share Score Format):** The share feature copies a Wordle-style plain-text summary to the clipboard, including the date (`DD/MM/YYYY`), score/max score, words found, and Mielegrammi found/total.
 - **FR-12 (Rank Progression):** The player's rank is derived (never persisted) from `score / maxScore` percentage and displayed reactively in the header. See rank threshold table in `data-models.md`, Section 5.
 
@@ -53,5 +53,13 @@
 
 ## 2. Non-Functional Requirements (NFR)
 - **NFR-01 (Architecture):** Angular 21 with Standalone Components and Signals for state management (`wordInput`, `foundWords`, `score`).
-- **NFR-02 (Accessibility):** Full keyboard accessibility for non-mouse navigation.
+- **NFR-02 (Accessibility - Testable Specifications):**
+  - **Interactive Tiles Semantics:** SVG hexagon tiles must expose `role="button"`, `tabindex="0"`, and dynamic `aria-label` attributes (e.g., `aria-label="Lettera centrale A"` for center tile, `aria-label="Lettera B"` for outer tiles).
+  - **Keyboard Navigation:** Action controls and hexagon tiles must trigger on `Enter` and `Space` keypresses when focused.
+  - **Visible Focus Indicator:** All focusable elements must display a high-contrast focus ring (`outline: 2px solid var(--focus-ring)`) meeting WCAG 2.1 SC 2.4.7.
+  - **Live Region Announcements:** Error/success messages, score updates, and toasts must be wrapped in an `aria-live="polite"` container (`aria-live="assertive"` for critical load errors) to announce feedback immediately to screen readers.
+  - **Modal Dialog Focus Management:** When a modal opens (`EndGameModalComponent`), focus must automatically move to the first interactive element and be trapped within the dialog (`focus trap`). Closing the modal restores focus to the triggering element.
+  - **Global Listener Guards:** The document-level physical key listener must ignore key events (`keyup`/`keydown`) whenever `event.target` is an input, textarea, or when a modal overlay is active, preventing accidental shortcut collisions.
+  - **Non-Color Visual Cues:** Visual states (e.g., center vs. outer tiles, valid vs. error states) must rely on shape, iconography, or explicit typography in addition to color contrast (WCAG 2.1 SC 1.4.1).
+  - **Reduced Motion Support:** All shake and celebration animations must respect `@media (prefers-reduced-motion: reduce)` by disabling transitions or replacing them with static visual indicators.
 - **NFR-03 (Performance):** Zero-lag user input response with optimized SVG rendering.

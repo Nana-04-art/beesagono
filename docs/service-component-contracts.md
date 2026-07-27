@@ -22,7 +22,9 @@ All components and services target **Angular 21 signal-based APIs**: `signal()`,
 ### 2.1 Exposed Signals (readonly, public)
 
 ```typescript
-readonly board: Signal<GameBoard>;
+readonly board: Signal<GameBoard | null>;  // null until loadDailyGame() resolves successfully
+readonly loadStatus: Signal<'idle' | 'loading' | 'ready' | 'error'>;
+readonly loadError: Signal<string | null>;
 readonly currentInput: Signal<string>;
 readonly foundWords: Signal<string[]>;
 readonly foundMielegrammi: Signal<string[]>;
@@ -42,6 +44,9 @@ readonly displayCells: Signal<Cell[]>;
 ```typescript
 /** Orchestrates dictionary load, deterministic puzzle generation, and storage restore. Called once on app bootstrap. */
 loadDailyGame(): Promise<void>;
+
+/** Re-attempts loadDailyGame() after a failure; no-op if loadStatus is 'loading' or 'ready'. */
+retryLoadDailyGame(): Promise<void>;
 
 /** Routes a single normalized character into currentInput. Backing implementation for FR-03's unified handler. */
 handleInput(rawChar: string): void;
