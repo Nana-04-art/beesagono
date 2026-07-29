@@ -14,24 +14,30 @@ export class DictionaryService {
     }
 
     try {
-      const response = await fetch('assets/dictionary.json');
+      const response = await fetch('dictionary.json');
       if (!response.ok) {
         throw new Error(`Impossibile caricare il dizionario (HTTP ${response.status})`);
       }
 
       const rawData: unknown = await response.json();
 
-      if (!Array.isArray(rawData)) {
-        throw new Error('Il formato del dizionario non è un array di stringhe valido.');
+      // Estraggo l'array sia se il JSON è un array nativo, sia se è un oggetto { "words": [...] }
+      let wordsArray: unknown[] = [];
+
+      if (Array.isArray(rawData)) {
+        wordsArray = rawData;
+      } else if (rawData && typeof rawData === 'object' && 'words' in rawData && Array.isArray((rawData as { words: unknown }).words)) {
+        wordsArray = (rawData as { words: unknown[] }).words;
+      } else {
+        throw new Error('Il formato del dizionario non è valido (deve essere un array o un oggetto con chiave "words").');
       }
 
       // Sanitize and filter: keep only valid uppercase alphabetic strings
       const sanitized: string[] = [];
-      for (let i = 0; i < rawData.length; i++) {
-        const item = rawData[i];
+      for (let i = 0; i < wordsArray.length; i++) {
+        const item = wordsArray[i];
         if (typeof item === 'string') {
           const clean = item.trim().toUpperCase();
-          // Solo lettere A-Z italiane/inglesi
           if (/^[A-Z]+$/.test(clean)) {
             sanitized.push(clean);
           }
@@ -42,7 +48,7 @@ export class DictionaryService {
         throw new Error('Il file dictionary.json non contiene parole valide.');
       }
 
-      this.dictionaryList = Array.from(new Set(sanitized)); // Rimuove eventuali duplicati
+      this.dictionaryList = Array.from(new Set(sanitized));
       this.dictionarySet = new Set(this.dictionaryList);
 
       return this.dictionaryList;
