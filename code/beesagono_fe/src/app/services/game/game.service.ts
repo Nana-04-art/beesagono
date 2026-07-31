@@ -10,6 +10,7 @@ import { getCenterLetter, getAvailableLetters } from '../../models/game-board.se
 import { DictionaryService } from '../dictionary/dictionary.service';
 import { PuzzleGeneratorService } from '../puzzle-generator/puzzle-generator.service';
 import { StorageService } from '../storage/storage.service';
+import { RANK_TIERS } from '../../config/rank-tiers.config';
 
 @Injectable({
     providedIn: 'root',
@@ -19,17 +20,22 @@ export class GameService {
     private dictionaryService = inject(DictionaryService);
     private puzzleGeneratorService = inject(PuzzleGeneratorService);
 
-    private readonly RANK_TIERS: RankTier[] = [
-        { threshold: 100, label: 'Ape Regina' },
-        { threshold: 70, label: 'Maestro' },
-        { threshold: 40, label: 'Genio' },
-        { threshold: 25, label: 'Eccellente' },
-        { threshold: 15, label: 'Esperto' },
-        { threshold: 8, label: 'Avanzato' },
-        { threshold: 5, label: 'Principiante' },
-        { threshold: 2, label: 'Mente Fresca' },
-        { threshold: 0, label: 'Iniziato' },
-    ];
+    /**
+     * Reference to the central rank tiers configuration.
+     * Cached in descending order for efficient rank resolution.
+     */
+    private readonly reversedRankTiers: readonly RankTier[] = [...RANK_TIERS].reverse();
+
+    /**
+     * Returns the current rank based on percentage of max score achieved.
+     * @param percentage - Score achieved relative to max possible score (0-100)
+     */
+    getRankForPercentage(percentage: number): RankTier {
+        const currentRank = this.reversedRankTiers.find(
+            (tier) => percentage >= tier.threshold
+        );
+        return currentRank ?? RANK_TIERS[0];
+    }
 
     private readonly _board = signal<GameBoard | null>(null);
     private readonly _loadStatus = signal<'idle' | 'loading' | 'ready' | 'error'>('idle');
@@ -37,29 +43,45 @@ export class GameService {
     private readonly _currentInput = signal<string>('');
     private readonly _foundWords = signal<string[]>([]);
     private readonly _shuffleOrder = signal<number[]>([1, 2, 3, 4, 5, 6]);
+    private readonly _startTime = signal<number>(Date.now());
+    private readonly _isStorageAvailable = signal<boolean>(true);
 
     readonly board: Signal<GameBoard | null> = this._board.asReadonly();
     readonly loadStatus: Signal<'idle' | 'loading' | 'ready' | 'error'> = this._loadStatus.asReadonly();
     readonly loadError: Signal<string | null> = this._loadError.asReadonly();
     readonly currentInput: Signal<string> = this._currentInput.asReadonly();
     readonly foundWords: Signal<string[]> = this._foundWords.asReadonly();
+    readonly isStorageAvailable: Signal<boolean> = this._isStorageAvailable.asReadonly();
 
-    readonly isStorageAvailable = computed(() => this.storageService.isAvailable());
+    /**
+     * Pre-calculated Set of possible words for O(1) lookups during validation.
+     */
+    private readonly possibleWordsSet = computed<Set<string>>(() => {
+        const currentBoard = this._board();
+        return new Set(currentBoard?.possibleWords ?? []);
+    });
+
+    /**
+     * Pre-calculated Set of mielegrammi for O(1) lookups.
+     */
+    private readonly mielegrammiSet = computed<Set<string>>(() => {
+        const currentBoard = this._board();
+        return new Set(currentBoard?.mielegrammi ?? []);
+    });
 
     readonly foundMielegrammi = computed(() => {
-        const currentBoard = this._board();
-        if (!currentBoard) return [];
-        return this._foundWords().filter((word) => currentBoard.mielegrammi.includes(word));
+        const mSet = this.mielegrammiSet();
+        return this._foundWords().filter((word) => mSet.has(word));
     });
 
     readonly score = computed(() => {
         const currentBoard = this._board();
         if (!currentBoard) return 0;
 
+        const mSet = this.mielegrammiSet();
         return this._foundWords().reduce((totalScore, word) => {
-            // 4-letter words earn 1 point, longer words earn 1 point per letter
             let wordScore = word.length === 4 ? 1 : word.length;
-            if (currentBoard.mielegrammi.includes(word)) {
+            if (mSet.has(word)) {
                 wordScore += GAME_RULES.MIELEGRAMMA_BONUS;
             }
             return totalScore + wordScore;
@@ -80,14 +102,11 @@ export class GameService {
         const currentScore = this.score();
 
         if (!currentBoard || currentBoard.maxScore === 0) {
-            return this.RANK_TIERS[this.RANK_TIERS.length - 1];
+            return RANK_TIERS[0];
         }
 
         const percentage = Math.floor((currentScore / currentBoard.maxScore) * 100);
-        return (
-            this.RANK_TIERS.find((tier) => percentage >= tier.threshold) ??
-            this.RANK_TIERS[this.RANK_TIERS.length - 1]
-        );
+        return this.getRankForPercentage(percentage);
     });
 
     readonly displayCells = computed<Cell[]>(() => {
@@ -98,7 +117,6 @@ export class GameService {
         const outerCells = currentBoard.cells.filter((c) => !c.isCenter);
         const order = this._shuffleOrder();
 
-        // Map radial outer positions (1-6) using the active shuffle permutation
         const reorderedOuterCells = order.map((posIndex, arrayIdx) => {
             const originalCell = outerCells[posIndex - 1];
             return {
@@ -123,10 +141,12 @@ export class GameService {
                     foundWords: words,
                     foundMielegrammi: this.foundMielegrammi(),
                     isCompleted: this.isCompleted(),
-                    startTime: Date.now(),
+                    startTime: this._startTime(), // Preserves initial start time across saves
                     lastUpdated: Date.now(),
                 };
-                this.storageService.save(stateToSave);
+
+                const saveSuccess = this.storageService.save(stateToSave);
+                this._isStorageAvailable.set(this.storageService.isAvailable());
             }
         });
     }
@@ -138,7 +158,7 @@ export class GameService {
         this._loadError.set(null);
 
         try {
-            const wordList = await this.dictionaryService.loadDictionary();
+            await this.dictionaryService.loadDictionary();
             const wordSet = this.dictionaryService.getWordSet();
 
             const todayIsoDate = this.getTodayIsoString();
@@ -149,20 +169,25 @@ export class GameService {
 
             this._board.set(generatedBoard);
 
-            // Reconcile and sanitize loaded words against current generated board
+            // Reconcile saved state or initialize new game session
             const savedState = this.storageService.load(todayIsoDate);
+            this._isStorageAvailable.set(this.storageService.isAvailable());
+
             if (savedState && savedState.version === 1) {
+                const validWordsSet = new Set(generatedBoard.possibleWords);
                 const sanitizedWords = Array.from(
-                    new Set(
-                        savedState.foundWords.filter((w) =>
-                            generatedBoard.possibleWords.includes(w)
-                        )
-                    )
+                    new Set(savedState.foundWords.filter((w) => validWordsSet.has(w)))
                 );
                 this._foundWords.set(sanitizedWords);
+                this._startTime.set(savedState.startTime ?? Date.now());
             } else {
                 this._foundWords.set([]);
+                this._startTime.set(Date.now());
             }
+
+            // Reset transient user state on fresh board load / midnight rollover
+            this.clearInput();
+            this._shuffleOrder.set([1, 2, 3, 4, 5, 6]);
 
             this._loadStatus.set('ready');
         } catch (err: any) {
@@ -184,7 +209,11 @@ export class GameService {
         if (this._loadStatus() !== 'ready') return;
 
         const normalized = rawChar.toUpperCase();
-        if (/^[A-Z]$/.test(normalized)) {
+        if (normalized === 'BACKSPACE') {
+            this.deleteLastChar();
+        } else if (normalized === 'ENTER') {
+            this.submitWord();
+        } else if (/^[A-Z]$/.test(normalized)) {
             this._currentInput.update((prev) => prev + normalized);
         }
     }
@@ -199,7 +228,6 @@ export class GameService {
 
     shuffle(): void {
         const currentOrder = [...this._shuffleOrder()];
-        // Fisher-Yates shuffle restricted to outer positions (1-6)
         for (let i = currentOrder.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
             [currentOrder[i], currentOrder[j]] = [currentOrder[j], currentOrder[i]];
@@ -261,7 +289,8 @@ export class GameService {
             };
         }
 
-        if (!currentBoard.possibleWords.includes(inputWord)) {
+        // O(1) set check instead of Array.includes scanning
+        if (!this.possibleWordsSet().has(inputWord)) {
             return {
                 isValid: false,
                 pointsAwarded: 0,
@@ -271,7 +300,7 @@ export class GameService {
             };
         }
 
-        const isMielegramma = currentBoard.mielegrammi.includes(inputWord);
+        const isMielegramma = this.mielegrammiSet().has(inputWord);
         let points = inputWord.length === 4 ? 1 : inputWord.length;
         if (isMielegramma) {
             points += GAME_RULES.MIELEGRAMMA_BONUS;

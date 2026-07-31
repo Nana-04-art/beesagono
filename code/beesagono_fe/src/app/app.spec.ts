@@ -14,10 +14,10 @@ describe('App', () => {
     expect(app).toBeTruthy();
   });
 
-  it('should render title', async () => {
+  it('should have title signal set to "beesagono"', () => {
     const fixture = TestBed.createComponent(App);
-    await fixture.whenStable();
-    const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector('h1')?.textContent).toContain('Hello, beesagono');
+    const app = fixture.componentInstance;
+    // Verify signal value directly since template only contains router-outlet
+    expect(app['title']()).toBe('beesagono');
   });
 });

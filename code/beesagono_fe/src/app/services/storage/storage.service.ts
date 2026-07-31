@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { GameState } from '../../models/game-state.model'; 
+import { GameState } from '../../models/game-state.model';
 
 @Injectable({ providedIn: 'root' })
 export class StorageService {
@@ -18,14 +18,17 @@ export class StorageService {
     }
 
     const key = `${this.PREFIX}${state.date}`;
+    const payload = JSON.stringify(state);
+
     try {
-      const payload = JSON.stringify(state);
       localStorage.setItem(key, payload);
+      // If successful, clear any fallback data for this key
+      this.inMemoryFallback.delete(key);
       this.usingFallback = false;
       return true;
     } catch (error) {
       console.warn('[StorageService] Unable to save to localStorage (quota exceeded or blocked).', error);
-      this.inMemoryFallback.set(key, JSON.stringify(state));
+      this.inMemoryFallback.set(key, payload);
       this.usingFallback = true;
       return false;
     }
@@ -38,9 +41,13 @@ export class StorageService {
     const key = `${this.PREFIX}${date}`;
 
     try {
-      const raw = localStorage.getItem(key) ?? this.inMemoryFallback.get(key);
+      // Attempt to read from inMemoryFallback first
+      let raw = this.inMemoryFallback.get(key);
+      // If not found in fallback, try localStorage
+      if (!raw) {
+        raw = localStorage.getItem(key) ?? undefined;
+      }
       if (!raw) return null;
-
       const parsed = JSON.parse(raw);
 
       // Structure and Schema Version validation (§10.3)
@@ -52,6 +59,18 @@ export class StorageService {
       return parsed as GameState;
     } catch (error) {
       console.error('[StorageService] Error occurred while parsing the saved state:', error);
+      // Attempt to recover from in-memory fallback if available
+      const fallbackRaw = this.inMemoryFallback.get(key);
+      if (fallbackRaw) {
+        try {
+          const parsedFallback = JSON.parse(fallbackRaw);
+          if (this.isValidGameState(parsedFallback, date)) {
+            return parsedFallback as GameState;
+          }
+        } catch {
+          // Fallback parsing failed
+        }
+      }
       return null;
     }
   }
