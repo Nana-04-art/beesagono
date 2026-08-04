@@ -88,6 +88,24 @@ export class GameService {
         }, 0);
     });
 
+    /** Maximum achievable score for the active game session */
+  readonly maxScore = computed<number>(() => {
+    const currentBoard = this._board();
+    return currentBoard ? currentBoard.maxScore : 0;
+  });
+
+  /** Total possible count of valid words in the active puzzle */
+  readonly totalPossibleWords = computed<number>(() => {
+    const currentBoard = this._board();
+    return currentBoard ? currentBoard.possibleWords.length : 0;
+  });
+
+  /** Total possible count of mielegrammi in the active puzzle */
+  readonly totalMielegrammi = computed<number>(() => {
+    const currentBoard = this._board();
+    return currentBoard ? currentBoard.mielegrammi.length : 0;
+  });
+
     readonly isCompleted = computed(() => {
         const currentBoard = this._board();
         if (!currentBoard) return false;
@@ -108,6 +126,13 @@ export class GameService {
         const percentage = Math.floor((currentScore / currentBoard.maxScore) * 100);
         return this.getRankForPercentage(percentage);
     });
+
+    /** Check if the player has achieved the highest possible rank */
+  readonly isGeniusRank = computed<boolean>(() => {
+    const currentBoard = this._board();
+    if (!currentBoard || currentBoard.maxScore === 0) return false;
+    return this.score() >= currentBoard.maxScore;
+  });
 
     readonly displayCells = computed<Cell[]>(() => {
         const currentBoard = this._board();
