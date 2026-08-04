@@ -1,0 +1,76 @@
+@if (isOpen() && payload(); as data) {
+<!-- Modal Backdrop Overlay -->
+<div class="modal-backdrop fade show" style="z-index: 1050; background-color: rgba(0, 0, 0, 0.6);"
+    (click)="closeModal()"></div>
+
+<!-- Modal Dialog Container -->
+<div class="modal d-block fade show" tabindex="-1" role="dialog" aria-labelledby="endGameModalTitle" aria-modal="true"
+    style="z-index: 1055;">
+    <div class="modal-dialog modal-dialog-centered" (click)="$event.stopPropagation()">
+        <div class="modal-content shadow-lg border-0 rounded-4 overflow-hidden">
+
+            <!-- Header -->
+            <div
+                class="modal-header bg-warning bg-gradient text-dark border-0 p-4 position-relative text-center d-block">
+                <button type="button" class="btn-close position-absolute top-0 end-0 m-3" aria-label="Chiudi"
+                    (click)="closeModal()"></button>
+
+                <div class="display-1 mb-2">🏆</div>
+                <h2 class="modal-title fw-bold h3 m-0" id="endGameModalTitle">
+                    Complimenti!
+                </h2>
+                <p class="text-dark-50 small m-0 mt-1">Hai trovato tutte le parole di oggi!</p>
+            </div>
+
+            <!-- Body with Statistics -->
+            <div class="modal-body p-4 text-center">
+                <div class="row g-3 mb-4">
+                    <!-- Score Card -->
+                    <div class="col-6">
+                        <div class="p-3 bg-light rounded-3 border">
+                            <span class="d-block text-uppercase text-muted fw-bold extra-small">Punti</span>
+                            <span class="fs-3 fw-extrabold text-warning-emphasis">
+                                {{ data.score }} / {{ data.maxScore }}
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Words Card -->
+                    <div class="col-6">
+                        <div class="p-3 bg-light rounded-3 border">
+                            <span class="d-block text-uppercase text-muted fw-bold extra-small">Parole</span>
+                            <span class="fs-3 fw-extrabold text-primary">
+                                {{ data.wordsFound }} / {{ data.totalWords }}
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Mielegrammi Card -->
+                    <div class="col-12">
+                        <div class="p-3 bg-warning-subtle rounded-3 border border-warning">
+                            <span
+                                class="d-block text-uppercase text-warning-emphasis fw-bold extra-small">Mielegrammi</span>
+                            <span class="fs-4 fw-bold text-dark">
+                                🐝 {{ data.mielegrammiFound }} / {{ data.totalMielegrammi }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer Actions -->
+            <div class="modal-footer border-0 p-4 pt-0 d-flex gap-2">
+                <button type="button" class="btn btn-outline-secondary flex-grow-1 rounded-pill py-2"
+                    (click)="closeModal()">
+                    Chiudi
+                </button>
+                <button type="button" class="btn btn-warning flex-grow-1 rounded-pill py-2 fw-bold shadow-sm"
+                    (click)="onShare()">
+                    📲 Condividi
+                </button>
+            </div>
+
+        </div>
+    </div>
+</div>
+}
