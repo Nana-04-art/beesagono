@@ -1,0 +1,23 @@
+<div class="scoreboard" role="region" aria-label="Punteggio e livello di gioco">
+    <div class="scoreboard__header">
+        <div class="scoreboard__rank">
+            <span class="rank-label">Livello:</span>
+            <strong class="rank-name">{{ rankName() }}</strong>
+        </div>
+
+        <div class="scoreboard__score">
+            <span class="score-label">Punti:</span>
+            <strong class="score-value">{{ score() }}</strong>
+        </div>
+    </div>
+
+    <div class="scoreboard__progress-container" role="progressbar" [attr.aria-valuenow]="score()"
+        [attr.aria-valuemin]="0" [attr.aria-valuemax]="nextRankScore()"
+        [attr.aria-label]="'Progresso verso il prossimo livello: ' + progressPercentage + '%'">
+        <div class="scoreboard__progress-bar" [style.width.%]="progressPercentage"></div>
+    </div>
+
+    <div class="scoreboard__next">
+        <span>Prossimo grado a {{ nextRankScore() }} punti</span>
+    </div>
+</div>
