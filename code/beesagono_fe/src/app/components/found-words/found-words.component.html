@@ -1,0 +1,32 @@
+<div class="found-words-container" [class.expanded]="isExpanded()">
+    <button class="toggle-button" (click)="toggleExpanded()" type="button" aria-label="Toggle found words list">
+        <div class="summary">
+            <span class="count">
+                Hai trovato {{ totalCount() }} {{ totalCount() === 1 ? 'parola' : 'parole' }}
+            </span>
+            @if (!isExpanded() && totalCount() > 0) {
+            <span class="preview">
+                {{ foundWords().slice(-3).join(', ') }}
+            </span>
+            }
+        </div>
+        <span class="chevron" [class.open]="isExpanded()">▼</span>
+    </button>
+
+    @if (isExpanded()) {
+    <div class="words-list-wrapper">
+        @if (foundWords().length === 0 && foundMielegrammi().length === 0) {
+        <p class="empty-state">Nessuna parola trovata. Inizia a digitare!</p>
+        } @else {
+        <ul class="words-grid">
+            @for (word of foundWords(); track word) {
+            <li class="word-chip">{{ word }}</li>
+            }
+            @for (word of foundMielegrammi(); track word) {
+            <li class="word-chip mielegramma">{{ word }}</li>
+            }
+        </ul>
+        }
+    </div>
+    }
+</div>
