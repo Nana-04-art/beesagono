@@ -27,17 +27,21 @@ export class HoneycombGridComponent {
 
   // Pure SVG helper to compute standard 2D layout coordinates for radial hexagons
   getHexCoordinates(position: number): { x: number; y: number } {
+    const centerX = 160;
+    const centerY = 160;
+
     if (position === 0) {
-      return { x: 150, y: 150 }; // Center tile coordinate
+      return { x: centerX, y: centerY }; // Center tile coordinate
     }
 
-    const radius = 82;
+    const distance = 92;
+
     const angleOffset = -Math.PI / 2; // Position 1 starts top-center
     const angle = angleOffset + ((position - 1) * Math.PI) / 3;
 
     return {
-      x: 150 + radius * Math.cos(angle),
-      y: 150 + radius * Math.sin(angle),
+      x: centerX + distance * Math.cos(angle),
+      y: centerY + distance * Math.sin(angle),
     };
   }
 }

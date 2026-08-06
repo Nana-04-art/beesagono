@@ -1,32 +1,60 @@
-<div class="found-words-container" [class.expanded]="isExpanded()">
-    <button class="toggle-button" (click)="toggleExpanded()" type="button" aria-label="Toggle found words list">
-        <div class="summary">
-            <span class="count">
+<div class="card shadow-sm border rounded-3 overflow-hidden found-words-card" [class.is-expanded]="isExpanded()">
+
+    <!--  HEADER COLLAPSE -->
+    <button
+        class="btn w-100 d-flex align-items-center justify-content-between p-3 border-0 text-start shadow-none toggle-button"
+        (click)="toggleExpanded()" type="button" aria-label="Apri o chiudi lista parole trovate">
+        <div class="d-flex align-items-center gap-2 flex-grow-1 min-w-0 me-2">
+            <!-- Conteggio parole -->
+            <span class="fw-semibold text-dark text-nowrap extra-small-title">
                 Hai trovato {{ totalCount() }} {{ totalCount() === 1 ? 'parola' : 'parole' }}
             </span>
+
+            <!-- Preview of the last 3 words (visible only when closed) -->
             @if (!isExpanded() && totalCount() > 0) {
-            <span class="preview">
+            <span class="small text-secondary text-uppercase text-truncate opacity-75">
                 {{ foundWords().slice(-3).join(', ') }}
             </span>
             }
         </div>
-        <span class="chevron" [class.open]="isExpanded()">▼</span>
+
+        <!-- Chevron arrow -->
+        <span class="chevron text-secondary small" [class.open]="isExpanded()">▼</span>
     </button>
 
+    <!-- LIST OF WORDS FOUND (Expanded content) -->
     @if (isExpanded()) {
-    <div class="words-list-wrapper">
+    <div class="card-body border-top p-3 pt-2 animate-fade-in">
         @if (foundWords().length === 0 && foundMielegrammi().length === 0) {
-        <p class="empty-state">Nessuna parola trovata. Inizia a digitare!</p>
+        <!-- Empty State -->
+        <p class="text-muted text-center fst-italic small mb-0 py-2">
+            Nessuna parola trovata. Inizia a digitare!
+        </p>
         } @else {
-        <ul class="words-grid">
+        <!-- Words Grid -->
+        <ul class="list-unstyled d-flex flex-wrap gap-2 mb-0 words-grid">
+
+            <!-- Normal words found -->
             @for (word of foundWords(); track word) {
-            <li class="word-chip">{{ word }}</li>
+            <li>
+                <span class="badge word-chip font-monospace">
+                    {{ word }}
+                </span>
+            </li>
             }
+
+            <!-- Mielegrammi -->
             @for (word of foundMielegrammi(); track word) {
-            <li class="word-chip mielegramma">{{ word }}</li>
+            <li>
+                <span class="badge word-chip mielegramma font-monospace">
+                    {{ word }}
+                </span>
+            </li>
             }
+
         </ul>
         }
     </div>
     }
+
 </div>

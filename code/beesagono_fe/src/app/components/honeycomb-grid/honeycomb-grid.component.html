@@ -1,5 +1,5 @@
 <div class="honeycomb-container">
-    <svg viewBox="0 0 300 300" class="honeycomb-svg" role="region" aria-label="Letter grid of the day">
+    <svg viewBox="0 0 320 320" class="honeycomb-svg" role="region" aria-label="Letter grid of the day">
         @for (cell of cells(); track cell.id) {
         @let coords = getHexCoordinates(cell.position);
 
@@ -7,7 +7,7 @@
             [attr.aria-label]="cell.isCenter ? 'Central letter ' + cell.letter : 'Letter ' + cell.letter"
             (keydown)="onKeyDown($event, cell.letter)">
             <!-- Click added directly to the polygon -->
-            <polygon points="0,-38 32.9,-19 32.9,19 0,38 -32.9,19 -32.9,-19"
+            <polygon points="0,-40 34.64,-20 34.64,20 0,40 -34.64,20 -34.64,-20"
                 [attr.transform]="'translate(' + coords.x + ',' + coords.y + ')'" [class.hex-tile]="true"
                 [class.is-center]="cell.isCenter" (click)="onCellClick(cell.letter)" />
 

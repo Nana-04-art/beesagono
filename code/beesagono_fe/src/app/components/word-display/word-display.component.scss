@@ -1,54 +1,38 @@
 .word-display-container {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    min-height: 70px;
-    margin-bottom: 1rem;
-    user-select: none;
+    min-height: 100px;
 }
 
 .feedback-badge {
     font-size: 0.95rem;
-    font-weight: 600;
     letter-spacing: 0.5px;
     animation: fadeIn 0.2s ease-in-out;
 }
 
 .input-box {
-    display: flex;
-    align-items: center;
-    justify-content: center;
     min-height: 48px;
-    padding: 0 16px;
-    border-bottom: 2px solid #dee2e6;
     min-width: 200px;
     max-width: 100%;
+    border-color: #dee2e6 !important;
     transition: border-color 0.2s ease;
 
     &.has-content {
-        border-color: #212529;
+        border-color: #212529 !important;
     }
 }
 
 .placeholder-text {
     color: #adb5bd;
     font-size: 1rem;
-    font-style: italic;
 }
 
 .letters-wrapper {
-    display: flex;
     gap: 2px;
 }
 
 .letter {
     font-size: 1.8rem;
-    font-weight: 700;
-    text-transform: uppercase;
     color: #212529;
 
-    /* Highlight the middle letter in a golden color */
     &.is-center {
         color: #f59e0b;
     }
@@ -56,13 +40,11 @@
 
 .cursor {
     font-size: 1.8rem;
-    font-weight: 300;
     color: #f59e0b;
     margin-left: 2px;
     animation: blink 1s infinite;
 }
 
-/* Animations */
 @keyframes blink {
 
     0%,

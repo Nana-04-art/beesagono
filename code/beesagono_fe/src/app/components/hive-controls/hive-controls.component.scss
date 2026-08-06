@@ -1,59 +1,49 @@
-.hive-controls {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 12px;
-    margin-top: 16px;
-    width: 100%;
-}
-
 .control-btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
     height: 48px;
-    padding: 0 20px;
-    border-radius: 24px;
     font-size: 1rem;
     font-weight: 600;
-    border: 1px solid var(--border-color, #e0e0e0);
-    background-color: var(--btn-bg, #ffffff);
-    color: var(--btn-color, #333333);
-    cursor: pointer;
+    border: 1px solid #e0e0e0;
+    background-color: #ffffff;
+    color: #333333;
     user-select: none;
     transition: background-color 0.15s ease, transform 0.1s ease, box-shadow 0.15s ease;
 
     &:hover {
-        background-color: var(--btn-hover-bg, #f5f5f5);
+        background-color: #f5f5f5;
+        border-color: #d6d6d6;
     }
 
     &:active {
-        transform: scale(0.96);
+        transform: scale(0.95);
     }
 
     &:focus-visible {
-        outline: 2px solid var(--accent-color, #f7da21);
+        outline: 2px solid #f7da21;
         outline-offset: 2px;
-    }
-
-    &--primary {
-        background-color: var(--primary-color, #f7da21);
-        border-color: var(--primary-color, #f7da21);
-        color: #000000;
-
-        &:hover {
-            background-color: var(--primary-hover-color, #e5c810);
-        }
-    }
-
-    &--icon {
-        width: 48px;
-        padding: 0;
-        border-radius: 50%;
     }
 }
 
-.shuffle-icon {
-    width: 20px;
-    height: 20px;
+.control-btn-primary {
+    background-color: #f7da21;
+    border-color: #f7da21;
+    color: #000000;
+    min-width: 90px;
+
+    &:hover {
+        background-color: #e5c810;
+        border-color: #e5c810;
+        color: #000000;
+    }
+
+    &:active {
+        background-color: #d4b80b;
+    }
+}
+
+.control-btn-icon {
+    width: 48px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
 }
