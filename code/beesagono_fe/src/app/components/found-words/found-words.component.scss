@@ -1,20 +1,26 @@
 :host {
     display: block;
-    width: 100%;
-    max-width: 500px;
+    width: 1024px;
+    max-width: 100%;
     margin: 0 auto;
 }
 
 .found-words-card {
-    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    width: 100%;
+    min-height: 60px;
+    border-radius: 12px !important;
+    border-color: #e2e8f0 !important;
+    transition: border-color 0.25s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 
     &.is-expanded {
-        border-color: #cbd5e1 !important;
-        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08) !important;
+        border-color: rgba(245, 158, 11, 0.4) !important;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06) !important;
     }
 }
 
 .toggle-button {
+    height: 60px;
+    padding: 0 1rem !important;
     background-color: #ffffff;
     transition: background-color 0.2s ease;
 
@@ -28,21 +34,21 @@
     }
 }
 
-.extra-small-title {
-    font-size: 0.95rem;
-}
-
 .chevron {
     transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-
+    font-size: 0.7rem;
 
     &.open {
         transform: rotate(180deg);
     }
 }
 
+.extra-small {
+    font-size: 0.75rem;
+}
+
 .words-grid {
-    max-height: 200px;
+    max-height: 250px;
     overflow-y: auto;
 
     &::-webkit-scrollbar {
@@ -70,7 +76,6 @@
     border-radius: 50rem;
     border: 1px solid transparent;
     transition: transform 0.15s ease, background-color 0.15s ease;
-
 
     &:hover {
         transform: translateY(-1px);

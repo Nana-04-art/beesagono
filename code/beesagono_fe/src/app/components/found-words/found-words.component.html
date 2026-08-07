@@ -1,40 +1,44 @@
-<div class="card shadow-sm border rounded-3 overflow-hidden found-words-card" [class.is-expanded]="isExpanded()">
+<div class="card shadow-xs border rounded-3 overflow-hidden found-words-card" [class.is-expanded]="isExpanded()">
 
-    <!--  HEADER COLLAPSE -->
     <button
         class="btn w-100 d-flex align-items-center justify-content-between p-3 border-0 text-start shadow-none toggle-button"
         (click)="toggleExpanded()" type="button" aria-label="Apri o chiudi lista parole trovate">
-        <div class="d-flex align-items-center gap-2 flex-grow-1 min-w-0 me-2">
-            <!-- Conteggio parole -->
-            <span class="fw-semibold text-dark text-nowrap extra-small-title">
-                Hai trovato {{ totalCount() }} {{ totalCount() === 1 ? 'parola' : 'parole' }}
+
+        <!-- Title and Icon -->
+        <div class="d-flex align-items-center gap-2">
+            <span class="fs-6" role="img" aria-label="Libro"></span>
+            <span class="fw-bold fs-6 text-dark m-0">Parole</span>
+            <svg class="chevron text-secondary flex-shrink-0 ms-1" [class.open]="isExpanded()" fill="none"
+                stroke="currentColor" viewBox="0 0 24 24" style="width: 14px; height: 14px;">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+            </svg>
+        </div>
+
+        <!-- Counter Badges -->
+        <div class="d-flex align-items-center gap-2">
+            <!-- Total Words Found -->
+            <span class="badge bg-light text-dark border px-2.5 py-1.5 fw-bold">
+                {{ totalFoundCount() }}/{{ totalPossibleWords() }}
             </span>
 
-            <!-- Preview of the last 3 words (visible only when closed) -->
-            @if (!isExpanded() && totalCount() > 0) {
-            <span class="small text-secondary text-uppercase text-truncate opacity-75">
-                {{ foundWords().slice(-3).join(', ') }}
+            <!-- Total Mielegrammi Found -->
+            @if (totalPossibleMielegrammi() > 0) {
+            <span class="badge bg-warning text-dark px-2.5 py-1.5 fw-black shadow-xs">
+                {{ foundMielegrammi().length }}/{{ totalPossibleMielegrammi() }} MIELEGRAMMI
             </span>
             }
         </div>
-
-        <!-- Chevron arrow -->
-        <span class="chevron text-secondary small" [class.open]="isExpanded()">▼</span>
     </button>
 
-    <!-- LIST OF WORDS FOUND (Expanded content) -->
+    <!-- Expanded Content -->
     @if (isExpanded()) {
     <div class="card-body border-top p-3 pt-2 animate-fade-in">
         @if (foundWords().length === 0 && foundMielegrammi().length === 0) {
-        <!-- Empty State -->
         <p class="text-muted text-center fst-italic small mb-0 py-2">
-            Nessuna parola trovata. Inizia a digitare!
+            Ancora nessuna parola trovata. Inizia a digitare!
         </p>
         } @else {
-        <!-- Words Grid -->
         <ul class="list-unstyled d-flex flex-wrap gap-2 mb-0 words-grid">
-
-            <!-- Normal words found -->
             @for (word of foundWords(); track word) {
             <li>
                 <span class="badge word-chip font-monospace">
@@ -43,7 +47,6 @@
             </li>
             }
 
-            <!-- Mielegrammi -->
             @for (word of foundMielegrammi(); track word) {
             <li>
                 <span class="badge word-chip mielegramma font-monospace">
@@ -51,10 +54,8 @@
                 </span>
             </li>
             }
-
         </ul>
         }
     </div>
     }
-
 </div>

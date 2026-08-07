@@ -8,9 +8,11 @@ import { Component, computed, input, signal } from '@angular/core';
   styleUrl: './found-words.component.scss',
 })
 export class FoundWordsComponent {
-  // Signal inputs for found words and optional pangrams (Mielegrammi)
+  // Signal inputs for found words,  optional pangrams (Mielegrammi), and total counts
   foundWords = input.required<string[]>();
   foundMielegrammi = input<string[]>([]);
+  totalPossibleWords = input<number>(0);
+  totalPossibleMielegrammi = input<number>(0);
 
   // Local state for toggling section visibility on smaller viewports
   isExpanded = signal<boolean>(false);
@@ -34,4 +36,8 @@ export class FoundWordsComponent {
   toggleExpanded(): void {
     this.isExpanded.update((prev) => !prev);
   }
+
+  readonly totalFoundCount = computed(
+    () => this.foundWords().length + this.foundMielegrammi().length
+  );
 }
