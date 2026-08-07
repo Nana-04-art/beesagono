@@ -1,23 +1,33 @@
-<div class="scoreboard" role="region" aria-label="Punteggio e livello di gioco">
-    <div class="scoreboard__header">
-        <div class="scoreboard__rank">
-            <span class="rank-label">Livello:</span>
-            <strong class="rank-name">{{ rankName() }}</strong>
+<div class="card scoreboard-card border shadow-sm p-3 w-100 mx-auto" role="region"
+    aria-label="Punteggio e livello di gioco">
+
+    <!-- HEADING: Level and Current Score -->
+    <div class="d-flex justify-content-between align-items-center mb-2">
+        <!-- Current Level -->
+        <div class="d-flex align-items-center gap-1">
+            <span class="small text-secondary">Grado:</span>
+            <strong class="fw-bold text-dark rank-name">{{ rankName() }}</strong>
         </div>
 
-        <div class="scoreboard__score">
-            <span class="score-label">Punti:</span>
-            <strong class="score-value">{{ score() }}</strong>
+        <!-- Current points -->
+        <div class="d-flex align-items-center gap-1">
+            <span class="small text-secondary">Punti:</span>
+            <strong class="fs-5 fw-bold score-value">{{ score() }}</strong>
         </div>
     </div>
 
-    <div class="scoreboard__progress-container" role="progressbar" [attr.aria-valuenow]="score()"
+    <!-- PROGRESS BAR (Bootstrap Progress Bar) -->
+    <div class="progress scoreboard-progress mb-1" role="progressbar" [attr.aria-valuenow]="score()"
         [attr.aria-valuemin]="0" [attr.aria-valuemax]="nextRankScore()"
         [attr.aria-label]="'Progresso verso il prossimo livello: ' + progressPercentage + '%'">
-        <div class="scoreboard__progress-bar" [style.width.%]="progressPercentage"></div>
+        <div class="progress-bar scoreboard-bar" [style.width.%]="progressPercentage"></div>
     </div>
 
-    <div class="scoreboard__next">
-        <span>Prossimo grado a {{ nextRankScore() }} punti</span>
+    <!-- NEXT GOAL INFO -->
+    <div class="text-end">
+        <span class="extra-small-text text-secondary">
+            Prossimo grado a {{ nextRankScore() }} punti
+        </span>
     </div>
+
 </div>

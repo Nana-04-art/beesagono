@@ -1,64 +1,37 @@
-.scoreboard {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
+:host {
+    display: block;
     width: 100%;
     max-width: 400px;
-    padding: 16px;
-    border-radius: 12px;
-    background-color: var(--scoreboard-bg, #f9f9f9);
-    border: 1px solid var(--border-color, #e0e0e0);
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+    margin: 0 auto;
+}
 
-    &__header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        font-size: 1rem;
-    }
+.scoreboard-card {
+    background-color: #f9f9f9;
+    border-color: #e0e0e0 !important;
+    border-radius: 12px !important;
+}
 
-    &__rank,
-    &__score {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-    }
+.rank-name {
+    font-size: 1rem;
+}
 
-    .rank-label,
-    .score-label {
-        color: var(--text-muted, #666666);
-        font-size: 0.9rem;
-    }
+.score-value {
+    color: #d97706;
+}
 
-    .rank-name {
-        font-weight: 700;
-        color: var(--text-color, #222222);
-    }
+.extra-small-text {
+    font-size: 0.75rem;
+}
 
-    .score-value {
-        font-weight: 700;
-        font-size: 1.1rem;
-        color: var(--primary-color, #e6b800);
-    }
+.scoreboard-progress {
+    height: 10px;
+    background-color: #e0e0e0;
+    border-radius: 5px;
+    overflow: hidden;
+}
 
-    &__progress-container {
-        height: 10px;
-        width: 100%;
-        background-color: var(--progress-bg, #e0e0e0);
-        border-radius: 5px;
-        overflow: hidden;
-    }
-
-    &__progress-bar {
-        height: 100%;
-        background-color: var(--primary-color, #f7da21);
-        border-radius: 5px;
-        transition: width 0.3s ease-in-out;
-    }
-
-    &__next {
-        font-size: 0.75rem;
-        color: var(--text-muted, #777777);
-        text-align: right;
-    }
+.scoreboard-bar {
+    background-color: #f7da21;
+    border-radius: 5px;
+    transition: width 0.3s ease-in-out;
 }
