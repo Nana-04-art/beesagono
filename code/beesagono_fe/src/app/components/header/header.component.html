@@ -41,10 +41,11 @@
 
         <!-- Right Section: Action Buttons -->
         <div class="d-flex align-items-center gap-1 gap-sm-2 flex-shrink-0">
+
             <!-- Button: Rules -->
             <div class="position-relative rules-popover-wrapper">
                 <button type="button" class="header-btn" title="Come si gioca" aria-label="Istruzioni di gioco"
-                    (click)="helpRequested.emit()">
+                    (click)="toggleRules()">
                     <svg xmlns="http://www.w3.org/2000/svg" class="btn-icon" fill="none" viewBox="0 0 24 24"
                         stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -53,16 +54,18 @@
                     <span class="d-none d-sm-inline extra-small fw-semibold">Regole</span>
                 </button>
 
-                <!-- ENLAGED POPOVER RULES -->
+                <!-- POPOVER RULES (Toggle con click) -->
+                @if (isRulesOpen()) {
                 <div
                     class="card rules-popover border shadow-lg p-3 position-absolute top-100 start-0 start-sm-auto end-0 mt-2">
                     <div class="rules-popover-body">
 
-                        <!-- Popover Title -->
-                        <h6
-                            class="fw-bold text-warning-emphasis mb-3 border-bottom pb-2 d-flex align-items-center gap-2 fs-6">
-                            <span>🐝</span> Regole del Gioco e Punteggio
-                        </h6>
+                        <!-- Header Popover -->
+                        <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-3">
+                            <h6 class="fw-bold text-warning-emphasis mb-0 d-flex align-items-center gap-2 fs-6">
+                                <span>🐝</span> Regole del Gioco e Punteggio
+                            </h6>
+                        </div>
 
                         <!-- GAME RULES -->
                         <div class="mb-3">
@@ -145,10 +148,10 @@
 
                     </div>
                 </div>
-
+                }
             </div>
 
-            <!-- Button: Statistics -->
+            <!-- Button 2: Statistics -->
             <button type="button" class="header-btn" title="Le tue statistiche" aria-label="Apri le statistiche"
                 (click)="statsRequested.emit()">
                 <svg xmlns="http://www.w3.org/2000/svg" class="btn-icon" fill="none" viewBox="0 0 24 24"
@@ -159,7 +162,7 @@
                 <span class="d-none d-sm-inline extra-small fw-semibold">Stats</span>
             </button>
 
-            <!-- Button: Share -->
+            <!-- Button 3: Share -->
             <button type="button" class="header-btn header-btn-primary" title="Condividi risultato"
                 aria-label="Condividi punteggio" (click)="shareRequested.emit()">
                 <svg xmlns="http://www.w3.org/2000/svg" class="btn-icon" fill="none" viewBox="0 0 24 24"
@@ -169,6 +172,7 @@
                 </svg>
                 <span class="d-none d-sm-inline extra-small fw-bold">Condividi</span>
             </button>
+
         </div>
 
     </div>

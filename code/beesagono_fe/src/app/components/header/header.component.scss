@@ -108,14 +108,17 @@
     .rules-popover {
         width: 320px;
         max-height: 380px;
-        visibility: hidden;
-        opacity: 0;
-        transform: translateY(-6px) scale(0.95);
-        transition: opacity 0.2s ease, transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), visibility 0.2s;
-        pointer-events: none;
+        /* Rimosse visibility: hidden, opacity: 0 e transform negativi */
+        visibility: visible;
+        opacity: 1;
+        pointer-events: auto;
+
         background-color: #ffffff;
         border-color: rgba(245, 158, 11, 0.3) !important;
         view-transition-name: rules-card-popover;
+        z-index: 1050;
+        min-width: 300px;
+        max-width: 360px;
     }
 
     .rules-popover-body {
@@ -131,13 +134,6 @@
             background-color: rgba(245, 158, 11, 0.4);
             border-radius: 4px;
         }
-    }
-
-    &:hover .rules-popover {
-        visibility: visible;
-        opacity: 1;
-        transform: translateY(0) scale(1);
-        pointer-events: auto;
     }
 }
 

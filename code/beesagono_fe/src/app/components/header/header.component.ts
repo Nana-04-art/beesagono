@@ -1,24 +1,40 @@
-import { Component, computed, inject, output } from '@angular/core';
+import { Component, computed, inject, output, signal, ElementRef, HostListener } from '@angular/core';
+import { CommonModule } from '@angular/common';
 import { GameService } from '../../services/game/game.service';
 import { ScoreboardComponent } from '../scoreboard/scoreboard.component';
 
 @Component({
   selector: 'app-header',
-  imports: [ScoreboardComponent],
+  standalone: true,
+  imports: [CommonModule, ScoreboardComponent],
   templateUrl: './header.component.html',
   styleUrl: './header.component.scss',
 })
 export class HeaderComponent {
   private gameService = inject(GameService);
+  private elementRef = inject(ElementRef);
 
-  // Event emitted when user clicks on help/rules icon
   readonly helpRequested = output<void>();
-
-  // Event emitted when user clicks on stats icon
   readonly statsRequested = output<void>();
-
-  // Event emitted when user clicks on share button
   readonly shareRequested = output<void>();
+
+  readonly isRulesOpen = signal<boolean>(false);
+
+  toggleRules(): void {
+    this.isRulesOpen.update(value => !value);
+  }
+
+  closeRules(): void {
+    this.isRulesOpen.set(false);
+  }
+
+  // Closes the popover when the user clicks anywhere outside the component.
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event: MouseEvent): void {
+    if (!this.elementRef.nativeElement.contains(event.target as Node)) {
+      this.closeRules();
+    }
+  }
 
   // Computes current rank tier from GameService
   readonly currentRank = computed(() => this.gameService.rank());
