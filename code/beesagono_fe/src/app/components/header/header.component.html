@@ -1,0 +1,175 @@
+<nav
+    class="navbar navbar-expand sticky-top bg-white bg-opacity-75 border-bottom border-warning border-opacity-25 backdrop-blur py-2 px-3 px-lg-4">
+    <div
+        class="container-fluid max-w-7xl px-0 flex-nowrap justify-content-between align-items-center gap-2 position-relative">
+
+        <!-- Left Section: Title & Date Badge -->
+        <div class="d-flex align-items-center gap-2 flex-shrink-0 cursor-pointer user-select-none"
+            (click)="onLogoClick()">
+            <span class="fs-2 animate-bounce-subtle" role="img" aria-label="Ape">🐝</span>
+            <div class="d-flex flex-column">
+                <h1 class="fw-black fs-5 tracking-wider text-warning-emphasis m-0 lh-1">
+                    MIELEGRAMMI
+                </h1>
+                <span class="date-subtitle fw-bold text-uppercase tracking-widest mt-1">
+                    {{ formattedDate() }}
+                </span>
+            </div>
+        </div>
+
+        <!-- Center Section: Current Rank Indicator -->
+        <div class="d-none d-sm-block position-absolute start-50 translate-middle-x rank-popover-wrapper">
+
+            <!-- MAIN BADGE -->
+            <div
+                class="d-flex align-items-center bg-warning bg-opacity-10 border border-warning border-opacity-25 rounded-pill px-3 py-1 shadow-sm cursor-pointer rank-badge">
+                <div class="d-flex align-items-center gap-2">
+                    <span class="small text-secondary fw-medium">Grado:</span>
+                    <span class="small fw-bold text-warning-emphasis d-flex align-items-center gap-1">
+                        <span>{{ rankIcon() }}</span>
+                        <span>{{ currentRank().label }}</span>
+                    </span>
+                </div>
+            </div>
+
+            <!-- Appears on hover/focus below the badge -->
+            <div class="scoreboard-popover position-absolute top-100 start-50 translate-middle-x mt-2">
+                <app-scoreboard [score]="score()" [rankName]="currentRank().label" [nextRankScore]="maxScore()" />
+            </div>
+
+        </div>
+
+        <!-- Right Section: Action Buttons -->
+        <div class="d-flex align-items-center gap-1 gap-sm-2 flex-shrink-0">
+            <!-- Button: Rules -->
+            <div class="position-relative rules-popover-wrapper">
+                <button type="button" class="header-btn" title="Come si gioca" aria-label="Istruzioni di gioco"
+                    (click)="helpRequested.emit()">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="btn-icon" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span class="d-none d-sm-inline extra-small fw-semibold">Regole</span>
+                </button>
+
+                <!-- ENLAGED POPOVER RULES -->
+                <div
+                    class="card rules-popover border shadow-lg p-3 position-absolute top-100 start-0 start-sm-auto end-0 mt-2">
+                    <div class="rules-popover-body">
+
+                        <!-- Popover Title -->
+                        <h6
+                            class="fw-bold text-warning-emphasis mb-3 border-bottom pb-2 d-flex align-items-center gap-2 fs-6">
+                            <span>🐝</span> Regole del Gioco e Punteggio
+                        </h6>
+
+                        <!-- GAME RULES -->
+                        <div class="mb-3">
+                            <span class="badge bg-warning text-dark mb-1">1. Regole del Gioco</span>
+                            <ul class="ps-3 mb-0 extra-small-text text-secondary">
+                                <li><strong>Lettera Centrale:</strong> Obbligatoria in ogni parola.</li>
+                                <li><strong>Lunghezza Minima:</strong> Almeno 4 lettere.</li>
+                                <li><strong>Uso Lettere:</strong> Solo le 7 della griglia (ripetibili).</li>
+                                <li><strong>Dizionario:</strong> La parola deve essere valida.</li>
+                                <li><strong>Nessun Duplicato:</strong> Non inserire parole già trovate.</li>
+                            </ul>
+                        </div>
+
+                        <!-- SCORE CALCULATION -->
+                        <div class="mb-3">
+                            <span class="badge bg-warning text-dark mb-1">2. Calcolo del Punteggio</span>
+                            <div class="table-responsive">
+                                <table class="table table-sm table-bordered extra-small-text mb-1 align-middle">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Tipo</th>
+                                            <th>Punti</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td>Parola di 4 lettere</td>
+                                            <td>1 pt fisso</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Parola di 5+ lettere</td>
+                                            <td>1 pt per ogni lettera</td>
+                                        </tr>
+                                        <tr class="table-warning">
+                                            <td><strong>Mielegramma</strong></td>
+                                            <td><strong>Lunghezza + 7 pt bonus</strong></td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <p class="extra-small-text text-muted mb-0">
+                                *<strong>Mielegramma:</strong> Usa tutte e 7 le lettere dell'alveare senza ripetizioni.
+                            </p>
+                        </div>
+
+                        <!-- GRADES AND LEVELS -->
+                        <div>
+                            <span class="badge bg-warning text-dark mb-2">3. Gradi e Avanzamento</span>
+                            <div class="d-flex flex-column gap-1 extra-small-text text-secondary">
+                                <div class="d-flex justify-content-between align-items-center border-bottom pb-1">
+                                    <span>🌱 Iniziato</span> <strong class="text-dark">1%</strong>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center border-bottom pb-1">
+                                    <span>🍃 Mente Fresca</span> <strong class="text-dark">4%</strong>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center border-bottom pb-1">
+                                    <span>🐣 Principiante</span> <strong class="text-dark">7%</strong>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center border-bottom pb-1">
+                                    <span>🚀 Avanzato</span> <strong class="text-dark">14%</strong>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center border-bottom pb-1">
+                                    <span>💡 Esperto</span> <strong class="text-dark">24%</strong>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center border-bottom pb-1">
+                                    <span>⭐ Eccellente</span> <strong class="text-dark">39%</strong>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center border-bottom pb-1">
+                                    <span>🧠 Genio</span> <strong class="text-dark">69%</strong>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center border-bottom pb-1">
+                                    <span>👑 Maestro</span> <strong class="text-dark">99%</strong>
+                                </div>
+                                <div
+                                    class="d-flex justify-content-between align-items-center bg-warning bg-opacity-25 rounded px-2 py-1 fw-bold text-dark">
+                                    <span>🐝 Ape Regina</span> <span>100%</span>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Button: Statistics -->
+            <button type="button" class="header-btn" title="Le tue statistiche" aria-label="Apri le statistiche"
+                (click)="statsRequested.emit()">
+                <svg xmlns="http://www.w3.org/2000/svg" class="btn-icon" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+                <span class="d-none d-sm-inline extra-small fw-semibold">Stats</span>
+            </button>
+
+            <!-- Button: Share -->
+            <button type="button" class="header-btn header-btn-primary" title="Condividi risultato"
+                aria-label="Condividi punteggio" (click)="shareRequested.emit()">
+                <svg xmlns="http://www.w3.org/2000/svg" class="btn-icon" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+                </svg>
+                <span class="d-none d-sm-inline extra-small fw-bold">Condividi</span>
+            </button>
+        </div>
+
+    </div>
+</nav>
