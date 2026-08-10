@@ -45,6 +45,7 @@ export class GameService {
     private readonly _shuffleOrder = signal<number[]>([1, 2, 3, 4, 5, 6]);
     private readonly _startTime = signal<number>(Date.now());
     private readonly _isStorageAvailable = signal<boolean>(true);
+    private readonly _invalidWords = signal<string[]>([]);
 
     readonly board: Signal<GameBoard | null> = this._board.asReadonly();
     readonly loadStatus: Signal<'idle' | 'loading' | 'ready' | 'error'> = this._loadStatus.asReadonly();
@@ -52,6 +53,7 @@ export class GameService {
     readonly currentInput: Signal<string> = this._currentInput.asReadonly();
     readonly foundWords: Signal<string[]> = this._foundWords.asReadonly();
     readonly isStorageAvailable: Signal<boolean> = this._isStorageAvailable.asReadonly();
+    readonly invalidWords: Signal<string[]> = this._invalidWords.asReadonly();
 
     /**
      * Pre-calculated Set of possible words for O(1) lookups during validation.
@@ -89,22 +91,22 @@ export class GameService {
     });
 
     /** Maximum achievable score for the active game session */
-  readonly maxScore = computed<number>(() => {
-    const currentBoard = this._board();
-    return currentBoard ? currentBoard.maxScore : 0;
-  });
+    readonly maxScore = computed<number>(() => {
+        const currentBoard = this._board();
+        return currentBoard ? currentBoard.maxScore : 0;
+    });
 
-  /** Total possible count of valid words in the active puzzle */
-  readonly totalPossibleWords = computed<number>(() => {
-    const currentBoard = this._board();
-    return currentBoard ? currentBoard.possibleWords.length : 0;
-  });
+    /** Total possible count of valid words in the active puzzle */
+    readonly totalPossibleWords = computed<number>(() => {
+        const currentBoard = this._board();
+        return currentBoard ? currentBoard.possibleWords.length : 0;
+    });
 
-  /** Total possible count of mielegrammi in the active puzzle */
-  readonly totalMielegrammi = computed<number>(() => {
-    const currentBoard = this._board();
-    return currentBoard ? currentBoard.mielegrammi.length : 0;
-  });
+    /** Total possible count of mielegrammi in the active puzzle */
+    readonly totalMielegrammi = computed<number>(() => {
+        const currentBoard = this._board();
+        return currentBoard ? currentBoard.mielegrammi.length : 0;
+    });
 
     readonly isCompleted = computed(() => {
         const currentBoard = this._board();
@@ -127,12 +129,35 @@ export class GameService {
         return this.getRankForPercentage(percentage);
     });
 
+    /** Minimum points required to reach the current rank */
+    readonly currentRankScore = computed<number>(() => {
+        const maxScore = this.maxScore();
+        const currentRank = this.rank();
+        return Math.ceil((maxScore * currentRank.threshold) / 100);
+    });
+
+    /** Minimum points required to unlock the next rank */
+    readonly nextRankScore = computed<number>(() => {
+        const maxScore = this.maxScore();
+        const currentScore = this.score();
+
+        // Find the first tier whose score threshold strictly exceeds the current score
+        const nextTier = RANK_TIERS.find((tier) => {
+            const requiredPoints = Math.ceil((maxScore * tier.threshold) / 100);
+            return requiredPoints > currentScore;
+        });
+
+        if (!nextTier) return maxScore; // Already at maximum rank (Ape Regina)
+
+        return Math.ceil((maxScore * nextTier.threshold) / 100);
+    });
+
     /** Check if the player has achieved the highest possible rank */
-  readonly isGeniusRank = computed<boolean>(() => {
-    const currentBoard = this._board();
-    if (!currentBoard || currentBoard.maxScore === 0) return false;
-    return this.score() >= currentBoard.maxScore;
-  });
+    readonly isGeniusRank = computed<boolean>(() => {
+        const currentBoard = this._board();
+        if (!currentBoard || currentBoard.maxScore === 0) return false;
+        return this.score() >= currentBoard.maxScore;
+    });
 
     readonly displayCells = computed<Cell[]>(() => {
         const currentBoard = this._board();
@@ -157,6 +182,7 @@ export class GameService {
         effect(() => {
             const currentBoard = this._board();
             const words = this._foundWords();
+            const invalidWords = this._invalidWords();
 
             if (currentBoard && this._loadStatus() === 'ready') {
                 const stateToSave: GameState = {
@@ -164,13 +190,14 @@ export class GameService {
                     date: currentBoard.date,
                     score: this.score(),
                     foundWords: words,
+                    invalidWords: invalidWords,
                     foundMielegrammi: this.foundMielegrammi(),
                     isCompleted: this.isCompleted(),
-                    startTime: this._startTime(), // Preserves initial start time across saves
+                    startTime: this._startTime(),
                     lastUpdated: Date.now(),
                 };
 
-                const saveSuccess = this.storageService.save(stateToSave);
+                this.storageService.save(stateToSave);
                 this._isStorageAvailable.set(this.storageService.isAvailable());
             }
         });
@@ -204,9 +231,13 @@ export class GameService {
                     new Set(savedState.foundWords.filter((w) => validWordsSet.has(w)))
                 );
                 this._foundWords.set(sanitizedWords);
+
+                // Restore invalid words list from storage
+                this._invalidWords.set(savedState.invalidWords ?? []);
                 this._startTime.set(savedState.startTime ?? Date.now());
             } else {
                 this._foundWords.set([]);
+                this._invalidWords.set([]);
                 this._startTime.set(Date.now());
             }
 
@@ -268,7 +299,16 @@ export class GameService {
             return { isValid: false, pointsAwarded: 0, isMielegramma: false };
         }
 
+        // Internal helper to record the incorrect word (without duplicates) and clear the input
+        const trackInvalid = (word: string) => {
+            if (!this._invalidWords().includes(word)) {
+                this._invalidWords.update((list) => [...list, word]);
+            }
+            this.clearInput();
+        };
+
         if (inputWord.length < GAME_RULES.MIN_WORD_LENGTH) {
+            this.clearInput();
             return {
                 isValid: false,
                 pointsAwarded: 0,
@@ -280,6 +320,7 @@ export class GameService {
 
         const centerLetter = getCenterLetter(currentBoard);
         if (!inputWord.includes(centerLetter)) {
+            trackInvalid(inputWord);
             return {
                 isValid: false,
                 pointsAwarded: 0,
@@ -295,6 +336,7 @@ export class GameService {
             .every((char) => allowedLetters.includes(char));
 
         if (!hasOnlyAllowed) {
+            trackInvalid(inputWord);
             return {
                 isValid: false,
                 pointsAwarded: 0,
@@ -305,6 +347,7 @@ export class GameService {
         }
 
         if (this._foundWords().includes(inputWord)) {
+            this.clearInput();
             return {
                 isValid: false,
                 pointsAwarded: 0,
@@ -314,8 +357,9 @@ export class GameService {
             };
         }
 
-        // O(1) set check instead of Array.includes scanning
+        // O(1) set check: word not found in the dictionary of valid answers
         if (!this.possibleWordsSet().has(inputWord)) {
+            trackInvalid(inputWord);
             return {
                 isValid: false,
                 pointsAwarded: 0,

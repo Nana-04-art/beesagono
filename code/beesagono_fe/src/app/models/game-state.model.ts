@@ -11,6 +11,9 @@ export interface GameState {
   /** List of words successfully found today */
   foundWords: string[];
 
+  /** List of words found today who aren't in the valid word list */
+  invalidWords?: string[];
+
   /** List of Mielegrammi (pangrams) found today */
   foundMielegrammi: string[];
 

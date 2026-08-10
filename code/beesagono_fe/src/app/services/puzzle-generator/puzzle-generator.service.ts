@@ -26,13 +26,13 @@ export class PuzzleGeneratorService {
       : ['BEESAGO'];
 
     const baseSeed = this.hashDateString(date);
+
+    const rng = this.mulberry32(baseSeed);
+
     let lastCandidateBoard: GameBoard | null = null;
 
     // Generation Loop (Max MAX_GENERATION_ATTEMPTS)
     for (let attempt = 0; attempt < GAME_RULES.MAX_GENERATION_ATTEMPTS; attempt++) {
-      // PRNG seeded by baseSeed + attempt to ensure deterministic behavior across attempts
-      const rng = this.mulberry32(baseSeed + attempt);
-
       // Pick deterministic candidate pangram
       const targetPangram = safeCandidates[Math.floor(rng() * safeCandidates.length)];
 
@@ -90,9 +90,7 @@ export class PuzzleGeneratorService {
 
   // --- Frozen Algorithms ---
 
-  /**
-   * Date -> seed hash (djb2 variant)
-   */
+  // Date -> seed hash (djb2 variant)
   private hashDateString(date: string): number {
     let hash = 5381;
     for (let i = 0; i < date.length; i++) {
@@ -101,9 +99,7 @@ export class PuzzleGeneratorService {
     return hash >>> 0;
   }
 
-  /**
-   * Deterministic PRNG (Mulberry32)
-   */
+  // Deterministic PRNG (Mulberry32)
   private mulberry32(seed: number): () => number {
     let state = seed >>> 0;
     return () => {
@@ -117,9 +113,7 @@ export class PuzzleGeneratorService {
 
   // --- Helper Functions ---
 
-  /**
-   * Pre-filters dictionary to extract words with exactly 7 unique characters
-   */
+  // Pre-filters dictionary to extract words with exactly 7 unique characters
   private extractPangrams(dictionary: string[]): string[] {
     const pangrams: string[] = [];
     for (let i = 0; i < dictionary.length; i++) {
@@ -131,9 +125,7 @@ export class PuzzleGeneratorService {
     return pangrams;
   }
 
-  /**
-   * Checks if all characters in the word belong to the set of daily board letters
-   */
+  // Checks if all characters in the word belong to the set of daily board letters
   private wordUsesOnlySet(word: string, letterSet: Set<string>): boolean {
     for (let i = 0; i < word.length; i++) {
       if (!letterSet.has(word[i])) return false;
@@ -142,14 +134,8 @@ export class PuzzleGeneratorService {
   }
 
   /**
-   * Builds the GameBoard object strictly compliant with the GameBoard interface, including cells, possible words, mielegrammi, and maxScore.
-   * @param date - The date string for the puzzle (e.g., '2024-06-15')
-   * @param seed - The deterministic seed used for this board generation
-   * @param all7Letters - Array of 7 unique letters for the board
-   * @param centerLetter - The mandatory center letter for the board
-   * @param possibleWords - Array of valid words that can be formed with the board letters
-   * @param mielegrammi - Array of special words that use all 7 letters
-   * @returns A fully constructed GameBoard object
+   * Builds the GameBoard object strictly compliant with the GameBoard interface, including cells, 
+   * possible words, mielegrammi, and maxScore.
    */
   private buildGameBoard(
     date: string,
