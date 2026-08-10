@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { Component, signal, WritableSignal } from '@angular/core';
-import { vi } from 'vitest';
+import { Component, input, signal, WritableSignal } from '@angular/core';
+import { vi, describe, beforeEach, it, expect } from 'vitest';
 
 import { HeaderComponent } from './header.component';
 import { GameBoard } from '../../models/game-board.model';
@@ -13,7 +13,10 @@ import { GameService } from '../../services/game/game.service';
   standalone: true,
   template: ''
 })
-class MockScoreboardComponent { }
+class MockScoreboardComponent {
+  score = input<number>(0);
+  rankName = input<string>();
+}
 
 class MockGameService {
   readonly board: WritableSignal<GameBoard | null> = signal<GameBoard | null>(null);
@@ -50,66 +53,37 @@ describe('HeaderComponent', () => {
     expect(component).toBeTruthy();
   });
 
-  describe('Computed Score Properties', () => {
-    it('should reactively reflect score from GameService', () => {
-      mockGameService.score.set(42);
-      fixture.detectChanges();
-
-      expect(component.score()).toBe(42);
+  describe('Rules Popover State', () => {
+    it('should initialize isRulesOpen as false', () => {
+      expect(component.isRulesOpen()).toBe(false);
     });
 
-    it('should compute maxScore from board when board is loaded', () => {
-      const mockBoard: GameBoard = {
-        date: '2026-08-05',
-        seed: 'test-seed',
-        cells: [],
-        possibleWords: ['CASA'],
-        mielegrammi: ['CAMPIO'],
-        maxScore: 180
-      };
+    it('should toggle isRulesOpen when toggleRules() is called', () => {
+      component.toggleRules();
+      expect(component.isRulesOpen()).toBe(true);
 
-      mockGameService.board.set(mockBoard);
-      fixture.detectChanges();
-
-      expect(component.maxScore()).toBe(180);
+      component.toggleRules();
+      expect(component.isRulesOpen()).toBe(false);
     });
 
-    it('should fallback maxScore to 100 when board is null', () => {
-      mockGameService.board.set(null);
-      fixture.detectChanges();
-
-      expect(component.maxScore()).toBe(100);
+    it('should set isRulesOpen to false when closeRules() is called', () => {
+      component.isRulesOpen.set(true);
+      component.closeRules();
+      expect(component.isRulesOpen()).toBe(false);
     });
-  });
 
-  describe('Rank Icon Emoji Calculation', () => {
-    const testCases: { threshold: number; expectedIcon: string }[] = [
-      { threshold: 100, expectedIcon: '🐝' },
-      { threshold: 85, expectedIcon: '👑' },
-      { threshold: 70, expectedIcon: '👑' },
-      { threshold: 55, expectedIcon: '🧠' },
-      { threshold: 40, expectedIcon: '🧠' },
-      { threshold: 30, expectedIcon: '⭐' },
-      { threshold: 25, expectedIcon: '⭐' },
-      { threshold: 20, expectedIcon: '💡' },
-      { threshold: 15, expectedIcon: '💡' },
-      { threshold: 10, expectedIcon: '🚀' },
-      { threshold: 8, expectedIcon: '🚀' },
-      { threshold: 6, expectedIcon: '🐣' },
-      { threshold: 5, expectedIcon: '🐣' },
-      { threshold: 3, expectedIcon: '🍃' },
-      { threshold: 2, expectedIcon: '🍃' },
-      { threshold: 1, expectedIcon: '🌱' },
-      { threshold: 0, expectedIcon: '🌱' }
-    ];
+    it('should close rules when clicking outside the component', () => {
+      component.isRulesOpen.set(true);
 
-    testCases.forEach(({ threshold, expectedIcon }) => {
-      it(`should return emoji '${expectedIcon}' for threshold ${threshold}`, () => {
-        mockGameService.rank.set({ label: 'Grado Test', threshold });
-        fixture.detectChanges();
+      const outsideElement = document.createElement('div');
+      document.body.appendChild(outsideElement);
 
-        expect(component.rankIcon()).toBe(expectedIcon);
-      });
+      const clickEvent = new MouseEvent('click', { bubbles: true });
+      outsideElement.dispatchEvent(clickEvent);
+
+      expect(component.isRulesOpen()).toBe(false);
+
+      document.body.removeChild(outsideElement);
     });
   });
 
@@ -142,7 +116,7 @@ describe('HeaderComponent', () => {
   });
 
   describe('Outputs and Events', () => {
-    it('should emit helpRequested when rules/help trigger occurs', () => {
+    it('should emit helpRequested when helpRequested.emit() is called', () => {
       let emitted = false;
       component.helpRequested.subscribe(() => (emitted = true));
 
@@ -151,7 +125,7 @@ describe('HeaderComponent', () => {
       expect(emitted).toBe(true);
     });
 
-    it('should emit statsRequested when stats trigger occurs', () => {
+    it('should emit statsRequested when statsRequested.emit() is called', () => {
       let emitted = false;
       component.statsRequested.subscribe(() => (emitted = true));
 
@@ -160,7 +134,7 @@ describe('HeaderComponent', () => {
       expect(emitted).toBe(true);
     });
 
-    it('should emit shareRequested when share button is clicked', () => {
+    it('should emit shareRequested when shareRequested.emit() is called', () => {
       let emitted = false;
       component.shareRequested.subscribe(() => (emitted = true));
 

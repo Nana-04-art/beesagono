@@ -2,7 +2,6 @@
     class="navbar navbar-expand sticky-top bg-white bg-opacity-75 border-bottom border-warning border-opacity-25 backdrop-blur py-2 px-3 px-lg-4">
     <div
         class="container-fluid max-w-7xl px-0 flex-nowrap justify-content-between align-items-center gap-2 position-relative">
-
         <!-- Left Section: Title & Date Badge -->
         <div class="d-flex align-items-center gap-2 flex-shrink-0 cursor-pointer user-select-none"
             (click)="onLogoClick()">
@@ -19,29 +18,25 @@
 
         <!-- Center Section: Current Rank Indicator -->
         <div class="d-none d-sm-block position-absolute start-50 translate-middle-x rank-popover-wrapper">
-
             <!-- MAIN BADGE -->
             <div
                 class="d-flex align-items-center bg-warning bg-opacity-10 border border-warning border-opacity-25 rounded-pill px-3 py-1 shadow-sm cursor-pointer rank-badge">
                 <div class="d-flex align-items-center gap-2">
                     <span class="small text-secondary fw-medium">Grado:</span>
                     <span class="small fw-bold text-warning-emphasis d-flex align-items-center gap-1">
-                        <span>{{ rankIcon() }}</span>
-                        <span>{{ currentRank().label }}</span>
+                        <span>{{ rank().label }}</span>
                     </span>
                 </div>
             </div>
 
             <!-- Appears on hover/focus below the badge -->
             <div class="scoreboard-popover position-absolute top-100 start-50 translate-middle-x mt-2">
-                <app-scoreboard [score]="score()" [rankName]="currentRank().label" [nextRankScore]="maxScore()" />
+                <app-scoreboard [score]="score()" [rankName]="rank().label" />
             </div>
-
         </div>
 
         <!-- Right Section: Action Buttons -->
         <div class="d-flex align-items-center gap-1 gap-sm-2 flex-shrink-0">
-
             <!-- Button: Rules -->
             <div class="position-relative rules-popover-wrapper">
                 <button type="button" class="header-btn" title="Come si gioca" aria-label="Istruzioni di gioco"
@@ -59,12 +54,13 @@
                 <div
                     class="card rules-popover border shadow-lg p-3 position-absolute top-100 start-0 start-sm-auto end-0 mt-2">
                     <div class="rules-popover-body">
-
                         <!-- Header Popover -->
                         <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-3">
                             <h6 class="fw-bold text-warning-emphasis mb-0 d-flex align-items-center gap-2 fs-6">
                                 <span>🐝</span> Regole del Gioco e Punteggio
                             </h6>
+                            <button type="button" class="btn-close small" aria-label="Chiudi"
+                                (click)="closeRules()"></button>
                         </div>
 
                         <!-- GAME RULES -->
@@ -145,7 +141,6 @@
                                 </div>
                             </div>
                         </div>
-
                     </div>
                 </div>
                 }
@@ -172,8 +167,6 @@
                 </svg>
                 <span class="d-none d-sm-inline extra-small fw-bold">Condividi</span>
             </button>
-
         </div>
-
     </div>
 </nav>
