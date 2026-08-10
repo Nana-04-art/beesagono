@@ -1,32 +1,75 @@
-<div class="card scoreboard-card border shadow-sm p-3 w-100 mx-auto" role="region"
+<div class="card scoreboard-card border shadow-sm p-3 w-100 mx-auto position-relative" role="region"
     aria-label="Punteggio e livello di gioco">
 
     <!-- HEADING: Level and Current Score -->
     <div class="d-flex justify-content-between align-items-center mb-2">
         <!-- Current Level -->
         <div class="d-flex align-items-center gap-1">
-            <span class="small text-secondary">Grado:</span>
-            <strong class="fw-bold text-dark rank-name">{{ rankName() }}</strong>
+            <span class="extra-small-text text-secondary">Grado:</span>
+            <span class="small fw-bold text-dark rank-name">
+                {{ rankName() }}
+            </span>
         </div>
 
         <!-- Current points -->
         <div class="d-flex align-items-center gap-1">
-            <span class="small text-secondary">Punti:</span>
-            <strong class="fs-5 fw-bold score-value">{{ score() }}</strong>
+            <span class="extra-small-text text-secondary me-1">Punti:</span>
+            <span class="small fw-bold score-value text-dark">{{ score() }}</span>
+            <span class="extra-small-text text-muted">/ {{ maxScore() }}</span>
         </div>
     </div>
 
-    <!-- PROGRESS BAR (Bootstrap Progress Bar) -->
-    <div class="progress scoreboard-progress mb-1" role="progressbar" [attr.aria-valuenow]="score()"
-        [attr.aria-valuemin]="0" [attr.aria-valuemax]="nextRankScore()"
-        [attr.aria-label]="'Progresso verso il prossimo livello: ' + progressPercentage + '%'">
-        <div class="progress-bar scoreboard-bar" [style.width.%]="progressPercentage"></div>
+    <!-- Progress bar with only current & next emojis -->
+    <div class="progress-container position-relative mb-1 py-1 cursor-pointer">
+
+        <div class="progress scoreboard-progress" role="progressbar" [attr.aria-valuenow]="score()"
+            [attr.aria-valuemin]="0" [attr.aria-valuemax]="maxScore()"
+            [attr.aria-label]="'Progresso totale: ' + progressPercentage() + '%'">
+
+            <div class="progress-bar scoreboard-bar" [style.width.%]="progressPercentage()"></div>
+
+            <!-- Current level emoji "walking" along the bar -->
+            <span class="tier-emoji-marker current" [style.left.%]="progressPercentage()">
+                {{ currentRankEmoji() }}
+            </span>
+
+            <!-- Emoji for the next level to reach -->
+            @if (nextRankEmoji()) {
+            <span class="tier-emoji-marker next" [style.left.%]="nextRankThreshold()">
+                {{ nextRankEmoji() }}
+            </span>
+            }
+        </div>
+
+        <!-- POPOVER HOVER: Complete table of all grades -->
+        <div class="rank-hover-popover card border shadow-lg p-2 position-absolute">
+            <div class="fw-bold text-warning-emphasis border-bottom pb-1 mb-2 extra-small-text">
+                🎯 Tutti i Gradi e Obiettivi (Max {{ maxScore() }} pt)
+            </div>
+            <div class="d-flex flex-column gap-1">
+                @for (tier of rankTiersWithPoints(); track tier.threshold) {
+                <div class="tier-row d-flex justify-content-between align-items-center px-2 py-1 rounded extra-small-text"
+                    [class.bg-warning-subtle]="tier.isUnlocked" [class.fw-bold]="tier.isUnlocked">
+                    <span>{{ tier.label }}</span>
+                    <span class="text-muted">
+                        <strong>{{ tier.requiredPoints }}</strong> pt
+                        <small>({{ tier.threshold }}%)</small>
+                    </span>
+                </div>
+                }
+            </div>
+        </div>
+
     </div>
 
     <!-- NEXT GOAL INFO -->
     <div class="text-end">
         <span class="extra-small-text text-secondary">
-            Prossimo grado a {{ nextRankScore() }} punti
+            @if (pointsToNextRank() > 0) {
+            Mancano {{ pointsToNextRank() }} {{ pointsToNextRank() === 1 ? 'punto' : 'punti' }} al prossimo grado
+            } @else {
+            Grado massimo raggiunto! 🐝
+            }
         </span>
     </div>
 

@@ -1,37 +1,99 @@
-:host {
-    display: block;
-    width: 100%;
-    max-width: 400px;
-    margin: 0 auto;
-}
-
 .scoreboard-card {
-    background-color: #f9f9f9;
-    border-color: #e0e0e0 !important;
-    border-radius: 12px !important;
-}
+    max-width: 480px;
+    background-color: #ffffff;
+    padding: 0.75rem 1rem !important;
 
-.rank-name {
-    font-size: 1rem;
-}
-
-.score-value {
-    color: #d97706;
+    .d-flex {
+        flex-wrap: nowrap;
+    }
 }
 
 .extra-small-text {
-    font-size: 0.75rem;
+    font-size: 0.72rem;
+}
+
+.rank-name {
+    font-size: 0.85rem;
+    white-space: nowrap;
+    line-height: 1;
+}
+
+.score-value {
+    font-size: 0.85rem;
+    line-height: 1;
+}
+
+.progress-container {
+    padding-top: 8px !important;
+    padding-bottom: 8px !important;
+
+    &:hover .rank-hover-popover {
+        opacity: 1;
+        visibility: visible;
+        transform: translateX(-50%) translateY(0);
+    }
 }
 
 .scoreboard-progress {
-    height: 10px;
-    background-color: #e0e0e0;
-    border-radius: 5px;
-    overflow: hidden;
+    height: 14px;
+    background-color: rgba(222, 226, 230, 0.6);
+    border-radius: 10px;
+    overflow: visible;
+    position: relative;
 }
 
 .scoreboard-bar {
-    background-color: #f7da21;
-    border-radius: 5px;
-    transition: width 0.3s ease-in-out;
+    background-color: #ffc107;
+    border-radius: 10px;
+    transition: width 0.4s ease-in-out;
+}
+
+.tier-emoji-marker {
+    position: absolute;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 1rem;
+    line-height: 1;
+    z-index: 3;
+    user-select: none;
+    transition: left 0.4s ease-in-out;
+
+    &.current {
+        opacity: 1 !important;
+        filter: none !important;
+        font-size: 1.15rem;
+        background: #ffffff;
+        border-radius: 50%;
+        padding: 2px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    &.next {
+        opacity: 0.4;
+        filter: grayscale(90%);
+        font-size: 0.9rem;
+    }
+}
+
+.rank-hover-popover {
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%) translateY(8px);
+    width: 250px;
+    background: #ffffff;
+    z-index: 1050;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.2s ease, transform 0.2s ease, visibility 0.2s;
+    pointer-events: none;
+
+    .tier-row {
+        &.bg-warning-subtle {
+            background-color: rgba(255, 193, 7, 0.18) !important;
+            color: #664d03;
+        }
+    }
 }
