@@ -54,3 +54,15 @@
 .cursor-pointer {
   cursor: pointer;
 }
+
+.word-badge {
+  transition: all 0.2s ease-in-out;
+
+  &.is-mielegramma {
+    background: linear-gradient(135deg, #fff3cd 0%, #ffe69c 100%) !important;
+    color: #664d03 !important;
+    border-color: #ffc107 !important;
+    font-weight: 700;
+    box-shadow: 0 2px 4px rgba(255, 193, 7, 0.25);
+  }
+}

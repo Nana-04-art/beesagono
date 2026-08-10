@@ -50,7 +50,13 @@
                     @if (group.foundWords.length > 0) {
                     <div class="d-flex flex-wrap gap-1">
                         @for (word of group.foundWords; track word) {
-                        <span class="badge bg-light text-dark border font-monospace">{{ word }}</span>
+                        <span class="badge border font-monospace word-badge"
+                            [class.is-mielegramma]="isMielegramma(word)" [class.bg-light]="!isMielegramma(word)"
+                            [class.text-dark]="!isMielegramma(word)">
+                            @if (isMielegramma(word)) {
+                            }
+                            {{ word }}
+                        </span>
                         }
                     </div>
                     } @else {
