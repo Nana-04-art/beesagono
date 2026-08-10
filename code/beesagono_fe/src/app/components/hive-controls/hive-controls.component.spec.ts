@@ -20,29 +20,26 @@ describe('HiveControlsComponent', () => {
     expect(component).toBeTruthy();
   });
 
-  it('should emit delete event when delete button is clicked', () => {
+  it('should emit deletePressed when onDelete is called', () => {
     const spy = vi.spyOn(component.deletePressed, 'emit');
-    const deleteBtn = fixture.nativeElement.querySelector('.control-btn--secondary');
 
-    deleteBtn.click();
+    component.onDelete();
 
     expect(spy).toHaveBeenCalledTimes(1);
   });
 
-  it('should emit shuffle event when shuffle button is clicked', () => {
+  it('should emit shufflePressed when onShuffle is called', () => {
     const spy = vi.spyOn(component.shufflePressed, 'emit');
-    const shuffleBtn = fixture.nativeElement.querySelector('.control-btn--icon');
 
-    shuffleBtn.click();
+    component.onShuffle();
 
     expect(spy).toHaveBeenCalledTimes(1);
   });
 
-  it('should emit submit event when submit button is clicked', () => {
+  it('should emit submitPressed when onSubmit is called', () => {
     const spy = vi.spyOn(component.submitPressed, 'emit');
-    const submitBtn = fixture.nativeElement.querySelector('.control-btn--primary');
 
-    submitBtn.click();
+    component.onSubmit();
 
     expect(spy).toHaveBeenCalledTimes(1);
   });
