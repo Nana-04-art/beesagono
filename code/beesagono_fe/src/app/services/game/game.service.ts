@@ -152,8 +152,8 @@ export class GameService {
         return Math.ceil((maxScore * nextTier.threshold) / 100);
     });
 
-    /** Check if the player has achieved the highest possible rank */
-    readonly isGeniusRank = computed<boolean>(() => {
+    // Check if the player has achieved Queen rank
+    readonly isQueenRank = computed<boolean>(() => {
         const currentBoard = this._board();
         if (!currentBoard || currentBoard.maxScore === 0) return false;
         return this.score() >= currentBoard.maxScore;
@@ -261,14 +261,14 @@ export class GameService {
         await this.loadDailyGame();
     }
 
-    handleInput(rawChar: string): void {
+    handleInput(rawChar: string): ValidationResult | void {
         if (this._loadStatus() !== 'ready') return;
 
         const normalized = rawChar.toUpperCase();
         if (normalized === 'BACKSPACE') {
             this.deleteLastChar();
         } else if (normalized === 'ENTER') {
-            this.submitWord();
+            return this.submitWord();
         } else if (/^[A-Z]$/.test(normalized)) {
             this._currentInput.update((prev) => prev + normalized);
         }

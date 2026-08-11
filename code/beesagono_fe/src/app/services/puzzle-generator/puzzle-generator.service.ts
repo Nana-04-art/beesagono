@@ -23,7 +23,7 @@ export class PuzzleGeneratorService {
     // provide a safe mock pangram to prevent runtime exceptions
     const safeCandidates = pangramCandidates.length > 0
       ? pangramCandidates
-      : ['BEESAGO'];
+      : ['ALBERGO'];
 
     const baseSeed = this.hashDateString(date);
 

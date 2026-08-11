@@ -1,4 +1,4 @@
-import { TestBed } from '@angular/core/testing'; 
+import { TestBed } from '@angular/core/testing';
 import { vi, describe, beforeEach, afterEach, it, expect } from 'vitest';
 import { StorageService } from './storage.service';
 import { GameState } from '../../models/game-state.model';
@@ -10,6 +10,7 @@ describe('StorageService', () => {
     version: 1,
     date: '2026-07-31',
     foundWords: ['A'],
+    invalidWords: [],
     score: 1,
     foundMielegrammi: [],
     isCompleted: false,
@@ -20,6 +21,7 @@ describe('StorageService', () => {
   const mockStateB: GameState = {
     ...mockStateA,
     foundWords: ['A', 'B'],
+    invalidWords: [],
     score: 2,
     lastUpdated: 2000,
   };

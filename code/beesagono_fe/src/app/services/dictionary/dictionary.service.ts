@@ -21,7 +21,7 @@ export class DictionaryService {
 
       const rawData: unknown = await response.json();
 
-      // Estraggo l'array sia se il JSON è un array nativo, sia se è un oggetto { "words": [...] }
+      // The array is extracted whether the JSON is a native array or an object { "words": [...] }
       let wordsArray: unknown[] = [];
 
       if (Array.isArray(rawData)) {

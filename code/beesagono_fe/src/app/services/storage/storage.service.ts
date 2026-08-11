@@ -56,6 +56,17 @@ export class StorageService {
         return null;
       }
 
+      // Sanitize and deduplicate invalidWords if present
+      if (Array.isArray(parsed.invalidWords)) {
+        parsed.invalidWords = Array.from(
+          new Set(
+            parsed.invalidWords.filter((item: unknown): item is string => typeof item === 'string')
+          )
+        );
+      } else {
+        parsed.invalidWords = [];
+      }
+
       return parsed as GameState;
     } catch (error) {
       console.error('[StorageService] Error occurred while parsing the saved state:', error);
@@ -65,6 +76,17 @@ export class StorageService {
         try {
           const parsedFallback = JSON.parse(fallbackRaw);
           if (this.isValidGameState(parsedFallback, date)) {
+            if (Array.isArray(parsedFallback.invalidWords)) {
+              parsedFallback.invalidWords = Array.from(
+                new Set(
+                  parsedFallback.invalidWords.filter(
+                    (item: unknown): item is string => typeof item === 'string'
+                  )
+                )
+              );
+            } else {
+              parsedFallback.invalidWords = [];
+            }
             return parsedFallback as GameState;
           }
         } catch {
@@ -99,6 +121,11 @@ export class StorageService {
    * Defensive validation check for loaded objects.
    */
   private isValidGameState(obj: any, expectedDate: string): obj is GameState {
+    const isInvalidWordsValid =
+      obj.invalidWords === undefined ||
+      (Array.isArray(obj.invalidWords) &&
+        obj.invalidWords.every((item: unknown) => typeof item === 'string'));
+
     return (
       obj &&
       typeof obj === 'object' &&
@@ -106,7 +133,8 @@ export class StorageService {
       obj.date === expectedDate &&
       Array.isArray(obj.foundWords) &&
       typeof obj.startTime === 'number' &&
-      typeof obj.lastUpdated === 'number'
+      typeof obj.lastUpdated === 'number' &&
+      isInvalidWordsValid
     );
   }
 }
