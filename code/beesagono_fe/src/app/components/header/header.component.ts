@@ -1,6 +1,6 @@
-import { Component, ElementRef, HostListener, computed, inject, output, signal } from '@angular/core';
+import { Component, HostListener, signal, input, output } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { GameService } from '../../services/game/game.service';
+import { RANK_TIERS } from '../../config/rank-tiers.config';
 import { ScoreboardComponent } from '../scoreboard/scoreboard.component';
 
 @Component({
@@ -11,48 +11,39 @@ import { ScoreboardComponent } from '../scoreboard/scoreboard.component';
   styleUrl: './header.component.scss',
 })
 export class HeaderComponent {
-  protected gameService = inject(GameService);
-  private elementRef = inject(ElementRef);
-  
-  readonly rank = this.gameService.rank;
-  readonly score = this.gameService.score;
+  // Import the degrees for the @for loop in the HTML.
+  readonly rankTiers = RANK_TIERS;
 
-  readonly helpRequested = output<void>();
-  readonly statsRequested = output<void>();
-  readonly shareRequested = output<void>();
-
+  readonly isScoreboardOpen = signal<boolean>(false);
   readonly isRulesOpen = signal<boolean>(false);
 
+  readonly score = input<number>(0);
+  readonly rank = input<{ label: string }>({ label: '🌱 Iniziato' });
+  readonly formattedDate = input<string>('');
+
+  readonly statsRequested = output<void>();
+  readonly shareRequested = output<void>();
+  readonly logoClicked = output<void>();
+
+  toggleScoreboard(): void {
+    this.isScoreboardOpen.update((open) => !open);
+  }
+
   toggleRules(): void {
-    this.isRulesOpen.update(value => !value);
+    this.isRulesOpen.update((open) => !open);
   }
 
   closeRules(): void {
     this.isRulesOpen.set(false);
   }
 
-  @HostListener('document:click', ['$event'])
-  onDocumentClick(event: MouseEvent): void {
-    if (!this.elementRef.nativeElement.contains(event.target as Node)) {
-      this.closeRules();
-    }
+  onLogoClick(): void {
+    this.logoClicked.emit();
   }
 
-  readonly formattedDate = computed(() => {
-    const board = this.gameService.board();
-    if (!board) return '';
-
-    const [year, month, day] = board.date.split('-').map(Number);
-    const dateObj = new Date(year, month - 1, day);
-
-    return dateObj.toLocaleDateString('it-IT', {
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric'
-    }).toUpperCase();
-  });
-
-  onLogoClick(): void {
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+  @HostListener('document:keydown.escape')
+  handleEscape(): void {
+    this.isScoreboardOpen.set(false);
+    this.isRulesOpen.set(false);
   }
 }

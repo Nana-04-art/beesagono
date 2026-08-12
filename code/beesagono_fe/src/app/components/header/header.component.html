@@ -3,11 +3,11 @@
     <div
         class="container-fluid max-w-7xl px-0 flex-nowrap justify-content-between align-items-center gap-2 position-relative">
         <!-- Left Section: Title & Date Badge -->
-        <div class="d-flex align-items-center gap-2 flex-shrink-0 cursor-pointer user-select-none"
+        <div class="d-flex align-items-center gap-1 gap-sm-2 flex-shrink-0 cursor-pointer user-select-none"
             (click)="onLogoClick()">
-            <span class="fs-2 animate-bounce-subtle" role="img" aria-label="Ape">🐝</span>
+            <span class="fs-4 fs-sm-2 animate-bounce-subtle" role="img" aria-label="Ape">🐝</span>
             <div class="d-flex flex-column">
-                <h1 class="fw-black fs-5 tracking-wider text-warning-emphasis m-0 lh-1">
+                <h1 class="fw-black fs-6 fs-sm-5 tracking-wider text-warning-emphasis m-0 lh-1">
                     MIELEGRAMMI
                 </h1>
                 <span class="date-subtitle fw-bold text-uppercase tracking-widest mt-1">
@@ -17,22 +17,28 @@
         </div>
 
         <!-- Center Section: Current Rank Indicator -->
-        <div class="d-none d-sm-block position-absolute start-50 translate-middle-x rank-popover-wrapper">
-            <!-- MAIN BADGE -->
-            <div
-                class="d-flex align-items-center bg-warning bg-opacity-10 border border-warning border-opacity-25 rounded-pill px-3 py-1 shadow-sm cursor-pointer rank-badge">
-                <div class="d-flex align-items-center gap-2">
-                    <span class="small text-secondary fw-medium">Grado:</span>
+        <div class="position-absolute start-50 translate-middle-x rank-popover-wrapper">
+            <!-- MAIN BADGE TRIGGER -->
+            <button type="button" id="scoreboard-trigger"
+                class="btn border-0 p-0 shadow-none d-flex align-items-center bg-warning bg-opacity-10 border border-warning border-opacity-25 rounded-pill px-2 px-sm-3 py-1 shadow-sm cursor-pointer rank-badge"
+                [attr.aria-expanded]="isScoreboardOpen()" aria-controls="scoreboard-popover"
+                aria-label="Mostra dettagli del grado e dello scoreboard" (click)="toggleScoreboard()">
+                <div class="d-flex align-items-center gap-1 gap-sm-2">
+                    <!-- La scritta "Grado:" si nasconde solo su schermi piccolissimi per salvare spazio -->
+                    <span class="small text-secondary fw-medium d-none d-sm-inline">Grado:</span>
                     <span class="small fw-bold text-warning-emphasis d-flex align-items-center gap-1">
                         <span>{{ rank().label }}</span>
                     </span>
                 </div>
-            </div>
+            </button>
 
-            <!-- Appears on hover/focus below the badge -->
-            <div class="scoreboard-popover position-absolute top-100 start-50 translate-middle-x mt-2">
+            <!-- Popover -->
+            @if (isScoreboardOpen()) {
+            <div id="scoreboard-popover"
+                class="scoreboard-popover position-absolute top-100 start-50 translate-middle-x mt-2">
                 <app-scoreboard [score]="score()" [rankName]="rank().label" />
             </div>
+            }
         </div>
 
         <!-- Right Section: Action Buttons -->
@@ -40,7 +46,7 @@
             <!-- Button: Rules -->
             <div class="position-relative rules-popover-wrapper">
                 <button type="button" class="header-btn" title="Come si gioca" aria-label="Istruzioni di gioco"
-                    (click)="toggleRules()">
+                    [attr.aria-expanded]="isRulesOpen()" aria-controls="rules-popover" (click)="toggleRules()">
                     <svg xmlns="http://www.w3.org/2000/svg" class="btn-icon" fill="none" viewBox="0 0 24 24"
                         stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -51,7 +57,7 @@
 
                 <!-- POPOVER RULES (Toggle con click) -->
                 @if (isRulesOpen()) {
-                <div
+                <div id="rules-popover"
                     class="card rules-popover border shadow-lg p-3 position-absolute top-100 start-0 start-sm-auto end-0 mt-2">
                     <div class="rules-popover-body">
                         <!-- Header Popover -->
@@ -59,7 +65,7 @@
                             <h6 class="fw-bold text-warning-emphasis mb-0 d-flex align-items-center gap-2 fs-6">
                                 <span>🐝</span> Regole del Gioco e Punteggio
                             </h6>
-                            <button type="button" class="btn-close small" aria-label="Chiudi"
+                            <button type="button" class="btn-close small" aria-label="Chiudi regole"
                                 (click)="closeRules()"></button>
                         </div>
 
@@ -103,7 +109,8 @@
                                 </table>
                             </div>
                             <p class="extra-small-text text-muted mb-0">
-                                *<strong>Mielegramma:</strong> Usa tutte e 7 le lettere dell'alveare senza ripetizioni.
+                                *<strong>Mielegramma:</strong> Usa tutte e 7 le lettere dell’alveare almeno una volta;
+                                le lettere possono ripetersi.
                             </p>
                         </div>
 
@@ -111,34 +118,17 @@
                         <div>
                             <span class="badge bg-warning text-dark mb-2">3. Gradi e Avanzamento</span>
                             <div class="d-flex flex-column gap-1 extra-small-text text-secondary">
-                                <div class="d-flex justify-content-between align-items-center border-bottom pb-1">
-                                    <span>🌱 Iniziato</span> <strong class="text-dark">1%</strong>
+                                @for (tier of rankTiers; track tier.label) {
+                                <div class="d-flex justify-content-between align-items-center border-bottom pb-1"
+                                    [class.bg-warning]="tier.threshold === 100"
+                                    [class.bg-opacity-25]="tier.threshold === 100"
+                                    [class.rounded]="tier.threshold === 100" [class.px-2]="tier.threshold === 100"
+                                    [class.py-1]="tier.threshold === 100" [class.fw-bold]="tier.threshold === 100"
+                                    [class.text-dark]="tier.threshold === 100">
+                                    <span>{{ tier.label }}</span>
+                                    <strong class="text-dark">{{ tier.threshold }}%</strong>
                                 </div>
-                                <div class="d-flex justify-content-between align-items-center border-bottom pb-1">
-                                    <span>🍃 Mente Fresca</span> <strong class="text-dark">4%</strong>
-                                </div>
-                                <div class="d-flex justify-content-between align-items-center border-bottom pb-1">
-                                    <span>🐣 Principiante</span> <strong class="text-dark">7%</strong>
-                                </div>
-                                <div class="d-flex justify-content-between align-items-center border-bottom pb-1">
-                                    <span>🚀 Avanzato</span> <strong class="text-dark">14%</strong>
-                                </div>
-                                <div class="d-flex justify-content-between align-items-center border-bottom pb-1">
-                                    <span>💡 Esperto</span> <strong class="text-dark">24%</strong>
-                                </div>
-                                <div class="d-flex justify-content-between align-items-center border-bottom pb-1">
-                                    <span>⭐ Eccellente</span> <strong class="text-dark">39%</strong>
-                                </div>
-                                <div class="d-flex justify-content-between align-items-center border-bottom pb-1">
-                                    <span>🧠 Genio</span> <strong class="text-dark">69%</strong>
-                                </div>
-                                <div class="d-flex justify-content-between align-items-center border-bottom pb-1">
-                                    <span>👑 Maestro</span> <strong class="text-dark">99%</strong>
-                                </div>
-                                <div
-                                    class="d-flex justify-content-between align-items-center bg-warning bg-opacity-25 rounded px-2 py-1 fw-bold text-dark">
-                                    <span>🐝 Ape Regina</span> <span>100%</span>
-                                </div>
+                                }
                             </div>
                         </div>
                     </div>

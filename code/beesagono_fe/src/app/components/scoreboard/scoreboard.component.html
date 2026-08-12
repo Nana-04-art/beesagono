@@ -20,7 +20,8 @@
     </div>
 
     <!-- Progress bar with only current & next emojis -->
-    <div class="progress-container position-relative mb-1 py-1 cursor-pointer">
+    <div class="progress-container position-relative mb-1 py-1 cursor-pointer" tabindex="0" role="region"
+        aria-label="Progresso e tabella gradi (seleziona o passa sopra con il mouse per i dettagli)">
 
         <div class="progress scoreboard-progress" role="progressbar" [attr.aria-valuenow]="score()"
             [attr.aria-valuemin]="0" [attr.aria-valuemax]="maxScore()"
@@ -41,7 +42,7 @@
             }
         </div>
 
-        <!-- POPOVER HOVER: Complete table of all grades -->
+        <!-- POPOVER HOVER/FOCUS: Complete table of all grades -->
         <div class="rank-hover-popover card border shadow-lg p-2 position-absolute">
             <div class="fw-bold text-warning-emphasis border-bottom pb-1 mb-2 extra-small-text">
                 🎯 Tutti i Gradi e Obiettivi (Max {{ maxScore() }} pt)

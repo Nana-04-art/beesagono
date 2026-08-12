@@ -1,12 +1,8 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { Component, input, signal, WritableSignal } from '@angular/core';
+import { Component, input } from '@angular/core';
 import { vi, describe, beforeEach, it, expect } from 'vitest';
-
 import { HeaderComponent } from './header.component';
-import { GameBoard } from '../../models/game-board.model';
-import { RankTier } from '../../models/rank.model';
 import { ScoreboardComponent } from '../scoreboard/scoreboard.component';
-import { GameService } from '../../services/game/game.service';
 
 @Component({
   selector: 'app-scoreboard',
@@ -18,25 +14,13 @@ class MockScoreboardComponent {
   rankName = input<string>();
 }
 
-class MockGameService {
-  readonly board: WritableSignal<GameBoard | null> = signal<GameBoard | null>(null);
-  readonly rank: WritableSignal<RankTier> = signal<RankTier>({ label: 'Iniziato', threshold: 0 });
-  readonly score: WritableSignal<number> = signal<number>(0);
-}
-
 describe('HeaderComponent', () => {
   let component: HeaderComponent;
   let fixture: ComponentFixture<HeaderComponent>;
-  let mockGameService: MockGameService;
 
   beforeEach(async () => {
-    mockGameService = new MockGameService();
-
     await TestBed.configureTestingModule({
       imports: [HeaderComponent],
-      providers: [
-        { provide: GameService, useValue: mockGameService }
-      ]
     })
       .overrideComponent(HeaderComponent, {
         remove: { imports: [ScoreboardComponent] },
@@ -46,16 +30,31 @@ describe('HeaderComponent', () => {
 
     fixture = TestBed.createComponent(HeaderComponent);
     component = fixture.componentInstance;
+
+    fixture.componentRef.setInput('score', 120);
+    fixture.componentRef.setInput('rank', { label: '🐝 Ape Operaia' });
+    fixture.componentRef.setInput('formattedDate', '5 AGOSTO 2026');
+
     fixture.detectChanges();
+    await fixture.whenStable();
   });
 
   it('should create the header component instance', () => {
     expect(component).toBeTruthy();
   });
 
-  describe('Rules Popover State', () => {
-    it('should initialize isRulesOpen as false', () => {
+  describe('Scoreboard & Rules Toggle State', () => {
+    it('should initialize states as false', () => {
+      expect(component.isScoreboardOpen()).toBe(false);
       expect(component.isRulesOpen()).toBe(false);
+    });
+
+    it('should toggle isScoreboardOpen when toggleScoreboard() is called', () => {
+      component.toggleScoreboard();
+      expect(component.isScoreboardOpen()).toBe(true);
+
+      component.toggleScoreboard();
+      expect(component.isScoreboardOpen()).toBe(false);
     });
 
     it('should toggle isRulesOpen when toggleRules() is called', () => {
@@ -72,85 +71,51 @@ describe('HeaderComponent', () => {
       expect(component.isRulesOpen()).toBe(false);
     });
 
-    it('should close rules when clicking outside the component', () => {
+    it('should close all popovers when Escape key is pressed', () => {
+      component.isScoreboardOpen.set(true);
       component.isRulesOpen.set(true);
 
-      const outsideElement = document.createElement('div');
-      document.body.appendChild(outsideElement);
+      component.handleEscape();
 
-      const clickEvent = new MouseEvent('click', { bubbles: true });
-      outsideElement.dispatchEvent(clickEvent);
-
+      expect(component.isScoreboardOpen()).toBe(false);
       expect(component.isRulesOpen()).toBe(false);
-
-      document.body.removeChild(outsideElement);
     });
   });
 
-  describe('Formatted Date Logic', () => {
-    it('should return empty string when board is null', () => {
-      mockGameService.board.set(null);
-      fixture.detectChanges();
-
-      expect(component.formattedDate()).toBe('');
-    });
-
-    it('should format date string YYYY-MM-DD into Italian uppercase long date format', () => {
-      const mockBoard: GameBoard = {
-        date: '2026-08-05',
-        seed: 'test-seed',
-        cells: [],
-        possibleWords: [],
-        mielegrammi: [],
-        maxScore: 100
-      };
-
-      mockGameService.board.set(mockBoard);
-      fixture.detectChanges();
-
-      const result = component.formattedDate();
-      expect(result).toContain('5');
-      expect(result).toContain('AGOSTO');
-      expect(result).toContain('2026');
+  describe('Input Signals', () => {
+    it('should receive inputs correctly', () => {
+      expect(component.score()).toBe(120);
+      expect(component.rank().label).toBe('🐝 Ape Operaia');
+      expect(component.formattedDate()).toBe('5 AGOSTO 2026');
     });
   });
 
   describe('Outputs and Events', () => {
-    it('should emit helpRequested when helpRequested.emit() is called', () => {
-      let emitted = false;
-      component.helpRequested.subscribe(() => (emitted = true));
-
-      component.helpRequested.emit();
-
-      expect(emitted).toBe(true);
-    });
-
     it('should emit statsRequested when statsRequested.emit() is called', () => {
-      let emitted = false;
-      component.statsRequested.subscribe(() => (emitted = true));
+      const spy = vi.fn();
+      component.statsRequested.subscribe(spy);
 
       component.statsRequested.emit();
 
-      expect(emitted).toBe(true);
+      expect(spy).toHaveBeenCalledTimes(1);
     });
 
     it('should emit shareRequested when shareRequested.emit() is called', () => {
-      let emitted = false;
-      component.shareRequested.subscribe(() => (emitted = true));
+      const spy = vi.fn();
+      component.shareRequested.subscribe(spy);
 
       component.shareRequested.emit();
 
-      expect(emitted).toBe(true);
+      expect(spy).toHaveBeenCalledTimes(1);
     });
-  });
 
-  describe('User Interaction Methods', () => {
-    it('should call window.scrollTo with top:0 and smooth behavior on logo click', () => {
-      const scrollToSpy = vi.spyOn(window, 'scrollTo').mockImplementation(() => { });
+    it('should emit logoClicked when onLogoClick is called', () => {
+      const spy = vi.fn();
+      component.logoClicked.subscribe(spy);
 
       component.onLogoClick();
 
-      expect(scrollToSpy).toHaveBeenCalledWith({ top: 0, behavior: 'smooth' });
+      expect(spy).toHaveBeenCalledTimes(1);
     });
   });
 });

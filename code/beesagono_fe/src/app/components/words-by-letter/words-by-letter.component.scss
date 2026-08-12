@@ -12,7 +12,8 @@
 .letter-card {
   width: 100%;
   max-width: 504px;
-  height: 110px;
+  min-height: 110px;
+  height: auto;
   margin: 0 auto;
   border-radius: 14px;
   background-color: #ffffff;
@@ -65,4 +66,10 @@
     font-weight: 700;
     box-shadow: 0 2px 4px rgba(255, 193, 7, 0.25);
   }
+}
+
+button.btn:focus-visible {
+  outline: 2px solid #ffc107 !important;
+  outline-offset: 2px !important;
+  border-radius: 8px !important;
 }

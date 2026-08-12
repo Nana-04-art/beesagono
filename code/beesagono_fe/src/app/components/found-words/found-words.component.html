@@ -6,7 +6,7 @@
 
         <!-- Title and Icon -->
         <div class="d-flex align-items-center gap-2">
-            <span class="fs-6" role="img" aria-label="Libro"></span>
+            <span class="fs-6" role="img" aria-label="Libro">📖</span>
             <span class="fw-bold fs-6 text-dark m-0">Parole</span>
             <svg class="chevron text-secondary flex-shrink-0 ms-1" [class.open]="isExpanded()" fill="none"
                 stroke="currentColor" viewBox="0 0 24 24" style="width: 14px; height: 14px;">
@@ -16,9 +16,9 @@
 
         <!-- Counter Badges -->
         <div class="d-flex align-items-center gap-2">
-            <!-- Total Words Found -->
+            <!-- Total Words Found (Solamente foundWords) -->
             <span class="badge bg-light text-dark border px-2.5 py-1.5 fw-bold">
-                {{ totalFoundCount() }}/{{ totalPossibleWords() }}
+                {{ foundWords().length }}/{{ totalPossibleWords() }}
             </span>
 
             <!-- Total Mielegrammi Found -->
@@ -33,7 +33,7 @@
     <!-- Expanded Content -->
     @if (isExpanded()) {
     <div class="card-body border-top p-3 pt-2 animate-fade-in">
-        @if (foundWords().length === 0 && foundMielegrammi().length === 0) {
+        @if (foundWords().length === 0) {
         <p class="text-muted text-center fst-italic small mb-0 py-2">
             Ancora nessuna parola trovata. Inizia a digitare!
         </p>
@@ -41,15 +41,7 @@
         <ul class="list-unstyled d-flex flex-wrap gap-2 mb-0 words-grid">
             @for (word of foundWords(); track word) {
             <li>
-                <span class="badge word-chip font-monospace">
-                    {{ word }}
-                </span>
-            </li>
-            }
-
-            @for (word of foundMielegrammi(); track word) {
-            <li>
-                <span class="badge word-chip mielegramma font-monospace">
+                <span class="badge word-chip font-monospace" [class.mielegramma]="isMielegramma(word)">
                     {{ word }}
                 </span>
             </li>

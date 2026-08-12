@@ -1,19 +1,19 @@
 <div class="honeycomb-container">
-    <svg viewBox="0 0 320 320" class="honeycomb-svg" role="region" aria-label="Letter grid of the day">
-        @for (cell of cells(); track cell.id) {
+    <svg class="honeycomb-svg" viewBox="0 0 320 320" role="group" aria-label="Alveare delle lettere">
+        @for (cell of cells(); track cell.letter) {
         @let coords = getHexCoordinates(cell.position);
 
-        <g class="hex-group" role="button" tabindex="0"
-            [attr.aria-label]="cell.isCenter ? 'Central letter ' + cell.letter : 'Letter ' + cell.letter"
-            (keydown)="onKeyDown($event, cell.letter)">
-            <!-- Click added directly to the polygon -->
-            <polygon points="0,-40 34.64,-20 34.64,20 0,40 -34.64,20 -34.64,-20"
-                [attr.transform]="'translate(' + coords.x + ',' + coords.y + ')'" [class.hex-tile]="true"
-                [class.is-center]="cell.isCenter" (click)="onCellClick(cell.letter)" />
+        <g class="hex-group" tabindex="0" role="button"
+            [attr.aria-label]="'Lettera ' + cell.letter + (cell.isCenter ? ' (centrale e obbligatoria)' : '')"
+            (click)="onCellClick(cell.letter)" (keydown)="onKeyDown($event, cell.letter)"
+            [attr.transform]="'translate(' + coords.x + ',' + coords.y + ')'">
 
-            <!-- Click added directly to the text -->
-            <text [attr.x]="coords.x" [attr.y]="coords.y" class="hex-text" [class.is-center-text]="cell.isCenter"
-                (click)="onCellClick(cell.letter)">
+            <!-- Polygon Hexagon Tile -->
+            <polygon class="hex-tile" [class.is-center]="cell.isCenter"
+                points="0,-40 34.64,-20 34.64,20 0,40 -34.64,20 -34.64,-20" />
+
+            <!-- Hexagon Text -->
+            <text class="hex-text" [class.is-center-text]="cell.isCenter">
                 {{ cell.letter }}
             </text>
         </g>

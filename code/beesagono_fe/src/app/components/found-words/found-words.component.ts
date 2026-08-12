@@ -9,7 +9,7 @@ import { Component, computed, input, signal } from '@angular/core';
 })
 export class FoundWordsComponent {
   // Signal inputs for found words,  optional pangrams (Mielegrammi), and total counts
-  foundWords = input.required<string[]>();
+  foundWords = input<string[]>([]);
   foundMielegrammi = input<string[]>([]);
   totalPossibleWords = input<number>(0);
   totalPossibleMielegrammi = input<number>(0);
@@ -29,7 +29,7 @@ export class FoundWordsComponent {
 
   // Checks whether a given word is classified as a Mielegramma (pangram)
   isMielegramma(word: string): boolean {
-    return this.mielegrammiSet().has(word.toUpperCase());
+    return this.foundMielegrammi().includes(word);
   }
 
   // Toggles the accordion expansion state

@@ -26,11 +26,16 @@
 .progress-container {
     padding-top: 8px !important;
     padding-bottom: 8px !important;
+    position: relative;
 
-    &:hover .rank-hover-popover {
-        opacity: 1;
-        visibility: visible;
-        transform: translateX(-50%) translateY(0);
+    /* Mostra il popover sia con :hover che con :focus-within (tastiera/touch) */
+    &:hover,
+    &:focus-within {
+        .rank-hover-popover {
+            opacity: 1;
+            visibility: visible;
+            transform: translateX(-50%) translateY(0);
+        }
     }
 }
 
@@ -89,6 +94,14 @@
     visibility: hidden;
     transition: opacity 0.2s ease, transform 0.2s ease, visibility 0.2s;
     pointer-events: none;
+
+    /* Supporto per visibilità forzata via classe (es. per click su mobile) */
+    &.is-visible {
+        opacity: 1;
+        visibility: visible;
+        transform: translateX(-50%) translateY(0);
+        pointer-events: auto;
+    }
 
     .tier-row {
         &.bg-warning-subtle {
