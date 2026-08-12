@@ -15,15 +15,10 @@ export interface GameBoard {
    */
   cells: Cell[];
 
-  /**
-   * DERIVED / READ-ONLY CACHE — computed once at puzzle generation time
-   * from `cells`, and never mutated independently afterward (including
-   * during shuffle). Do not write to these fields directly; regenerate
-   * them only if `cells` itself is rebuilt from scratch.
-   */
-  readonly centerLetter: string;
-  readonly outerLetters: string[];
-  readonly availableLetters: string[];
+ // NOTE: centerLetter / outerLetters / availableLetters are intentionally
+  // NOT stored here. They are cheap to derive from `cells` and storing them
+  // separately would duplicate the single source of truth. See the pure
+  // selector functions in `game-board.selectors.ts`, Section 3a below.
 
   /** List of all valid target words for today's board (length >= MIN_WORD_LENGTH) */
   possibleWords: string[];
@@ -33,9 +28,4 @@ export interface GameBoard {
 
   /** Maximum possible score for this board (sum of word points + mielegramma bonuses) */
   maxScore: number;
-}
-
-export interface RankTier {
-  threshold: number; // minimum % (0-100) required to reach this rank
-  label: string;
 }
