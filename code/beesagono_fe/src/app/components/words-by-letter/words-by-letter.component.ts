@@ -1,11 +1,10 @@
 import { Component, computed, effect, inject, signal } from '@angular/core';
 import { GameService } from '../../services/game/game.service';
 import { LetterGroup } from '../../models/letter-group.model';
-import { NgClass } from '@angular/common';
 
 @Component({
   selector: 'app-words-by-letter',
-  imports: [NgClass],
+  imports: [],
   templateUrl: './words-by-letter.component.html',
   styleUrl: './words-by-letter.component.scss',
 })

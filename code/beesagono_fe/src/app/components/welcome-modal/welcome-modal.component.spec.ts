@@ -1,7 +1,7 @@
 import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
 import { signal } from '@angular/core';
 import { WelcomeModalComponent } from './welcome-modal.component';
-import { WelcomeNoticeService } from '../../services/welcome-notice/welcome-notice.service';
+import { WelcomeNoticeService } from '../../services/welcome-notice/welcome-notice.service'; 
 
 class MockWelcomeNoticeService {
   isNoticeOpen = signal<boolean>(false);

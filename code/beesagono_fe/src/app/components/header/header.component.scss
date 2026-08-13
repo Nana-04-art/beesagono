@@ -48,7 +48,6 @@
         transform: translateY(-1px);
     }
 
-    /* Click Effect */
     &:active {
         transform: translateY(0);
     }
@@ -86,56 +85,13 @@
 
     .scoreboard-popover {
         width: 280px;
-        visibility: hidden;
-        opacity: 0;
-        transform: translateX(-50%) scale(0.9) translateY(-6px);
-        transition: opacity 0.2s ease, transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), visibility 0.2s;
-        pointer-events: none;
+        visibility: visible;
+        opacity: 1;
+        pointer-events: auto;
         view-transition-name: rank-card-popover;
     }
-
-    &:hover .scoreboard-popover {
-        visibility: visible;
-        opacity: 1;
-        transform: translateX(-50%) scale(1) translateY(0);
-        pointer-events: auto;
-    }
 }
 
-.rules-popover-wrapper {
-    z-index: 1050;
-
-    .rules-popover {
-        width: 320px;
-        max-height: 380px;
-        /* Rimosse visibility: hidden, opacity: 0 e transform negativi */
-        visibility: visible;
-        opacity: 1;
-        pointer-events: auto;
-
-        background-color: #ffffff;
-        border-color: rgba(245, 158, 11, 0.3) !important;
-        view-transition-name: rules-card-popover;
-        z-index: 1050;
-        min-width: 300px;
-        max-width: 360px;
-    }
-
-    .rules-popover-body {
-        max-height: 350px;
-        overflow-y: auto;
-        padding-right: 4px;
-
-        &::-webkit-scrollbar {
-            width: 4px;
-        }
-
-        &::-webkit-scrollbar-thumb {
-            background-color: rgba(245, 158, 11, 0.4);
-            border-radius: 4px;
-        }
-    }
-}
 
 .extra-small-text {
     font-size: 0.75rem;
@@ -145,4 +101,10 @@
 ::view-transition-old(rank-card-popover),
 ::view-transition-new(rank-card-popover) {
     animation-duration: 0.25s;
+}
+
+.rules-popover-wrapper,
+.stats-popover-wrapper {
+    position: relative;
+    z-index: 1050;
 }

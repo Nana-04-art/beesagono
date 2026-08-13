@@ -9,7 +9,7 @@ export const routes: Routes = [
     {
         path: 'play',
         loadComponent: () =>
-            import('./components/hive-view/hive-view.component').then(m => m.HiveViewComponent),
+            import('./pages/hive-view/hive-view.component').then(m => m.HiveViewComponent),
         title: 'Beesagono - Il Gioco del Miele'
     },
     {

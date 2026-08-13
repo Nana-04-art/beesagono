@@ -1,5 +1,5 @@
 import { Component, input, output } from '@angular/core';
-import { Cell } from '../../models/cell.model';
+import { Cell } from '../../models/cell.model'; 
 
 @Component({
   selector: 'app-honeycomb-grid',

@@ -1,7 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { HoneycombGridComponent } from './honeycomb-grid.component';
 import { describe, beforeEach, it, expect, vi } from 'vitest';
-import { Cell } from '../../models/cell.model';
+import { Cell } from '../../models/cell.model'; 
 
 describe('HoneycombGridComponent', () => {
   let component: HoneycombGridComponent;

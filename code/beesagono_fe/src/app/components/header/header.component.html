@@ -2,29 +2,24 @@
     class="navbar navbar-expand sticky-top bg-white bg-opacity-75 border-bottom border-warning border-opacity-25 backdrop-blur py-2 px-3 px-lg-4">
     <div
         class="container-fluid max-w-7xl px-0 flex-nowrap justify-content-between align-items-center gap-2 position-relative">
-        <!-- Left Section: Title & Date Badge -->
+
+        <!-- Left Section: Title & Date -->
         <div class="d-flex align-items-center gap-1 gap-sm-2 flex-shrink-0 cursor-pointer user-select-none"
             (click)="onLogoClick()">
             <span class="fs-4 fs-sm-2 animate-bounce-subtle" role="img" aria-label="Ape">🐝</span>
             <div class="d-flex flex-column">
-                <h1 class="fw-black fs-6 fs-sm-5 tracking-wider text-warning-emphasis m-0 lh-1">
-                    MIELEGRAMMI
-                </h1>
-                <span class="date-subtitle fw-bold text-uppercase tracking-widest mt-1">
-                    {{ formattedDate() }}
-                </span>
+                <h1 class="fw-black fs-6 fs-sm-5 tracking-wider text-warning-emphasis m-0 lh-1">MIELEGRAMMI</h1>
+                <span class="date-subtitle fw-bold text-uppercase tracking-widest mt-1">{{ formattedDate() }}</span>
             </div>
         </div>
 
         <!-- Center Section: Current Rank Indicator -->
         <div class="position-absolute start-50 translate-middle-x rank-popover-wrapper">
-            <!-- MAIN BADGE TRIGGER -->
             <button type="button" id="scoreboard-trigger"
                 class="btn border-0 p-0 shadow-none d-flex align-items-center bg-warning bg-opacity-10 border border-warning border-opacity-25 rounded-pill px-2 px-sm-3 py-1 shadow-sm cursor-pointer rank-badge"
-                [attr.aria-expanded]="isScoreboardOpen()" aria-controls="scoreboard-popover"
-                aria-label="Mostra dettagli del grado e dello scoreboard" (click)="toggleScoreboard()">
+                [attr.aria-expanded]="activePopover() === 'scoreboard'" aria-controls="scoreboard-popover"
+                (click)="toggleScoreboard()">
                 <div class="d-flex align-items-center gap-1 gap-sm-2">
-                    <!-- La scritta "Grado:" si nasconde solo su schermi piccolissimi per salvare spazio -->
                     <span class="small text-secondary fw-medium d-none d-sm-inline">Grado:</span>
                     <span class="small fw-bold text-warning-emphasis d-flex align-items-center gap-1">
                         <span>{{ rank().label }}</span>
@@ -32,8 +27,7 @@
                 </div>
             </button>
 
-            <!-- Popover -->
-            @if (isScoreboardOpen()) {
+            @if (activePopover() === 'scoreboard') {
             <div id="scoreboard-popover"
                 class="scoreboard-popover position-absolute top-100 start-50 translate-middle-x mt-2">
                 <app-scoreboard [score]="score()" [rankName]="rank().label" />
@@ -43,10 +37,12 @@
 
         <!-- Right Section: Action Buttons -->
         <div class="d-flex align-items-center gap-1 gap-sm-2 flex-shrink-0">
-            <!-- Button: Rules -->
+
+            <!-- Button 1: Rules -->
             <div class="position-relative rules-popover-wrapper">
-                <button type="button" class="header-btn" title="Come si gioca" aria-label="Istruzioni di gioco"
-                    [attr.aria-expanded]="isRulesOpen()" aria-controls="rules-popover" (click)="toggleRules()">
+                <button type="button" class="header-btn" [class.active]="activePopover() === 'rules'"
+                    title="Come si gioca" [attr.aria-expanded]="activePopover() === 'rules'"
+                    aria-controls="rules-popover" (click)="toggleRules()">
                     <svg xmlns="http://www.w3.org/2000/svg" class="btn-icon" fill="none" viewBox="0 0 24 24"
                         stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -55,101 +51,36 @@
                     <span class="d-none d-sm-inline extra-small fw-semibold">Regole</span>
                 </button>
 
-                <!-- POPOVER RULES (Toggle con click) -->
-                @if (isRulesOpen()) {
-                <div id="rules-popover"
-                    class="card rules-popover border shadow-lg p-3 position-absolute top-100 start-0 start-sm-auto end-0 mt-2">
-                    <div class="rules-popover-body">
-                        <!-- Header Popover -->
-                        <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-3">
-                            <h6 class="fw-bold text-warning-emphasis mb-0 d-flex align-items-center gap-2 fs-6">
-                                <span>🐝</span> Regole del Gioco e Punteggio
-                            </h6>
-                            <button type="button" class="btn-close small" aria-label="Chiudi regole"
-                                (click)="closeRules()"></button>
-                        </div>
-
-                        <!-- GAME RULES -->
-                        <div class="mb-3">
-                            <span class="badge bg-warning text-dark mb-1">1. Regole del Gioco</span>
-                            <ul class="ps-3 mb-0 extra-small-text text-secondary">
-                                <li><strong>Lettera Centrale:</strong> Obbligatoria in ogni parola.</li>
-                                <li><strong>Lunghezza Minima:</strong> Almeno 4 lettere.</li>
-                                <li><strong>Uso Lettere:</strong> Solo le 7 della griglia (ripetibili).</li>
-                                <li><strong>Dizionario:</strong> La parola deve essere valida.</li>
-                                <li><strong>Nessun Duplicato:</strong> Non inserire parole già trovate.</li>
-                            </ul>
-                        </div>
-
-                        <!-- SCORE CALCULATION -->
-                        <div class="mb-3">
-                            <span class="badge bg-warning text-dark mb-1">2. Calcolo del Punteggio</span>
-                            <div class="table-responsive">
-                                <table class="table table-sm table-bordered extra-small-text mb-1 align-middle">
-                                    <thead class="table-light">
-                                        <tr>
-                                            <th>Tipo</th>
-                                            <th>Punti</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <tr>
-                                            <td>Parola di 4 lettere</td>
-                                            <td>1 pt fisso</td>
-                                        </tr>
-                                        <tr>
-                                            <td>Parola di 5+ lettere</td>
-                                            <td>1 pt per ogni lettera</td>
-                                        </tr>
-                                        <tr class="table-warning">
-                                            <td><strong>Mielegramma</strong></td>
-                                            <td><strong>Lunghezza + 7 pt bonus</strong></td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </div>
-                            <p class="extra-small-text text-muted mb-0">
-                                *<strong>Mielegramma:</strong> Usa tutte e 7 le lettere dell’alveare almeno una volta;
-                                le lettere possono ripetersi.
-                            </p>
-                        </div>
-
-                        <!-- GRADES AND LEVELS -->
-                        <div>
-                            <span class="badge bg-warning text-dark mb-2">3. Gradi e Avanzamento</span>
-                            <div class="d-flex flex-column gap-1 extra-small-text text-secondary">
-                                @for (tier of rankTiers; track tier.label) {
-                                <div class="d-flex justify-content-between align-items-center border-bottom pb-1"
-                                    [class.bg-warning]="tier.threshold === 100"
-                                    [class.bg-opacity-25]="tier.threshold === 100"
-                                    [class.rounded]="tier.threshold === 100" [class.px-2]="tier.threshold === 100"
-                                    [class.py-1]="tier.threshold === 100" [class.fw-bold]="tier.threshold === 100"
-                                    [class.text-dark]="tier.threshold === 100">
-                                    <span>{{ tier.label }}</span>
-                                    <strong class="text-dark">{{ tier.threshold }}%</strong>
-                                </div>
-                                }
-                            </div>
-                        </div>
-                    </div>
+                @if (activePopover() === 'rules') {
+                <div class="position-absolute top-100 end-0 mt-2">
+                    <app-rules (close)="closeAll()" />
                 </div>
                 }
             </div>
 
             <!-- Button 2: Statistics -->
-            <button type="button" class="header-btn" title="Le tue statistiche" aria-label="Apri le statistiche"
-                (click)="statsRequested.emit()">
-                <svg xmlns="http://www.w3.org/2000/svg" class="btn-icon" fill="none" viewBox="0 0 24 24"
-                    stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                </svg>
-                <span class="d-none d-sm-inline extra-small fw-semibold">Stats</span>
-            </button>
+            <div class="position-relative stats-popover-wrapper">
+                <button type="button" class="header-btn" [class.active]="activePopover() === 'stats'"
+                    title="Le tue statistiche" [attr.aria-expanded]="activePopover() === 'stats'"
+                    aria-controls="stats-popover" (click)="toggleStats()">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="btn-icon" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                    </svg>
+                    <span class="d-none d-sm-inline extra-small fw-semibold">Statistiche</span>
+                </button>
+
+                @if (activePopover() === 'stats') {
+                <div class="position-absolute top-100 end-0 mt-2">
+                    <app-stats />
+                </div>
+                }
+            </div>
 
             <!-- Button 3: Share -->
             <button type="button" class="header-btn header-btn-primary" title="Condividi risultato"
-                aria-label="Condividi punteggio" (click)="shareRequested.emit()">
+                (click)="shareRequested.emit()">
                 <svg xmlns="http://www.w3.org/2000/svg" class="btn-icon" fill="none" viewBox="0 0 24 24"
                     stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -157,6 +88,7 @@
                 </svg>
                 <span class="d-none d-sm-inline extra-small fw-bold">Condividi</span>
             </button>
+
         </div>
     </div>
 </nav>

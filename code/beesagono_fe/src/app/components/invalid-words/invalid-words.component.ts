@@ -1,5 +1,5 @@
 import { Component, computed, inject, signal } from '@angular/core';
-import { GameService } from '../../services/game/game.service';
+import { GameService } from '../../services/game/game.service'; 
 
 @Component({
   selector: 'app-invalid-words',

@@ -9,9 +9,4 @@ import { RANK_TIERS } from '../../../config/rank-tiers.config';
 })
 export class RulesComponent {
   readonly rankTiers = RANK_TIERS;
-  readonly close = output<void>();
-
-  closeRules(): void {
-    this.close.emit();
-  }
 }

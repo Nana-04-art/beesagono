@@ -5,7 +5,6 @@
             <h6 class="fw-bold text-warning-emphasis mb-0 d-flex align-items-center gap-2 fs-6">
                 <span>🐝</span> Regole del Gioco e Punteggio
             </h6>
-            <button type="button" class="btn-close small" aria-label="Chiudi regole" (click)="closeRules()"></button>
         </div>
 
         <!-- GAME RULES -->
@@ -22,7 +21,10 @@
 
         <!-- SCORE CALCULATION -->
         <div class="mb-3">
-            <span class="badge bg-warning text-dark mb-1">2. Calcolo del Punteggio</span>
+            <span class="badge bg-warning text-dark mb-1">2. Calcolo del Punteggio & Bonus</span>
+            <p class="extra-small-text text-secondary mb-2">
+                Le parole assegnano punti base in base alla lunghezza, a cui si sommano i bonus:
+            </p>
             <div class="table-responsive">
                 <table class="table table-sm table-bordered extra-small-text mb-1 align-middle">
                     <thead class="table-light">
@@ -34,11 +36,11 @@
                     <tbody>
                         <tr>
                             <td>Parola di 4 lettere</td>
-                            <td>1 pt fisso</td>
+                            <td><strong>1 pt</strong> fisso</td>
                         </tr>
                         <tr>
                             <td>Parola di 5+ lettere</td>
-                            <td>1 pt per ogni lettera</td>
+                            <td><strong>1 pt</strong> per ogni lettera</td>
                         </tr>
                         <tr class="table-warning">
                             <td><strong>Mielegramma</strong></td>
@@ -48,14 +50,23 @@
                 </table>
             </div>
             <p class="extra-small-text text-muted mb-0">
-                *<strong>Mielegramma:</strong> Usa tutte e 7 le lettere dell’alveare almeno una volta; le lettere
-                possono ripetersi.
+                *<strong>Mielegramma:</strong> Usa tutte e 7 le lettere dell’alveare almeno una volta.
             </p>
+        </div>
+
+        <!-- STREAKS & SEASON RANKS -->
+        <div class="mb-3">
+            <span class="badge bg-warning text-dark mb-1">3. Serie (Streak) e Stagioni</span>
+            <ul class="ps-3 mb-0 extra-small-text text-secondary">
+                <li><strong>Serie (Streak):</strong> Giocando e completando le sfide nei giorni consecutivi incrementi la tua serie di vittorie, accumulando punti <em>Bonus Serie</em> stagionali.</li>
+                <li><strong>Totale Stagionale:</strong> È la somma tra i punti base delle parole trovate e i punti bonus accumulati grazie alle streak.</li>
+                <li><strong>Rank Stagionale:</strong> Il tuo livello (es. Uovo d'Ape) progredisce in percentuale in base ai punti totali ottenuti nella stagione in corso.</li>
+            </ul>
         </div>
 
         <!-- GRADES AND LEVELS -->
         <div>
-            <span class="badge bg-warning text-dark mb-2">3. Gradi e Avanzamento</span>
+            <span class="badge bg-warning text-dark mb-2">4. Gradi e Avanzamento</span>
             <div class="d-flex flex-column gap-1 extra-small-text text-secondary">
                 @for (tier of rankTiers; track tier.label) {
                 <div class="d-flex justify-content-between align-items-center border-bottom pb-1"

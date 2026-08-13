@@ -19,9 +19,9 @@
         </div>
     </div>
 
-    <!-- Progress bar with only current & next emojis -->
-    <div class="progress-container position-relative mb-1 py-1 cursor-pointer" tabindex="0" role="region"
-        aria-label="Progresso e tabella gradi (seleziona o passa sopra con il mouse per i dettagli)">
+    <!-- Progress bar -->
+    <div class="progress-container position-relative mb-2 py-1" tabindex="0" role="region"
+        aria-label="Progresso e tabella gradi">
 
         <div class="progress scoreboard-progress" role="progressbar" [attr.aria-valuenow]="score()"
             [attr.aria-valuemin]="0" [attr.aria-valuemax]="maxScore()"
@@ -41,35 +41,16 @@
             </span>
             }
         </div>
-
-        <!-- POPOVER HOVER/FOCUS: Complete table of all grades -->
-        <div class="rank-hover-popover card border shadow-lg p-2 position-absolute">
-            <div class="fw-bold text-warning-emphasis border-bottom pb-1 mb-2 extra-small-text">
-                🎯 Tutti i Gradi e Obiettivi (Max {{ maxScore() }} pt)
-            </div>
-            <div class="d-flex flex-column gap-1">
-                @for (tier of rankTiersWithPoints(); track tier.threshold) {
-                <div class="tier-row d-flex justify-content-between align-items-center px-2 py-1 rounded extra-small-text"
-                    [class.bg-warning-subtle]="tier.isUnlocked" [class.fw-bold]="tier.isUnlocked">
-                    <span>{{ tier.label }}</span>
-                    <span class="text-muted">
-                        <strong>{{ tier.requiredPoints }}</strong> pt
-                        <small>({{ tier.threshold }}%)</small>
-                    </span>
-                </div>
-                }
-            </div>
-        </div>
-
     </div>
 
     <!-- NEXT GOAL INFO -->
-    <div class="text-end">
+    <div class="text-end mt-2 pt-1 border-top">
         <span class="extra-small-text text-secondary">
             @if (pointsToNextRank() > 0) {
-            Mancano {{ pointsToNextRank() }} {{ pointsToNextRank() === 1 ? 'punto' : 'punti' }} al prossimo grado
+            Mancano <strong>{{ pointsToNextRank() }}</strong> {{ pointsToNextRank() === 1 ? 'punto' : 'punti' }} al
+            prossimo grado
             } @else {
-            Grado massimo raggiunto! 🐝
+            🎉 Grado massimo raggiunto (Regina)!
             }
         </span>
     </div>

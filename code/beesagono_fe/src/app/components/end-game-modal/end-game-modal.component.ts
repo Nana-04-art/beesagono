@@ -8,7 +8,7 @@ import {
   viewChild,
 } from '@angular/core';
 
-import { ShareScorePayload } from '../../models/share-score.model';
+import { ShareScorePayload } from '../../models/share-score.model'; 
 
 @Component({
   selector: 'app-end-game-modal',
