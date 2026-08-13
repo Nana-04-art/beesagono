@@ -163,6 +163,7 @@ export class HiveViewComponent implements OnInit {
     if (this.gameService.loadStatus() !== 'ready') return;
 
     if (event.key === 'Enter') {
+      event.preventDefault();
       this.submit();
     } else if (event.key === 'Backspace') {
       this.gameService.deleteLastChar();

@@ -11,7 +11,6 @@ describe('HiveViewComponent', () => {
     let component: HiveViewComponent;
     let fixture: ComponentFixture<HiveViewComponent>;
 
-    // Signals simulati per GameService
     const loadStatusSignal = signal<'idle' | 'loading' | 'ready' | 'error'>('ready');
     const boardSignal = signal<GameBoard | null>({
         date: '2026-08-12',
@@ -80,16 +79,16 @@ describe('HiveViewComponent', () => {
         totalMielegrammiSignal.set(1);
 
         mockGameService = {
-            loadStatus: loadStatusSignal,
-            board: boardSignal,
-            isCompleted: isCompletedSignal,
-            currentInput: currentInputSignal,
-            displayCells: displayCellsSignal,
-            foundWords: foundWordsSignal,
-            foundMielegrammi: foundMielegrammiSignal,
-            invalidWords: invalidWordsSignal,
-            totalPossibleWords: totalPossibleWordsSignal,
-            totalMielegrammi: totalMielegrammiSignal,
+            loadStatus: loadStatusSignal as any,
+            board: boardSignal as any,
+            isCompleted: isCompletedSignal as any,
+            currentInput: currentInputSignal as any,
+            displayCells: displayCellsSignal as any,
+            foundWords: foundWordsSignal as any,
+            foundMielegrammi: foundMielegrammiSignal as any,
+            invalidWords: invalidWordsSignal as any,
+            totalPossibleWords: totalPossibleWordsSignal as any,
+            totalMielegrammi: totalMielegrammiSignal as any,
             loadDailyGame: vi.fn(),
             checkDateRollover: vi.fn(),
             submitWord: vi.fn().mockReturnValue({ isValid: true, message: 'Ottimo!', isMielegramma: false }),
@@ -162,17 +161,14 @@ describe('HiveViewComponent', () => {
 
     describe('Modal State Handlers', () => {
         it('should toggle help, stats, and end game modals', () => {
-            // Modale Help
             component.openHelpModal();
             // @ts-expect-error Accessing protected property for test
             expect(component.isHelpModalOpen()).toBe(true);
 
-            // Modale Stats
             component.openStatsModal();
             // @ts-expect-error Accessing protected property for test
             expect(component.isStatsModalOpen()).toBe(true);
 
-            // Modale End Game
             component.openEndGame();
             // @ts-expect-error Accessing protected property for test
             expect(component.isEndGameModalOpen()).toBe(true);

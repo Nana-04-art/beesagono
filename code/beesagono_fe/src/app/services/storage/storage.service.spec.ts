@@ -27,7 +27,6 @@ describe('StorageService', () => {
   };
 
   beforeEach(() => {
-    // Reset TestBed to allow reconfiguration in Vitest environment
     TestBed.resetTestingModule();
     TestBed.configureTestingModule({
       providers: [StorageService],
@@ -45,36 +44,67 @@ describe('StorageService', () => {
     expect(service).toBeTruthy();
   });
 
-  it('should prioritize in-memory fallback when localStorage save fails', () => {
-    // Persist State A successfully
-    service.save(mockStateA);
+  it('should successfully save and load valid data using prefixed keys', () => {
+    const success = service.save('test-key', mockStateA);
+    expect(success).toBe(true);
+    expect(service.isAvailable()).toBe(true);
 
-    // Mock localStorage.setItem to throw an error using Vitest vi.spyOn
+    const loaded = service.load<GameState>('test-key');
+    expect(loaded).toEqual(mockStateA);
+  });
+
+  it('should return null and warn when saving invalid key or undefined/null data', () => {
+    const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => { });
+
+    expect(service.save('', mockStateA)).toBe(false);
+    expect(service.save('key', undefined)).toBe(false);
+    expect(service.save('key', null)).toBe(false);
+
+    expect(consoleWarnSpy).toHaveBeenCalled();
+  });
+
+  it('should return null when loading non-existent key', () => {
+    const loaded = service.load('non-existent');
+    expect(loaded).toBeNull();
+  });
+
+  it('should handle JSON parse errors gracefully and return null', () => {
+    localStorage.setItem('beesagono:corrupted', 'invalid-json-content');
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => { });
+
+    const loaded = service.load('corrupted');
+    expect(loaded).toBeNull();
+    expect(consoleErrorSpy).toHaveBeenCalled();
+  });
+
+  it('should clear stored items correctly', () => {
+    service.save('temp-key', mockStateA);
+    expect(service.load('temp-key')).not.toBeNull();
+
+    service.clear('temp-key');
+    expect(service.load('temp-key')).toBeNull();
+  });
+
+  it('should prioritize in-memory fallback when localStorage save fails', () => {
+    service.save('2026-07-31', mockStateA);
+
     vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
       throw new Error('QuotaExceededError');
     });
 
-    // Save State B (must go to inMemoryFallback)
-    service.save(mockStateB);
+    const success = service.save('2026-07-31', mockStateB);
+    expect(success).toBe(false);
+    expect(service.isAvailable()).toBe(false);
 
-    // Load state - must return State B, not State A from localStorage
-    const loaded = service.load(mockStateA.date);
+    const loaded = service.load<GameState>('2026-07-31');
     expect(loaded?.foundWords).toEqual(['A', 'B']);
     expect(loaded?.score).toBe(2);
   });
 
-  it('should read from inMemoryFallback if localStorage.getItem throws', () => {
-    service.save(mockStateA);
+  it('should read from inMemoryFallback if localStorage value is missing but fallback has it', () => {
+    (service as any).inMemoryFallback.set('beesagono:fallback-key', JSON.stringify(mockStateA));
 
-    // Mock localStorage.getItem to throw using vi.spyOn
-    vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
-      throw new Error('AccessDenied');
-    });
-
-    // Manually ensure entry in fallback map
-    (service as any).inMemoryFallback.set('beesagono:game:2026-07-31', JSON.stringify(mockStateA));
-
-    const loaded = service.load('2026-07-31');
+    const loaded = service.load<GameState>('fallback-key');
     expect(loaded).toEqual(mockStateA);
   });
 });

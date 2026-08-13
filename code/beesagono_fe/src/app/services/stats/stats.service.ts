@@ -10,29 +10,27 @@ export class StatsService {
     private readonly storage = inject(StorageService);
     private readonly STORAGE_KEY = 'stats';
 
-    // Stato reattivo
+    // Reactive state
     private readonly _stats = signal<PlayerStats>(this.loadStats());
     readonly stats = this._stats.asReadonly();
 
-    // Dati derivati
+    // Derived data
     readonly currentTier = computed(() => this.calculateTier(this._stats()));
 
     constructor() { }
 
-    /**
-     * Registra l'inizio della giornata di gioco senza alterare il punteggio o la distribuzione ranghi.
-     */
+    // Records the start of a game day without altering the score or rank distribution.
     recordGameStarted(currentDate: string): void {
         this.recordProgress(currentDate, 0, false, null);
     }
 
     /**
-     * Registra i progressi incrementali a fine partita o quando si trova una parola.
-     * @param currentDate Data corrente YYYY-MM-DD
-     * @param dailyScore Punteggio TOTALE accumulato nella giornata di oggi
-     * @param isCompletedToday True se il tabellone di oggi è stato completato al 100%
-     * @param dailyRank Nome del rango raggiunto oggi (passare null o stringa vuota per non aggiornare)
-     */
+    * Records incremental progress at game completion or when finding a word.
+    * @param currentDate Current date YYYY-MM-DD
+    * @param dailyScore TOTAL score accumulated today
+    * @param isCompletedToday True if today's board has been 100% completed
+    * @param dailyRank Name of today's achieved rank (pass null or empty string to skip updating)
+    */
     recordProgress(
         currentDate: string,
         dailyScore: number,
@@ -48,7 +46,7 @@ export class StatsService {
 
             const todayYear = parseInt(currentDate.split('-')[0], 10);
 
-            // 1. Gestione Rollover Anno (Season Reset)
+            // Year Rollover Handling (Season Reset)
             if (stats.currentSeason.year !== todayYear) {
                 stats.seasonHistory = {
                     ...stats.seasonHistory,
@@ -57,7 +55,7 @@ export class StatsService {
                 stats.currentSeason = this.createEmptySeason(todayYear);
             }
 
-            // 2. Aggiornamento Streak e Giorni Giocati
+            // Streak and Days Played Updates
             const isFirstPlayToday = stats.lastPlayedDate !== currentDate;
 
             if (isFirstPlayToday) {
@@ -66,20 +64,20 @@ export class StatsService {
                 if (this.isConsecutiveDay(stats.lastPlayedDate, currentDate)) {
                     stats.currentStreak++;
                 } else {
-                    stats.currentStreak = 1; // Prima partita in assoluto o streak interrotta
+                    stats.currentStreak = 1; // First play ever or broken streak
                 }
 
                 stats.maxStreak = Math.max(stats.maxStreak, stats.currentStreak);
                 stats.lastPlayedDate = currentDate;
 
-                // Controllo e accredito Bonus Milestone
+                // Check and award Milestone Bonuses
                 this.checkStreakMilestones(stats.currentStreak, stats.currentSeason);
             }
 
-            // 3. Punteggio Season (Somma cumulativa dei punti della stagione)
+            // Season Score (Cumulative sum of seasonal points)
             if (dailyScore > 0) {
-                // Calcoliamo la differenza rispetto ai punti giornalieri già registrati
-                // Per farlo in modo pulito mantenendo i punti totali di stagione:
+                // Calculate difference compared to already recorded daily points
+                // To keep total seasonal points clean:
                 if (isFirstPlayToday) {
                     stats.currentSeason.basePointsEarned += dailyScore;
                 }
@@ -88,17 +86,17 @@ export class StatsService {
                     stats.currentSeason.basePointsEarned + stats.currentSeason.bonusStreakPoints;
             }
 
-            // 4. Completamento e Ranghi
+            // Completion and Ranks
             if (isCompletedToday && isFirstPlayToday) {
                 stats.gamesCompleted++;
             }
 
-            // Aggiorna Rango Giornaliero solo se espressamente fornito
+            // Update Daily Rank only if explicitly provided
             if (dailyRank && dailyRank.trim() !== '') {
                 stats.dailyRankDistribution[dailyRank] = (stats.dailyRankDistribution[dailyRank] || 0) + 1;
             }
 
-            // Aggiorna il tier massimo raggiunto nella stagione corrente
+            // Update highest tier achieved in the current season
             const calculatedTier = this.calculateTier(stats);
             stats.currentSeason.highestTierAchieved = calculatedTier;
 
@@ -122,7 +120,7 @@ export class StatsService {
         const startOfYear = new Date(refDate.getFullYear(), 0, 1);
         const dayOfYear = Math.floor((refDate.getTime() - startOfYear.getTime()) / (1000 * 60 * 60 * 24)) + 1;
 
-        // Punti massimi stimati accumulabili fino a questo giorno dell'anno
+        // Estimated maximum achievable points up to this day of the year
         const maxPossibleGlobalPoints = dayOfYear * 25;
 
         if (maxPossibleGlobalPoints === 0) return CAREER_TIERS[0].name;

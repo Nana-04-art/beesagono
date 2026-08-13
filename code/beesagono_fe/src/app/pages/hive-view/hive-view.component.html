@@ -76,16 +76,9 @@
 
     <app-welcome-modal />
 
-    <!-- MODALE FINE GIOCO -->
+    <!-- END OF GAME MODAL -->
     <app-end-game-modal [payload]="endGamePayload()" [isOpen]="isEndGameModalOpen()" (shareRequested)="shareResults()"
         (closed)="closeEndGame()" />
-
-    <!-- PULSANTE TEMPORANEO DI TEST -->
-    <div class="text-center py-2 bg-white border-top flex-shrink-0">
-        <button type="button" class="btn btn-warning btn-sm shadow-sm fw-bold" (click)="openEndGame()">
-            🏆 Apri Modale Fine Gioco
-        </button>
-    </div>
     }
 
 </div>

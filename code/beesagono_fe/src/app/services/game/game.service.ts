@@ -304,7 +304,7 @@ export class GameService {
         };
 
         if (inputWord.length < GAME_RULES.MIN_WORD_LENGTH) {
-            this.clearInput();
+            trackInvalid(inputWord);
             return {
                 isValid: false,
                 pointsAwarded: 0,
@@ -366,7 +366,7 @@ export class GameService {
 
         const isMielegramma = this.mielegrammiSet().has(inputWord);
         const points = this.scoreService.calculateWordPoints(inputWord, isMielegramma);
-
+        
         // Calculate NEW list and NEW total score before updating
         const updatedWords = [...this._foundWords(), inputWord];
 
