@@ -1,0 +1,50 @@
+.stats-popover {
+    width: 320px;
+    background-color: #ffffff;
+    border: 1px solid rgba(245, 158, 11, 0.3);
+    border-radius: 0.5rem;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    z-index: 1050;
+    padding: 0.75rem;
+}
+
+/* Forziamo i blocchi KPI ad avere la stessa altezza e il testo su una riga */
+.row.g-1 {
+    >div {
+        display: flex;
+    }
+}
+
+.kpi-card {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    padding: 0.4rem 0.2rem;
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 0.375rem;
+    height: 100%;
+}
+
+.kpi-value {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #212529;
+    line-height: 1.2;
+}
+
+.kpi-label {
+    font-size: 0.6rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: #6c757d;
+    white-space: nowrap;
+    letter-spacing: -0.02em;
+}
+
+.extra-small-text {
+    font-size: 0.7rem;
+    line-height: 1.2;
+}
