@@ -10,6 +10,8 @@ import { getCenterLetter, getAvailableLetters } from '../../models/game-board.se
 import { DictionaryService } from '../dictionary/dictionary.service';
 import { PuzzleGeneratorService } from '../puzzle-generator/puzzle-generator.service';
 import { StorageService } from '../storage/storage.service';
+import { ScoreService } from '../score/score.service';
+import { StatsService } from '../stats/stats.service';
 import { RANK_TIERS } from '../../config/rank-tiers.config';
 
 @Injectable({
@@ -19,23 +21,39 @@ export class GameService {
     private storageService = inject(StorageService);
     private dictionaryService = inject(DictionaryService);
     private puzzleGeneratorService = inject(PuzzleGeneratorService);
+    private scoreService = inject(ScoreService);
+    private statsService = inject(StatsService);
 
     /**
-     * Reference to the central rank tiers configuration.
-     * Cached in descending order for efficient rank resolution.
-     */
+    * Reference to the central rank tiers configuration.
+    * Cached in descending order for efficient rank resolution.
+    */
     private readonly reversedRankTiers: readonly RankTier[] = [...RANK_TIERS].reverse();
 
     /**
-     * Returns the current rank based on percentage of max score achieved.
-     * @param percentage - Score achieved relative to max possible score (0-100)
-     */
+    * Returns the current rank based on percentage of max score achieved.
+    * @param percentage - Score achieved relative to max possible score (0-100)
+    */
     getRankForPercentage(percentage: number): RankTier {
+        // Find the highest unlocked rank for this percentage
         const currentRank = this.reversedRankTiers.find(
             (tier) => percentage >= tier.threshold
         );
         return currentRank ?? RANK_TIERS[0];
     }
+
+    readonly rank = computed<RankTier>(() => {
+        const currentBoard = this._board();
+        const currentScore = this.score();
+
+        if (!currentBoard || currentBoard.maxScore === 0) {
+            return RANK_TIERS[0];
+        }
+
+        // Use Math.round or simple division to avoid losing crucial decimals on the first points
+        const percentage = (currentScore / currentBoard.maxScore) * 100;
+        return this.getRankForPercentage(percentage);
+    });
 
     private readonly _board = signal<GameBoard | null>(null);
     private readonly _loadStatus = signal<'idle' | 'loading' | 'ready' | 'error'>('idle');
@@ -55,17 +73,13 @@ export class GameService {
     readonly isStorageAvailable: Signal<boolean> = this._isStorageAvailable.asReadonly();
     readonly invalidWords: Signal<string[]> = this._invalidWords.asReadonly();
 
-    /**
-     * Pre-calculated Set of possible words for O(1) lookups during validation.
-     */
+    // Pre-calculated Set of possible words for O(1) lookups during validation.
     private readonly possibleWordsSet = computed<Set<string>>(() => {
         const currentBoard = this._board();
         return new Set(currentBoard?.possibleWords ?? []);
     });
 
-    /**
-     * Pre-calculated Set of mielegrammi for O(1) lookups.
-     */
+    // Pre-calculated Set of mielegrammi for O(1) lookups.
     private readonly mielegrammiSet = computed<Set<string>>(() => {
         const currentBoard = this._board();
         return new Set(currentBoard?.mielegrammi ?? []);
@@ -76,33 +90,26 @@ export class GameService {
         return this._foundWords().filter((word) => mSet.has(word));
     });
 
+    // Score calculation delegated to ScoreService.
     readonly score = computed(() => {
         const currentBoard = this._board();
         if (!currentBoard) return 0;
-
-        const mSet = this.mielegrammiSet();
-        return this._foundWords().reduce((totalScore, word) => {
-            let wordScore = word.length === 4 ? 1 : word.length;
-            if (mSet.has(word)) {
-                wordScore += GAME_RULES.MIELEGRAMMA_BONUS;
-            }
-            return totalScore + wordScore;
-        }, 0);
+        return this.scoreService.calculateTotalScore(this._foundWords(), this.mielegrammiSet());
     });
 
-    /** Maximum achievable score for the active game session */
+    // Maximum achievable score for the active game session
     readonly maxScore = computed<number>(() => {
         const currentBoard = this._board();
         return currentBoard ? currentBoard.maxScore : 0;
     });
 
-    /** Total possible count of valid words in the active puzzle */
+    // Total possible count of valid words in the active puzzle
     readonly totalPossibleWords = computed<number>(() => {
         const currentBoard = this._board();
         return currentBoard ? currentBoard.possibleWords.length : 0;
     });
 
-    /** Total possible count of mielegrammi in the active puzzle */
+    // Total possible count of mielegrammi in the active puzzle
     readonly totalMielegrammi = computed<number>(() => {
         const currentBoard = this._board();
         return currentBoard ? currentBoard.mielegrammi.length : 0;
@@ -117,42 +124,28 @@ export class GameService {
         );
     });
 
-    readonly rank = computed<RankTier>(() => {
-        const currentBoard = this._board();
-        const currentScore = this.score();
-
-        if (!currentBoard || currentBoard.maxScore === 0) {
-            return RANK_TIERS[0];
-        }
-
-        const percentage = Math.floor((currentScore / currentBoard.maxScore) * 100);
-        return this.getRankForPercentage(percentage);
-    });
-
-    /** Minimum points required to reach the current rank */
+    // Minimum points required to reach the current rank
     readonly currentRankScore = computed<number>(() => {
         const maxScore = this.maxScore();
         const currentRank = this.rank();
         return Math.ceil((maxScore * currentRank.threshold) / 100);
     });
 
-    /** Minimum points required to unlock the next rank */
+    // Minimum points required to unlock the next rank
     readonly nextRankScore = computed<number>(() => {
         const maxScore = this.maxScore();
         const currentScore = this.score();
 
-        // Find the first tier whose score threshold strictly exceeds the current score
         const nextTier = RANK_TIERS.find((tier) => {
             const requiredPoints = Math.ceil((maxScore * tier.threshold) / 100);
             return requiredPoints > currentScore;
         });
 
-        if (!nextTier) return maxScore; // Already at maximum rank (Ape Regina)
+        if (!nextTier) return maxScore;
 
         return Math.ceil((maxScore * nextTier.threshold) / 100);
     });
 
-    // Check if the player has achieved Queen rank
     readonly isQueenRank = computed<boolean>(() => {
         const currentBoard = this._board();
         if (!currentBoard || currentBoard.maxScore === 0) return false;
@@ -178,6 +171,12 @@ export class GameService {
         return [centerCell, ...reorderedOuterCells];
     });
 
+    // Call this method when starting the game to initialize stats for the day
+    initGame(): void {
+        const todayIso = new Date().toISOString().split('T')[0];
+        this.statsService.recordGameStarted(todayIso);
+    }
+
     constructor() {
         effect(() => {
             const currentBoard = this._board();
@@ -197,7 +196,7 @@ export class GameService {
                     lastUpdated: Date.now(),
                 };
 
-                this.storageService.save(stateToSave);
+                this.storageService.save(`game:${currentBoard.date}`, stateToSave);
                 this._isStorageAvailable.set(this.storageService.isAvailable());
             }
         });
@@ -221,9 +220,7 @@ export class GameService {
 
             this._board.set(generatedBoard);
 
-            // Reconcile saved state or initialize new game session
-            const savedState = this.storageService.load(todayIsoDate);
-            this._isStorageAvailable.set(this.storageService.isAvailable());
+            const savedState = this.storageService.load<GameState>(`game:${todayIsoDate}`);
 
             if (savedState && savedState.version === 1) {
                 const validWordsSet = new Set(generatedBoard.possibleWords);
@@ -232,16 +229,16 @@ export class GameService {
                 );
                 this._foundWords.set(sanitizedWords);
 
-                // Restore invalid words list from storage
                 this._invalidWords.set(savedState.invalidWords ?? []);
                 this._startTime.set(savedState.startTime ?? Date.now());
             } else {
                 this._foundWords.set([]);
                 this._invalidWords.set([]);
                 this._startTime.set(Date.now());
+                // Notify StatsService that a new game has started
+                this.statsService.recordGameStarted(todayIsoDate);
             }
 
-            // Reset transient user state on fresh board load / midnight rollover
             this.clearInput();
             this._shuffleOrder.set([1, 2, 3, 4, 5, 6]);
 
@@ -299,7 +296,6 @@ export class GameService {
             return { isValid: false, pointsAwarded: 0, isMielegramma: false };
         }
 
-        // Internal helper to record the incorrect word (without duplicates) and clear the input
         const trackInvalid = (word: string) => {
             if (!this._invalidWords().includes(word)) {
                 this._invalidWords.update((list) => [...list, word]);
@@ -357,7 +353,6 @@ export class GameService {
             };
         }
 
-        // O(1) set check: word not found in the dictionary of valid answers
         if (!this.possibleWordsSet().has(inputWord)) {
             trackInvalid(inputWord);
             return {
@@ -370,13 +365,28 @@ export class GameService {
         }
 
         const isMielegramma = this.mielegrammiSet().has(inputWord);
-        let points = inputWord.length === 4 ? 1 : inputWord.length;
-        if (isMielegramma) {
-            points += GAME_RULES.MIELEGRAMMA_BONUS;
-        }
+        const points = this.scoreService.calculateWordPoints(inputWord, isMielegramma);
 
-        this._foundWords.update((words) => [...words, inputWord]);
+        // Calculate NEW list and NEW total score before updating
+        const updatedWords = [...this._foundWords(), inputWord];
+
+        // Update found words Signal
+        this._foundWords.set(updatedWords);
         this.clearInput();
+
+        // Calculate new total score atomically and safely
+        const newTotalScore = this.scoreService.calculateTotalScore(
+            updatedWords,
+            this.mielegrammiSet()
+        );
+
+        // Notify StatsService with updated score
+        this.statsService.recordProgress(
+            currentBoard.date,
+            newTotalScore,
+            this.isCompleted(),
+            this.rank().label
+        );
 
         return {
             isValid: true,
@@ -414,7 +424,6 @@ export class GameService {
     }
 
     private getTodayIsoString(): string {
-        // Formats local calendar date to YYYY-MM-DD
         const now = new Date();
         const year = now.getFullYear();
         const month = String(now.getMonth() + 1).padStart(2, '0');

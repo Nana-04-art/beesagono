@@ -5,9 +5,7 @@ export class DictionaryService {
   private dictionarySet: Set<string> | null = null;
   private dictionaryList: string[] | null = null;
 
-  /**
-   * Fetches, validates and parses dictionary.json once; cached for subsequent calls.
-   */
+  // Fetches, validates and parses dictionary.json once; cached for subsequent calls.
   async loadDictionary(): Promise<string[]> {
     if (this.dictionaryList) {
       return this.dictionaryList;
@@ -58,9 +56,7 @@ export class DictionaryService {
     }
   }
 
-  /**
-   * Returns the O(1)-lookup Set built from the loaded word list.
-   */
+  // Returns the O(1)-lookup Set built from the loaded word list.
   getWordSet(): Set<string> {
     if (!this.dictionarySet) {
       throw new Error('DictionaryService.getWordSet() chiamato prima del completamento di loadDictionary().');
