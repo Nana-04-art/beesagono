@@ -14,8 +14,8 @@ describe('FoundWordsComponent', () => {
     fixture = TestBed.createComponent(FoundWordsComponent);
     component = fixture.componentInstance;
 
-    fixture.componentRef.setInput('foundWords', ['APE', 'HONEY']);
-    fixture.componentRef.setInput('foundMielegrammi', ['BEEHIVE']);
+    fixture.componentRef.setInput('foundWords', ['TANA', 'BANDITO']);
+    fixture.componentRef.setInput('foundMielegrammi', ['BANDITO']);
     fixture.componentRef.setInput('totalPossibleWords', 10);
     fixture.componentRef.setInput('totalPossibleMielegrammi', 2);
 
@@ -28,18 +28,18 @@ describe('FoundWordsComponent', () => {
   });
 
   describe('Computed Signals', () => {
-    it('should compute the correct total count including Mielegrammi', () => {
-      expect(component.totalCount()).toBe(3);
-      expect(component.totalFoundCount()).toBe(3);
+    it('should compute the correct total count based on found words', () => {
+      expect(component.totalCount()).toBe(2);
+      expect(component.totalFoundCount()).toBe(2);
     });
 
     it('should dynamically update total count when inputs change', () => {
-      fixture.componentRef.setInput('foundWords', ['APE', 'HONEY', 'BEE']);
-      fixture.componentRef.setInput('foundMielegrammi', ['BEEHIVE', 'HONEYCOMB']);
+      fixture.componentRef.setInput('foundWords', ['TANA', 'BANDITO', 'CASA']);
+      fixture.componentRef.setInput('foundMielegrammi', ['BANDITO']);
       fixture.detectChanges();
 
-      expect(component.totalCount()).toBe(5);
-      expect(component.totalFoundCount()).toBe(5);
+      expect(component.totalCount()).toBe(3);
+      expect(component.totalFoundCount()).toBe(3);
     });
 
     it('should handle empty input arrays gracefully', () => {
@@ -54,8 +54,8 @@ describe('FoundWordsComponent', () => {
 
   describe('isMielegramma Helper Method', () => {
     it('should correctly identify a Mielegramma', () => {
-      expect(component.isMielegramma('BEEHIVE')).toBe(true);
-      expect(component.isMielegramma('APE')).toBe(false);
+      expect(component.isMielegramma('BANDITO')).toBe(true);
+      expect(component.isMielegramma('TANA')).toBe(false);
     });
 
     it('should return false for non-existent or empty strings', () => {
