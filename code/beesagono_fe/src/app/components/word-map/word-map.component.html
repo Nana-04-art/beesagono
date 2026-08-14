@@ -1,0 +1,8 @@
+<div class="word-map-container">
+    @for (item of items(); track item.word) {
+    <div class="hive-cell" [class.pangram]="item.isPangram"
+        [style.background-color]="item.isFound ? (item.isPangram ? '#ffc107' : letterColors().get(item.initial)) : '#e9ecef'"
+        [title]="item.isFound ? item.word : 'Parola nascosta'"> -->
+    </div>
+    }
+</div>

@@ -4,7 +4,7 @@
         class="btn w-100 d-flex align-items-center justify-content-between p-3 border-0 text-start shadow-none toggle-button"
         (click)="toggleExpanded()" type="button" aria-label="Apri o chiudi lista parole trovate">
 
-        <!-- Title and Icon -->
+        <!-- Title and Chevron -->
         <div class="d-flex align-items-center gap-2">
             <span class="fw-bold fs-6 text-dark m-0">Parole</span>
             <svg class="chevron text-secondary flex-shrink-0 ms-1" [class.open]="isExpanded()" fill="none"
@@ -13,8 +13,8 @@
             </svg>
         </div>
 
-        <!-- Counter Badges -->
-        <div class="d-flex align-items-center gap-2">
+        <!-- Counter Badges + Map Toggle Button -->
+        <div class="d-flex align-items-center gap-2" (click)="$event.stopPropagation()">
             <!-- Total Words Found (Solamente foundWords) -->
             <span class="badge bg-light text-dark border px-2.5 py-1.5 fw-bold">
                 {{ foundWords().length }}/{{ totalPossibleWords() }}
@@ -26,12 +26,29 @@
                 {{ foundMielegrammi().length }}/{{ totalPossibleMielegrammi() }} MIELEGRAMMI
             </span>
             }
+
+            <!-- Pulsante Mappa Globale -->
+            <button type="button"
+                class="btn btn-sm btn-outline-secondary p-1 d-flex align-items-center justify-content-center"
+                (click)="toggleMapView($event)" [title]="showMap() ? 'Mostra elenco parole' : 'Mostra mappa generale'">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width: 16px; height: 16px;">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+                </svg>
+            </button>
         </div>
     </button>
 
-    <!-- Expanded Content -->
+    <!-- Expanded Content: Toggle tra Lista Globale e Mappa Globale -->
     @if (isExpanded()) {
     <div class="card-body border-top p-3 pt-2 animate-fade-in">
+        @if (showMap()) {
+        <!-- Vista Mappa Globale di tutte le parole -->
+        <div class="py-2">
+            <app-word-map [items]="gameService.wordMap()"></app-word-map>
+        </div>
+        } @else {
+        <!-- Vista Elenco Parole Classica -->
         @if (foundWords().length === 0) {
         <p class="text-muted text-center fst-italic small mb-0 py-2">
             Ancora nessuna parola trovata. Inizia a digitare!
@@ -46,6 +63,7 @@
             </li>
             }
         </ul>
+        }
         }
     </div>
     }

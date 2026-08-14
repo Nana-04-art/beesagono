@@ -12,8 +12,15 @@
                     [attr.aria-label]="'Parole con lettera ' + group.letter + ', ' + group.foundCount + ' di ' + group.totalCount + ' trovate'"
                     (click)="toggleExpand(group.letter)">
 
-                    <!-- Left Side: Circle and Letter -->
+                    <!-- Left Side: Chevron + Circle and Letter -->
                     <div class="d-flex align-items-center gap-2">
+                        <!-- Chevron Icon spostato a sinistra -->
+                        <svg class="chevron-icon text-muted flex-shrink-0"
+                            [class.rotate-180]="expandedLetters().has(group.letter)" fill="none" stroke="currentColor"
+                            viewBox="0 0 24 24" aria-hidden="true" style="width: 14px; height: 14px;">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                        </svg>
+
                         <div class="letter-circle d-flex align-items-center justify-content-center fw-bold" [ngClass]="{
                             'bg-warning text-dark ring-warning': group.isCenter,
                             'bg-light text-secondary border': !group.isCenter
@@ -22,8 +29,8 @@
                         </div>
                     </div>
 
-                    <!-- Right Side: Counters in columns + Chevron -->
-                    <div class="d-flex align-items-center gap-2">
+                    <!-- Right Side: Counters in columns + Map Toggle Button -->
+                    <div class="d-flex align-items-center gap-2" (click)="$event.stopPropagation()">
                         <div class="d-flex flex-column align-items-end text-end">
                             <!-- Words (Top) -->
                             <span class="extra-small-text text-muted fw-semibold">
@@ -38,20 +45,31 @@
                             }
                         </div>
 
-                        <!-- Chevron Icon -->
-                        <svg class="chevron-icon text-muted flex-shrink-0"
-                            [class.rotate-180]="expandedLetters().has(group.letter)" fill="none" stroke="currentColor"
-                            viewBox="0 0 24 24" aria-hidden="true">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                        </svg>
+                        <!-- Map button for a single letter (CORRECTED with group.letter) -->
+                        <button type="button"
+                            class="btn btn-sm btn-outline-secondary p-1 d-flex align-items-center justify-content-center"
+                            (click)="toggleView(group.letter, $event)"
+                            [title]="showMapLetters().has(group.letter) ? 'Mostra parole' : 'Mostra mappa'">
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                                style="width: 16px; height: 16px;">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+                            </svg>
+                        </button>
                     </div>
 
                 </button>
 
-                <!-- Found Words Section / Empty State -->
+                <!-- Expanded Content: Toggle between Word List and Letter Map -->
                 @if (expandedLetters().has(group.letter)) {
                 <div [id]="'words-group-' + group.letter" class="mt-2 pt-2 border-top" role="region"
                     [attr.aria-label]="'Elenco parole trovate per la lettera ' + group.letter">
+
+                    @if (showMapLetters().has(group.letter)) {
+                    <div class="py-1">
+                        <app-word-map [items]="group.wordItems"></app-word-map>
+                    </div>
+                    } @else {
                     @if (group.foundWords.length > 0) {
                     <div class="d-flex flex-wrap gap-1">
                         @for (word of group.foundWords; track word) {
@@ -66,6 +84,7 @@
                     <p class="extra-small-text text-muted italic mb-0 text-center py-1">
                         Ancora nessuna parola trovata
                     </p>
+                    }
                     }
                 </div>
                 }
