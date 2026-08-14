@@ -10,6 +10,7 @@ export interface SeasonStats {
     totalSeasonPoints: number;
     highestTierAchieved: string;
     claimedStreakMilestones: number[];
+    _lastRecordedDailyScore?: number
 }
 
 export interface PlayerStats {

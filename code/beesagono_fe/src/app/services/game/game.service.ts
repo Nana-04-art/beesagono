@@ -13,6 +13,7 @@ import { StorageService } from '../storage/storage.service';
 import { ScoreService } from '../score/score.service';
 import { StatsService } from '../stats/stats.service';
 import { RANK_TIERS } from '../../config/rank-tiers.config';
+import { WordMapItem } from '../../models/word-map-item.model';
 
 @Injectable({
     providedIn: 'root',
@@ -45,14 +46,9 @@ export class GameService {
     readonly rank = computed<RankTier>(() => {
         const currentBoard = this._board();
         const currentScore = this.score();
+        const maxScore = currentBoard ? currentBoard.maxScore : 0;
 
-        if (!currentBoard || currentBoard.maxScore === 0) {
-            return RANK_TIERS[0];
-        }
-
-        // Use Math.round or simple division to avoid losing crucial decimals on the first points
-        const percentage = (currentScore / currentBoard.maxScore) * 100;
-        return this.getRankForPercentage(percentage);
+        return this.scoreService.getCurrentRank(currentScore, maxScore);
     });
 
     private readonly _board = signal<GameBoard | null>(null);
@@ -366,7 +362,7 @@ export class GameService {
 
         const isMielegramma = this.mielegrammiSet().has(inputWord);
         const points = this.scoreService.calculateWordPoints(inputWord, isMielegramma);
-        
+
         // Calculate NEW list and NEW total score before updating
         const updatedWords = [...this._foundWords(), inputWord];
 
@@ -430,4 +426,42 @@ export class GameService {
         const day = String(now.getDate()).padStart(2, '0');
         return `${year}-${month}-${day}`;
     }
+
+    readonly wordMap = computed(() => {
+        const currentBoard = this._board();
+        if (!currentBoard) return [];
+
+        const validWords = currentBoard.possibleWords;
+        const mSet = this.mielegrammiSet();
+        const found = this._foundWords();
+
+        return validWords.map((word: string) => ({
+            word: word,
+            length: word.length,
+            initial: word.toUpperCase()[0],
+            isFound: found.includes(word),
+            isPangram: mSet.has(word)
+        })).sort((a, b) => {
+            if (a.length !== b.length) {
+                return a.length - b.length;
+            }
+            return a.word.localeCompare(b.word);
+        });
+    });
+
+    private readonly letterPalette = [
+        '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4',
+        '#FFEEAD', '#D4A5A5', '#9B59B6'
+    ];
+
+    readonly letterColors = computed(() => {
+        const board = this.board();
+        if (!board) return new Map<string, string>();
+
+        const map = new Map<string, string>();
+        board.cells.forEach((cell, index) => {
+            map.set(cell.letter, this.letterPalette[index % this.letterPalette.length]);
+        });
+        return map;
+    });
 }

@@ -75,11 +75,13 @@ export class StatsService {
             }
 
             // Season Score (Cumulative sum of seasonal points)
-            if (dailyScore > 0) {
-                // Calculate difference compared to already recorded daily points
-                // To keep total seasonal points clean:
-                if (isFirstPlayToday) {
-                    stats.currentSeason.basePointsEarned += dailyScore;
+            if (dailyScore >= 0) {
+                const previousDailyScore = stats.currentSeason._lastRecordedDailyScore || 0;
+                const scoreDiff = dailyScore - previousDailyScore;
+
+                if (scoreDiff !== 0) {
+                    stats.currentSeason.basePointsEarned += scoreDiff;
+                    stats.currentSeason._lastRecordedDailyScore = dailyScore;
                 }
 
                 stats.currentSeason.totalSeasonPoints =
@@ -151,9 +153,40 @@ export class StatsService {
 
     private loadStats(): PlayerStats {
         const saved = this.storage.load<PlayerStats>(this.STORAGE_KEY);
-        if (saved) return saved;
+        const today = new Date().toISOString().split('T')[0]; // Data odierna in formato YYYY-MM-DD
 
-        return {
+        let stats: PlayerStats;
+        if (saved) {
+            stats = saved;
+            this.checkStreakContinuity(stats, today);
+        } else {
+            // If the 'stats' file does not exist, we rebuild the data by reading the matches saved in the browser.
+            stats = this.rebuildStatsFromStorage();
+            this.checkStreakContinuity(stats, today);
+        }
+        return stats;
+    }
+
+    private checkStreakContinuity(stats: PlayerStats, today: string): void {
+        if (!stats.lastPlayedDate) return;
+
+        const [y, m, d] = today.split('-').map(Number);
+        const [lastY, lastM, lastD] = stats.lastPlayedDate.split('-').map(Number);
+
+        const todayUtc = Date.UTC(y, m - 1, d);
+        const lastUtc = Date.UTC(lastY, lastM - 1, lastD);
+
+        const diffDays = Math.round((todayUtc - lastUtc) / (1000 * 60 * 60 * 24));
+
+        // If the last day played was before yesterday (i.e., diffDays > 1), 
+        // the current streak resets (it will start again from 1 upon the first launch/game of the day).
+        if (diffDays > 1) {
+            stats.currentStreak = 0;
+        }
+    }
+
+    private rebuildStatsFromStorage(): PlayerStats {
+        const newStats: PlayerStats = {
             gamesPlayed: 0,
             gamesCompleted: 0,
             currentStreak: 0,
@@ -163,6 +196,61 @@ export class StatsService {
             seasonHistory: {},
             dailyRankDistribution: {}
         };
+
+        const playedDates: string[] = [];
+
+        // Scan LocalStorage, sum the points, and save the dates
+        for (let i = 0; i < localStorage.length; i++) {
+            const key = localStorage.key(i);
+            if (key?.startsWith('beesagono:game:')) {
+                try {
+                    const gameData = JSON.parse(localStorage.getItem(key)!);
+
+                    newStats.currentSeason.basePointsEarned += (gameData.score || 0);
+                    newStats.gamesPlayed++;
+
+                    if (gameData.isCompleted) {
+                        newStats.gamesCompleted++;
+                    }
+
+                    // Extract the date (e.g., "2026-08-05") and put it into the array
+                    const date = key.replace('beesagono:game:', '');
+                    playedDates.push(date);
+                } catch (e) {
+                    console.error('Errore nel parsing della chiave di gioco:', key, e);
+                }
+            }
+        }
+
+        // Let's sort the dates in chronological order (from oldest to most recent)
+        playedDates.sort();
+
+        // Calculate the streak by iterating through the sorted dates
+        if (playedDates.length > 0) {
+            newStats.lastPlayedDate = playedDates[playedDates.length - 1];
+            let streak = 0;
+
+            for (let i = 0; i < playedDates.length; i++) {
+                if (i === 0) {
+                    streak = 1;
+                } else {
+                    if (this.isConsecutiveDay(playedDates[i - 1], playedDates[i])) {
+                        streak++;
+                    } else if (playedDates[i - 1] !== playedDates[i]) {
+                        streak = 1;
+                    }
+                }
+
+                if (streak > newStats.maxStreak) {
+                    newStats.maxStreak = streak;
+                }
+            }
+
+            newStats.currentStreak = streak;
+        }
+
+        newStats.currentSeason.totalSeasonPoints = newStats.currentSeason.basePointsEarned;
+        return newStats;
     }
 
     private saveStats(): void {
