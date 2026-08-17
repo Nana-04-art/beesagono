@@ -10,6 +10,9 @@ export interface SeasonStats {
     totalSeasonPoints: number;
     highestTierAchieved: string;
     claimedStreakMilestones: number[];
+    _lastRecordedDailyScore?: number;
+    _isCompletedToday?: boolean;
+    _lastRecordedRankToday?: string | null;
 }
 
 export interface PlayerStats {

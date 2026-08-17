@@ -104,7 +104,48 @@
 }
 
 .rules-popover-wrapper,
-.stats-popover-wrapper {
+.stats-popover-wrapper,
+.rank-popover-wrapper {
     position: relative;
     z-index: 1050;
+}
+
+@media (max-width: 576px) {
+
+    .rules-popover-wrapper,
+    .stats-popover-wrapper,
+    .rank-popover-wrapper {
+        position: static;
+    }
+
+    .scoreboard-popover,
+    .rules-popover,
+    .stats-popover {
+        position: fixed !important;
+        left: 1rem !important;
+        right: 1rem !important;
+        width: auto !important;
+        max-width: none !important;
+        margin: 0 auto;
+    }
+}
+
+.rank-popover-wrapper {
+    .scoreboard-popover {
+        width: 280px;
+        visibility: visible;
+        opacity: 1;
+        pointer-events: auto;
+        view-transition-name: rank-card-popover;
+    }
+}
+
+.extra-small-text {
+    font-size: 0.75rem;
+    line-height: 1.25;
+}
+
+::view-transition-old(rank-card-popover),
+::view-transition-new(rank-card-popover) {
+    animation-duration: 0.25s;
 }

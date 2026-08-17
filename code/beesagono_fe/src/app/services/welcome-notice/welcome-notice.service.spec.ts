@@ -1,54 +1,56 @@
 import { TestBed } from '@angular/core/testing';
-import { describe, beforeEach, afterEach, it, expect, vi } from 'vitest';
+import { describe, beforeEach, it, expect, vi } from 'vitest';
 import { WelcomeNoticeService } from './welcome-notice.service';
+import { StorageService } from '../storage/storage.service';
 
 describe('WelcomeNoticeService', () => {
   let service: WelcomeNoticeService;
-  const STORAGE_KEY = 'mielegrammi_welcome_disclaimer_seen';
+  let mockStorageService: Partial<StorageService>;
 
   beforeEach(() => {
-    TestBed.resetTestingModule();
+    mockStorageService = {
+      load: vi.fn(),
+      save: vi.fn(),
+    };
+
     TestBed.configureTestingModule({
-      providers: [WelcomeNoticeService],
+      providers: [
+        WelcomeNoticeService,
+        { provide: StorageService, useValue: mockStorageService },
+      ],
     });
 
     service = TestBed.inject(WelcomeNoticeService);
-    localStorage.clear();
   });
 
-  afterEach(() => {
-    vi.restoreAllMocks();
+  it('should show notice if key is not present in storage', () => {
+    vi.spyOn(mockStorageService, 'load').mockReturnValue(null);
+    service.checkAndShowNotice();
+    expect(service.isNoticeOpen()).toBe(true);
   });
 
-  it('should be created', () => {
-    expect(service).toBeTruthy();
-  });
-
-  it('should open notice if disclaimer has not been seen before', () => {
-    expect(localStorage.getItem(STORAGE_KEY)).toBeNull();
+  it('should not show notice if key is present in storage', () => {
+    vi.spyOn(mockStorageService, 'load').mockReturnValue(true);
+    service.checkAndShowNotice();
     expect(service.isNoticeOpen()).toBe(false);
+  });
+
+  it('should safely open notice when storage throws a SecurityError', () => {
+    vi.spyOn(mockStorageService, 'load').mockImplementation(() => {
+      throw new DOMException('Access denied', 'SecurityError');
+    });
 
     service.checkAndShowNotice();
-
     expect(service.isNoticeOpen()).toBe(true);
   });
 
-  it('should not open notice if disclaimer has already been seen', () => {
-    localStorage.setItem(STORAGE_KEY, 'true');
-    expect(service.isNoticeOpen()).toBe(false);
-
-    service.checkAndShowNotice();
-
-    expect(service.isNoticeOpen()).toBe(false);
-  });
-
-  it('should dismiss notice, set localStorage flag, and close notice state', () => {
-    service.checkAndShowNotice();
-    expect(service.isNoticeOpen()).toBe(true);
+  it('should dismiss notice and safely handle save exceptions', () => {
+    service.isNoticeOpen.set(true);
+    vi.spyOn(mockStorageService, 'save').mockImplementation(() => {
+      throw new DOMException('Quota exceeded', 'QuotaExceededError');
+    });
 
     service.dismissNotice();
-
-    expect(localStorage.getItem(STORAGE_KEY)).toBe('true');
     expect(service.isNoticeOpen()).toBe(false);
   });
 });

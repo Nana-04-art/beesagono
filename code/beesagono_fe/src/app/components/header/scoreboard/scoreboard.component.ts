@@ -34,26 +34,19 @@ export class ScoreboardComponent {
   maxScore = computed(() => this.gameService.maxScore());
 
   // Calculation of the fill percentage (0% - 100%)
-  progressPercentage = computed(() => {
-    const max = this.maxScore();
-    if (!max || max === 0) return 0;
-    return Math.min(Math.max((this.score() / max) * 100, 0), 100);
-  });
+  progressPercentage = computed(() =>
+    this.scoreService.calculatePercentage(this.score(), this.maxScore())
+  );
 
   // Find the next level to reach
-  nextRankTier = computed(() => {
-    const currentScore = this.score();
-    const max = this.maxScore();
-    return RANK_TIERS.find((t) => Math.ceil((max * t.threshold) / 100) > currentScore);
-  });
+  nextRankTier = computed(() =>
+    this.scoreService.getNextRank(this.score(), this.maxScore())
+  );
 
   // Points needed to reach the next rank (calculated based on nextRankTier)
-  pointsToNextRank = computed(() => {
-    const next = this.nextRankTier();
-    if (!next) return 0;
-    const requiredForNext = Math.ceil((this.maxScore() * next.threshold) / 100);
-    return Math.max(requiredForNext - this.score(), 0);
-  });
+  pointsToNextRank = computed(() =>
+    this.scoreService.getPointsToNext(this.score(), this.maxScore())
+  );
 
   // Current rank emoji
   currentRankEmoji = computed(() => {

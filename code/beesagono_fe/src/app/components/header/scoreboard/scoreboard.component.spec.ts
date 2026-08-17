@@ -2,14 +2,14 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ComponentRef, signal, WritableSignal } from '@angular/core';
 import { describe, beforeEach, it, expect } from 'vitest';
 import { ScoreboardComponent } from './scoreboard.component';
-import { GameService } from '../../services/game/game.service';
-import { RankTier } from '../../models/rank.model';
+import { GameService } from '../../../services/game/game.service';
+import { RankTier } from '../../../models/rank.model';
 
 class MockGameService {
   readonly maxScore: WritableSignal<number> = signal<number>(100);
-  readonly nextRankScore: WritableSignal<number> = signal<number>(50);
+  readonly score: WritableSignal<number> = signal<number>(0);
   readonly rank: WritableSignal<RankTier> = signal<RankTier>({
-    label: '🐝 Ape Maestosa',
+    label: '🐝 Ape Regina',
     threshold: 100
   });
 }
@@ -56,24 +56,30 @@ describe('ScoreboardComponent', () => {
     expect(component.progressPercentage()).toBe(0);
   });
 
-  it('should compute pointsToNextRank correctly', () => {
+  it('should compute pointsToNextRank correctly using RANK_TIERS and maxScore', () => {
+    mockGameService.maxScore.set(100);
     componentRef.setInput('score', 20);
-    mockGameService.nextRankScore.set(50);
     fixture.detectChanges();
 
-    expect(component.pointsToNextRank()).toBe(30);
+    const nextTier = component.nextRankTier();
+    if (nextTier) {
+      const expectedPoints = Math.ceil((100 * nextTier.threshold) / 100) - 20;
+      expect(component.pointsToNextRank()).toBe(expectedPoints);
+    } else {
+      expect(component.pointsToNextRank()).toBe(0);
+    }
   });
 
-  it('should return 0 for pointsToNextRank if score exceeds nextRankScore', () => {
-    componentRef.setInput('score', 60);
-    mockGameService.nextRankScore.set(50);
+  it('should return 0 for pointsToNextRank if score exceeds or reaches maximum rank', () => {
+    componentRef.setInput('score', 150);
+    mockGameService.maxScore.set(100);
     fixture.detectChanges();
 
     expect(component.pointsToNextRank()).toBe(0);
   });
 
   it('should extract emoji from current rank label', () => {
-    mockGameService.rank.set({ label: '🐝 Ape Maestosa', threshold: 100 });
+    mockGameService.rank.set({ label: '🐝 Ape Regina', threshold: 100 });
     fixture.detectChanges();
 
     expect(component.currentRankEmoji()).toBe('🐝');

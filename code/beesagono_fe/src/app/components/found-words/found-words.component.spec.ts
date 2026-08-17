@@ -29,8 +29,7 @@ describe('FoundWordsComponent', () => {
 
   describe('Computed Signals', () => {
     it('should compute the correct total count based on found words', () => {
-      expect(component.totalCount()).toBe(2);
-      expect(component.totalFoundCount()).toBe(2);
+      expect(component.foundWords().length).toBe(2);
     });
 
     it('should dynamically update total count when inputs change', () => {
@@ -38,8 +37,7 @@ describe('FoundWordsComponent', () => {
       fixture.componentRef.setInput('foundMielegrammi', ['BANDITO']);
       fixture.detectChanges();
 
-      expect(component.totalCount()).toBe(3);
-      expect(component.totalFoundCount()).toBe(3);
+      expect(component.foundWords().length).toBe(3);
     });
 
     it('should handle empty input arrays gracefully', () => {
@@ -47,8 +45,7 @@ describe('FoundWordsComponent', () => {
       fixture.componentRef.setInput('foundMielegrammi', []);
       fixture.detectChanges();
 
-      expect(component.totalCount()).toBe(0);
-      expect(component.totalFoundCount()).toBe(0);
+      expect(component.foundWords().length).toBe(0);
     });
   });
 

@@ -2,7 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Component, input } from '@angular/core';
 import { vi, describe, beforeEach, it, expect } from 'vitest';
 import { HeaderComponent } from './header.component';
-import { ScoreboardComponent } from '../scoreboard/scoreboard.component';
+import { ScoreboardComponent } from './scoreboard/scoreboard.component';
 
 @Component({
   selector: 'app-scoreboard',
@@ -44,41 +44,41 @@ describe('HeaderComponent', () => {
   });
 
   describe('Scoreboard & Rules Toggle State', () => {
-    it('should initialize states as false', () => {
-      expect(component.isScoreboardOpen()).toBe(false);
-      expect(component.isRulesOpen()).toBe(false);
+    it('should initialize activePopover as null', () => {
+      expect(component.activePopover()).toBeNull();
     });
 
-    it('should toggle isScoreboardOpen when toggleScoreboard() is called', () => {
+    it('should toggle scoreboard popover when toggleScoreboard() is called', () => {
       component.toggleScoreboard();
-      expect(component.isScoreboardOpen()).toBe(true);
+      expect(component.activePopover()).toBe('scoreboard');
 
       component.toggleScoreboard();
-      expect(component.isScoreboardOpen()).toBe(false);
+      expect(component.activePopover()).toBeNull();
     });
 
-    it('should toggle isRulesOpen when toggleRules() is called', () => {
+    it('should toggle rules popover when toggleRules() is called', () => {
       component.toggleRules();
-      expect(component.isRulesOpen()).toBe(true);
+      expect(component.activePopover()).toBe('rules');
 
       component.toggleRules();
-      expect(component.isRulesOpen()).toBe(false);
+      expect(component.activePopover()).toBeNull();
     });
 
-    it('should set isRulesOpen to false when closeRules() is called', () => {
-      component.isRulesOpen.set(true);
-      component.closeRules();
-      expect(component.isRulesOpen()).toBe(false);
+    it('should close popovers when closeAll() is called', () => {
+      component.toggleRules();
+      expect(component.activePopover()).toBe('rules');
+
+      component.closeAll();
+      expect(component.activePopover()).toBeNull();
     });
 
     it('should close all popovers when Escape key is pressed', () => {
-      component.isScoreboardOpen.set(true);
-      component.isRulesOpen.set(true);
+      component.toggleScoreboard();
+      expect(component.activePopover()).toBe('scoreboard');
 
       component.handleEscape();
 
-      expect(component.isScoreboardOpen()).toBe(false);
-      expect(component.isRulesOpen()).toBe(false);
+      expect(component.activePopover()).toBeNull();
     });
   });
 
