@@ -3,19 +3,19 @@
 
     <!-- BUTTON: Delete (Backspace icon) -->
     <button type="button" class="btn control-btn control-btn-secondary rounded-pill shadow-sm" (click)="onDelete()"
-        title="Cancella l'ultima lettera">
-        <i class="bi bi-backspace fs-5"></i>
+        aria-label="Cancella l'ultima lettera" title="Cancella l'ultima lettera">
+        <i class="bi bi-backspace fs-5" aria-hidden="true"></i>
     </button>
 
     <!-- BUTTON: Shuffle (Round Shuffle Icon) -->
     <button type="button" class="btn control-btn control-btn-icon rounded-circle shadow-sm" (click)="onShuffle()"
-        title="Mescola le lettere">
-        <i class="bi bi-shuffle fs-5"></i>
+        aria-label="Mescola le lettere" title="Mescola le lettere">
+        <i class="bi bi-shuffle fs-5" aria-hidden="true"></i>
     </button>
 
     <!-- BUTTON: Submit (Primary Button) -->
     <button type="button" class="btn control-btn control-btn-primary rounded-pill shadow-sm fw-bold"
-        (click)="onSubmit()" aria-label="Invia la parola inserita">
+        (click)="onSubmit()" aria-label="Invia la parola inserita" title="Invia la parola inserita">
         Invio
     </button>
 

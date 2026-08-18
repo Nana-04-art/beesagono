@@ -1,16 +1,16 @@
 .word-display-container {
-    min-height: 100px;
+    min-height: 6.25rem;
 }
 
 .feedback-badge {
     font-size: 0.95rem;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.0313rem;
     animation: fadeIn 0.2s ease-in-out;
 }
 
 .input-box {
-    min-height: 48px;
-    min-width: 200px;
+    min-height: 3rem;
+    min-width: 12.5rem;
     max-width: 100%;
     border-color: #dee2e6 !important;
     transition: border-color 0.2s ease;
@@ -26,11 +26,11 @@
 }
 
 .letters-wrapper {
-    gap: 2px;
+    gap: 0.125rem;
 }
 
 .letter {
-    font-size: 1.8rem;
+    font-size: clamp(1.25rem, 5vw, 1.8rem);
     color: #212529;
 
     &.is-center {
@@ -39,9 +39,9 @@
 }
 
 .cursor {
-    font-size: 1.8rem;
+    font-size: clamp(1.25rem, 5vw, 1.8rem);
     color: #f59e0b;
-    margin-left: 2px;
+    margin-left: 0.125rem;
     animation: blink 1s infinite;
 }
 
@@ -60,7 +60,7 @@
 @keyframes fadeIn {
     from {
         opacity: 0;
-        transform: translateY(-4px);
+        transform: translateY(-0.25rem);
     }
 
     to {

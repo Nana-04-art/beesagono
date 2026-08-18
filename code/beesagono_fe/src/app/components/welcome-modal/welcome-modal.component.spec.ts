@@ -1,7 +1,8 @@
-import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
-import { signal } from '@angular/core';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { WelcomeModalComponent } from './welcome-modal.component';
-import { WelcomeNoticeService } from '../../services/welcome-notice/welcome-notice.service'; 
+import { WelcomeNoticeService } from '../../services/welcome-notice/welcome-notice.service';
+import { describe, beforeEach, afterEach, it, expect, vi } from 'vitest';
+import { signal } from '@angular/core';
 
 class MockWelcomeNoticeService {
   isNoticeOpen = signal<boolean>(false);
@@ -19,6 +20,7 @@ describe('WelcomeModalComponent', () => {
   let mockWelcomeNoticeService: MockWelcomeNoticeService;
 
   beforeEach(async () => {
+    vi.useFakeTimers();
     mockWelcomeNoticeService = new MockWelcomeNoticeService();
 
     await TestBed.configureTestingModule({
@@ -35,6 +37,7 @@ describe('WelcomeModalComponent', () => {
 
   afterEach(() => {
     document.body.style.overflow = '';
+    vi.useRealTimers();
   });
 
   it('should create the component', () => {
@@ -42,24 +45,28 @@ describe('WelcomeModalComponent', () => {
   });
 
   describe('Effect and body scroll management', () => {
-    it('should set overflow: hidden on body when modal is open', fakeAsync(() => {
+    it('should set overflow: hidden on body when modal is open', async () => {
       mockWelcomeNoticeService.isNoticeOpen.set(true);
       fixture.detectChanges();
-      tick(50);
+      vi.advanceTimersByTime(50);
+      await fixture.whenStable();
 
       expect(document.body.style.overflow).toBe('hidden');
-    }));
+    });
 
-    it('should restore body overflow when modal is closed', fakeAsync(() => {
+    it('should restore body overflow when modal is closed', async () => {
       mockWelcomeNoticeService.isNoticeOpen.set(true);
       fixture.detectChanges();
-      tick(50);
+      vi.advanceTimersByTime(50);
+      await fixture.whenStable();
 
       mockWelcomeNoticeService.isNoticeOpen.set(false);
       fixture.detectChanges();
+      vi.advanceTimersByTime(50);
+      await fixture.whenStable();
 
       expect(document.body.style.overflow).toBe('');
-    }));
+    });
   });
 
   describe('dismissNotice()', () => {
@@ -79,7 +86,7 @@ describe('WelcomeModalComponent', () => {
       fixture.detectChanges();
     });
 
-    it('should trap Tab key and prevent default behavior', fakeAsync(() => {
+    it('should trap Tab key and prevent default behavior', async () => {
       let isDefaultPrevented = false;
       const event = {
         key: 'Tab',
@@ -87,10 +94,11 @@ describe('WelcomeModalComponent', () => {
       } as KeyboardEvent;
 
       component.handleKeyboardEvent(event);
-      tick(50);
+      vi.advanceTimersByTime(50);
+      await fixture.whenStable();
 
       expect(isDefaultPrevented).toBe(true);
-    }));
+    });
 
     it('should catch Escape key, prevent default and close modal', () => {
       let isDefaultPrevented = false;
@@ -122,19 +130,20 @@ describe('WelcomeModalComponent', () => {
   });
 
   describe('Focus Management', () => {
-    it('should focus confirmBtn after modal opens', fakeAsync(() => {
-      let focused = false;
-      const buttonNativeEl = {
-        focus: () => { focused = true; }
-      } as unknown as HTMLButtonElement;
-
-      component.confirmBtn = { nativeElement: buttonNativeEl };
-
+    it('should focus confirmBtn after modal opens', async () => {
       mockWelcomeNoticeService.isNoticeOpen.set(true);
       fixture.detectChanges();
-      tick(50);
 
-      expect(focused).toBe(true);
-    }));
+      if (component.confirmBtn?.nativeElement) {
+        const focusSpy = vi.spyOn(component.confirmBtn.nativeElement, 'focus');
+
+        vi.advanceTimersByTime(100);
+        await fixture.whenStable();
+
+        expect(focusSpy).toHaveBeenCalled();
+      } else {
+        expect(component.confirmBtn).toBeDefined();
+      }
+    });
   });
 });

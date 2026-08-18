@@ -1,4 +1,4 @@
-import { Component, inject, input } from '@angular/core';
+import { Component, inject, input, signal } from '@angular/core';
 import { WordMapItem } from '../../models/word-map-item.model';
 import { GameService } from '../../services/game/game.service';
 
@@ -9,7 +9,8 @@ import { GameService } from '../../services/game/game.service';
   styleUrl: './word-map.component.scss',
 })
 export class WordMapComponent {
-  items = input.required<WordMapItem[]>();
   private gameService = inject(GameService);
+
+  items = input.required<WordMapItem[]>();
   letterColors = this.gameService.letterColors;
 }

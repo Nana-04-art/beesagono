@@ -9,6 +9,7 @@ import { CAREER_TIERS, STREAK_MILESTONES } from '../../config/career-tiers.const
 export class StatsService {
     private readonly storage = inject(StorageService);
     private readonly STORAGE_KEY = 'stats';
+    private readonly GAME_KEY_PREFIX = 'beesagono:game:';
 
     // Reactive state
     private readonly _stats = signal<PlayerStats>(this.loadStats());
@@ -70,6 +71,11 @@ export class StatsService {
                 stats.maxStreak = Math.max(stats.maxStreak, stats.currentStreak);
                 stats.lastPlayedDate = currentDate;
 
+                // Reset daily tracking helpers for a new day
+                stats.currentSeason._lastRecordedDailyScore = 0;
+                stats.currentSeason._isCompletedToday = false;
+                stats.currentSeason._lastRecordedRankToday = null;
+
                 // Check and award Milestone Bonuses
                 this.checkStreakMilestones(stats.currentStreak, stats.currentSeason);
             }
@@ -79,7 +85,7 @@ export class StatsService {
                 const previousDailyScore = stats.currentSeason._lastRecordedDailyScore || 0;
                 const scoreDiff = dailyScore - previousDailyScore;
 
-                if (scoreDiff !== 0) {
+                if (scoreDiff > 0) {
                     stats.currentSeason.basePointsEarned += scoreDiff;
                     stats.currentSeason._lastRecordedDailyScore = dailyScore;
                 }
@@ -88,14 +94,26 @@ export class StatsService {
                     stats.currentSeason.basePointsEarned + stats.currentSeason.bonusStreakPoints;
             }
 
-            // Completion and Ranks
-            if (isCompletedToday && isFirstPlayToday) {
+            // Completion Check (Increments on transition to complete state)
+            if (isCompletedToday && !stats.currentSeason._isCompletedToday) {
                 stats.gamesCompleted++;
+                stats.currentSeason._isCompletedToday = true;
             }
 
-            // Update Daily Rank only if explicitly provided
+            // Replaces/Updates rank when a higher/new rank is achieved
             if (dailyRank && dailyRank.trim() !== '') {
-                stats.dailyRankDistribution[dailyRank] = (stats.dailyRankDistribution[dailyRank] || 0) + 1;
+                const prevRank = stats.currentSeason._lastRecordedRankToday;
+
+                if (prevRank !== dailyRank) {
+                    // Decrement counter for previous rank if reached earlier today
+                    if (prevRank && stats.dailyRankDistribution[prevRank]) {
+                        stats.dailyRankDistribution[prevRank] = Math.max(0, stats.dailyRankDistribution[prevRank] - 1);
+                    }
+
+                    // Increment counter for the newly achieved rank
+                    stats.dailyRankDistribution[dailyRank] = (stats.dailyRankDistribution[dailyRank] || 0) + 1;
+                    stats.currentSeason._lastRecordedRankToday = dailyRank;
+                }
             }
 
             // Update highest tier achieved in the current season
@@ -153,14 +171,14 @@ export class StatsService {
 
     private loadStats(): PlayerStats {
         const saved = this.storage.load<PlayerStats>(this.STORAGE_KEY);
-        const today = new Date().toISOString().split('T')[0]; // Data odierna in formato YYYY-MM-DD
+        const today = new Date().toISOString().split('T')[0];
 
         let stats: PlayerStats;
         if (saved) {
             stats = saved;
             this.checkStreakContinuity(stats, today);
         } else {
-            // If the 'stats' file does not exist, we rebuild the data by reading the matches saved in the browser.
+            // Rebuild stats from stored local games if 'stats' key doesn't exist
             stats = this.rebuildStatsFromStorage();
             this.checkStreakContinuity(stats, today);
         }
@@ -178,54 +196,75 @@ export class StatsService {
 
         const diffDays = Math.round((todayUtc - lastUtc) / (1000 * 60 * 60 * 24));
 
-        // If the last day played was before yesterday (i.e., diffDays > 1), 
-        // the current streak resets (it will start again from 1 upon the first launch/game of the day).
         if (diffDays > 1) {
             stats.currentStreak = 0;
         }
     }
 
     private rebuildStatsFromStorage(): PlayerStats {
+        const currentYear = new Date().getFullYear();
+        const todayStr = new Date().toISOString().split('T')[0];
+
         const newStats: PlayerStats = {
             gamesPlayed: 0,
             gamesCompleted: 0,
             currentStreak: 0,
             maxStreak: 0,
             lastPlayedDate: null,
-            currentSeason: this.createEmptySeason(new Date().getFullYear()),
+            currentSeason: this.createEmptySeason(currentYear),
             seasonHistory: {},
             dailyRankDistribution: {}
         };
 
+        const gameKeys = this.getGameKeysFromStorage();
         const playedDates: string[] = [];
 
-        // Scan LocalStorage, sum the points, and save the dates
-        for (let i = 0; i < localStorage.length; i++) {
-            const key = localStorage.key(i);
-            if (key?.startsWith('beesagono:game:')) {
-                try {
-                    const gameData = JSON.parse(localStorage.getItem(key)!);
+        for (const key of gameKeys) {
+            const gameData = this.storage.load<any>(key);
+            if (!gameData) continue;
 
-                    newStats.currentSeason.basePointsEarned += (gameData.score || 0);
-                    newStats.gamesPlayed++;
+            const date = key.replace(this.GAME_KEY_PREFIX, '');
+            if (!date) continue;
 
-                    if (gameData.isCompleted) {
-                        newStats.gamesCompleted++;
-                    }
+            const year = parseInt(date.split('-')[0], 10);
+            if (isNaN(year)) continue;
 
-                    // Extract the date (e.g., "2026-08-05") and put it into the array
-                    const date = key.replace('beesagono:game:', '');
-                    playedDates.push(date);
-                } catch (e) {
-                    console.error('Errore nel parsing della chiave di gioco:', key, e);
+            const score = gameData.score || 0;
+            const isCompleted = !!gameData.isCompleted;
+            const rankLabel = gameData.rankLabel || gameData.rank || null;
+
+            playedDates.push(date);
+            newStats.gamesPlayed++;
+
+            if (isCompleted) {
+                newStats.gamesCompleted++;
+            }
+
+            if (rankLabel) {
+                newStats.dailyRankDistribution[rankLabel] = (newStats.dailyRankDistribution[rankLabel] || 0) + 1;
+            }
+
+            // Distribute points to appropriate season
+            if (year === currentYear) {
+                newStats.currentSeason.basePointsEarned += score;
+
+                // If game belongs to today, properly initialize daily state tracking
+                if (date === todayStr) {
+                    newStats.currentSeason._lastRecordedDailyScore = score;
+                    newStats.currentSeason._isCompletedToday = isCompleted;
+                    newStats.currentSeason._lastRecordedRankToday = rankLabel;
                 }
+            } else {
+                if (!newStats.seasonHistory[year]) {
+                    newStats.seasonHistory[year] = this.createEmptySeason(year);
+                }
+                newStats.seasonHistory[year].basePointsEarned += score;
+                newStats.seasonHistory[year].totalSeasonPoints = newStats.seasonHistory[year].basePointsEarned;
             }
         }
 
-        // Let's sort the dates in chronological order (from oldest to most recent)
         playedDates.sort();
 
-        // Calculate the streak by iterating through the sorted dates
         if (playedDates.length > 0) {
             newStats.lastPlayedDate = playedDates[playedDates.length - 1];
             let streak = 0;
@@ -250,7 +289,24 @@ export class StatsService {
         }
 
         newStats.currentSeason.totalSeasonPoints = newStats.currentSeason.basePointsEarned;
+        newStats.currentSeason.highestTierAchieved = this.calculateTier(newStats);
+
         return newStats;
+    }
+
+    private getGameKeysFromStorage(): string[] {
+        const keys: string[] = [];
+        try {
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key?.startsWith(this.GAME_KEY_PREFIX)) {
+                    keys.push(key);
+                }
+            }
+        } catch (e) {
+            console.warn('Storage enumeration unavailable:', e);
+        }
+        return keys;
     }
 
     private saveStats(): void {
@@ -264,7 +320,10 @@ export class StatsService {
             bonusStreakPoints: 0,
             totalSeasonPoints: 0,
             highestTierAchieved: CAREER_TIERS[0]?.name ?? 'Iniziato',
-            claimedStreakMilestones: []
+            claimedStreakMilestones: [],
+            _lastRecordedDailyScore: 0,
+            _isCompletedToday: false,
+            _lastRecordedRankToday: null
         };
     }
 }

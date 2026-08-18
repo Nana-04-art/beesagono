@@ -161,13 +161,26 @@ export class HiveViewComponent implements OnInit {
   @HostListener('window:keydown', ['$event'])
   handleKeyboardEvent(event: KeyboardEvent): void {
     if (this.gameService.loadStatus() !== 'ready') return;
+    if (this.welcomeService.isNoticeOpen() || this.isHelpModalOpen() || this.isStatsModalOpen() || this.isEndGameModalOpen()) {
+      return;
+    }
+    if (event.defaultPrevented || event.ctrlKey || event.metaKey || event.altKey) {
+      return;
+    }
+
+    const target = event.target as HTMLElement;
+    if (target && ['INPUT', 'TEXTAREA', 'BUTTON', 'SELECT'].includes(target.tagName)) {
+      return;
+    }
 
     if (event.key === 'Enter') {
       event.preventDefault();
       this.submit();
     } else if (event.key === 'Backspace') {
+      event.preventDefault();
       this.gameService.deleteLastChar();
     } else if (/^[a-zA-Z]$/.test(event.key)) {
+      event.preventDefault();
       this.gameService.handleInput(event.key);
     }
   }

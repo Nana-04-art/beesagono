@@ -12,6 +12,7 @@ class MockGameService {
   readonly foundMielegrammi: WritableSignal<string[]> = signal<string[]>([]);
   readonly totalPossibleWords: WritableSignal<number> = signal<number>(0);
   readonly totalMielegrammi: WritableSignal<number> = signal<number>(0);
+  readonly wordMap: WritableSignal<any[]> = signal<any[]>([]);
 }
 
 describe('WordsByLetterComponent', () => {

@@ -1,26 +1,107 @@
 <nav
-    class="navbar navbar-expand sticky-top bg-white bg-opacity-75 border-bottom border-warning border-opacity-25 backdrop-blur py-2 px-3 px-lg-4">
-    <div
-        class="container-fluid max-w-7xl px-0 flex-nowrap justify-content-between align-items-center gap-2 position-relative">
+    class="navbar sticky-top bg-white bg-opacity-75 border-bottom border-warning border-opacity-25 backdrop-blur py-2 px-3 px-lg-4">
+    <div class="container-fluid max-w-7xl px-0 d-flex flex-column gap-2">
 
-        <!-- Left Section: Title & Date -->
-        <div class="d-flex align-items-center gap-1 gap-sm-2 flex-shrink-0 cursor-pointer user-select-none"
-            (click)="onLogoClick()">
-            <span class="fs-4 fs-sm-2 animate-bounce-subtle" role="img" aria-label="Ape">🐝</span>
-            <div class="d-flex flex-column">
-                <h1 class="fw-black fs-6 fs-sm-5 tracking-wider text-warning-emphasis m-0 lh-1">MIELEGRAMMI</h1>
-                <span class="date-subtitle fw-bold text-uppercase tracking-widest mt-1">{{ formattedDate() }}</span>
+        <!-- Top Row: Logo, Central Rank, Actions -->
+        <div class="w-100 d-flex align-items-center justify-content-between gap-2 position-relative">
+
+            <!-- Left Section: Title & Date -->
+            <div class="d-flex align-items-center gap-1 gap-sm-2 flex-shrink-0 cursor-pointer user-select-none"
+                (click)="onLogoClick()">
+                <span class="fs-4 fs-sm-2 animate-bounce-subtle" role="img" aria-label="Ape">🐝</span>
+                <div class="d-flex flex-column">
+                    <h1 class="fw-black fs-6 fs-sm-5 tracking-wider text-warning-emphasis m-0 lh-1">MIELEGRAMMI</h1>
+                    <span class="date-subtitle fw-bold text-uppercase tracking-widest mt-1">{{ formattedDate() }}</span>
+                </div>
+            </div>
+
+            <!-- Center Section: Current Rank Indicator -->
+            <div class="d-none d-md-block position-absolute start-50 translate-middle-x rank-popover-wrapper">
+                <button type="button" id="scoreboard-trigger"
+                    class="btn border-0 p-0 shadow-none d-flex align-items-center bg-warning bg-opacity-10 border border-warning border-opacity-25 rounded-pill px-3 py-1 shadow-sm cursor-pointer rank-badge"
+                    [attr.aria-expanded]="activePopover() === 'scoreboard'" aria-controls="scoreboard-popover"
+                    (click)="toggleScoreboard()">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="small text-secondary fw-medium">Grado:</span>
+                        <span class="small fw-bold text-warning-emphasis d-flex align-items-center gap-1">
+                            <span>{{ rank().label }}</span>
+                        </span>
+                    </div>
+                </button>
+
+                @if (activePopover() === 'scoreboard') {
+                <div id="scoreboard-popover"
+                    class="scoreboard-popover position-absolute top-100 start-50 translate-middle-x mt-2">
+                    <app-scoreboard [score]="score()" [rankName]="rank().label" />
+                </div>
+                }
+            </div>
+
+            <!-- Right Section: Action Buttons -->
+            <div class="d-flex align-items-center gap-1 gap-sm-2 flex-shrink-0">
+
+                <!-- Button 1: Rules -->
+                <div class="position-relative rules-popover-wrapper">
+                    <button type="button" class="header-btn" [class.active]="activePopover() === 'rules'"
+                        title="Come si gioca" [attr.aria-expanded]="activePopover() === 'rules'"
+                        aria-controls="rules-popover" (click)="toggleRules()">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="btn-icon" fill="none" viewBox="0 0 24 24"
+                            stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <span class="d-none d-sm-inline extra-small fw-semibold">Regole</span>
+                    </button>
+
+                    @if (activePopover() === 'rules') {
+                    <div class="position-absolute top-100 end-0 mt-2">
+                        <app-rules (close)="closeAll()" />
+                    </div>
+                    }
+                </div>
+
+                <!-- Button 2: Statistics -->
+                <div class="position-relative stats-popover-wrapper">
+                    <button type="button" class="header-btn" [class.active]="activePopover() === 'stats'"
+                        title="Le tue statistiche" [attr.aria-expanded]="activePopover() === 'stats'"
+                        aria-controls="stats-popover" (click)="toggleStats()">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="btn-icon" fill="none" viewBox="0 0 24 24"
+                            stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                        </svg>
+                        <span class="d-none d-sm-inline extra-small fw-semibold">Statistiche</span>
+                    </button>
+
+                    @if (activePopover() === 'stats') {
+                    <div class="position-absolute top-100 end-0 mt-2">
+                        <app-stats />
+                    </div>
+                    }
+                </div>
+
+                <!-- Button 3: Share -->
+                <button type="button" class="header-btn header-btn-primary" title="Condividi risultato"
+                    (click)="shareRequested.emit()">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="btn-icon" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+                    </svg>
+                    <span class="d-none d-sm-inline extra-small fw-bold">Condividi</span>
+                </button>
+
             </div>
         </div>
 
-        <!-- Center Section: Current Rank Indicator -->
-        <div class="position-absolute start-50 translate-middle-x rank-popover-wrapper">
-            <button type="button" id="scoreboard-trigger"
-                class="btn border-0 p-0 shadow-none d-flex align-items-center bg-warning bg-opacity-10 border border-warning border-opacity-25 rounded-pill px-2 px-sm-3 py-1 shadow-sm cursor-pointer rank-badge"
-                [attr.aria-expanded]="activePopover() === 'scoreboard'" aria-controls="scoreboard-popover"
+        <!-- Mobile-Only Row: Rank Indicator (Visible on < MD screens) -->
+        <div class="d-md-none w-100 d-flex justify-content-center position-relative rank-popover-wrapper">
+            <button type="button" id="scoreboard-trigger-mobile"
+                class="btn border-0 p-0 shadow-none d-flex align-items-center bg-warning bg-opacity-10 border border-warning border-opacity-25 rounded-pill px-3 py-0.5 shadow-sm cursor-pointer rank-badge"
+                [attr.aria-expanded]="activePopover() === 'scoreboard'" aria-controls="scoreboard-popover-mobile"
                 (click)="toggleScoreboard()">
-                <div class="d-flex align-items-center gap-1 gap-sm-2">
-                    <span class="small text-secondary fw-medium d-none d-sm-inline">Grado:</span>
+                <div class="d-flex align-items-center gap-1">
+                    <span class="small text-secondary fw-medium">Grado:</span>
                     <span class="small fw-bold text-warning-emphasis d-flex align-items-center gap-1">
                         <span>{{ rank().label }}</span>
                     </span>
@@ -28,67 +109,11 @@
             </button>
 
             @if (activePopover() === 'scoreboard') {
-            <div id="scoreboard-popover"
+            <div id="scoreboard-popover-mobile"
                 class="scoreboard-popover position-absolute top-100 start-50 translate-middle-x mt-2">
                 <app-scoreboard [score]="score()" [rankName]="rank().label" />
             </div>
             }
-        </div>
-
-        <!-- Right Section: Action Buttons -->
-        <div class="d-flex align-items-center gap-1 gap-sm-2 flex-shrink-0">
-
-            <!-- Button 1: Rules -->
-            <div class="position-relative rules-popover-wrapper">
-                <button type="button" class="header-btn" [class.active]="activePopover() === 'rules'"
-                    title="Come si gioca" [attr.aria-expanded]="activePopover() === 'rules'"
-                    aria-controls="rules-popover" (click)="toggleRules()">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="btn-icon" fill="none" viewBox="0 0 24 24"
-                        stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    <span class="d-none d-sm-inline extra-small fw-semibold">Regole</span>
-                </button>
-
-                @if (activePopover() === 'rules') {
-                <div class="position-absolute top-100 end-0 mt-2">
-                    <app-rules (close)="closeAll()" />
-                </div>
-                }
-            </div>
-
-            <!-- Button 2: Statistics -->
-            <div class="position-relative stats-popover-wrapper">
-                <button type="button" class="header-btn" [class.active]="activePopover() === 'stats'"
-                    title="Le tue statistiche" [attr.aria-expanded]="activePopover() === 'stats'"
-                    aria-controls="stats-popover" (click)="toggleStats()">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="btn-icon" fill="none" viewBox="0 0 24 24"
-                        stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                    </svg>
-                    <span class="d-none d-sm-inline extra-small fw-semibold">Statistiche</span>
-                </button>
-
-                @if (activePopover() === 'stats') {
-                <div class="position-absolute top-100 end-0 mt-2">
-                    <app-stats />
-                </div>
-                }
-            </div>
-
-            <!-- Button 3: Share -->
-            <button type="button" class="header-btn header-btn-primary" title="Condividi risultato"
-                (click)="shareRequested.emit()">
-                <svg xmlns="http://www.w3.org/2000/svg" class="btn-icon" fill="none" viewBox="0 0 24 24"
-                    stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
-                </svg>
-                <span class="d-none d-sm-inline extra-small fw-bold">Condividi</span>
-            </button>
-
         </div>
     </div>
 </nav>

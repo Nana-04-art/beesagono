@@ -1,17 +1,21 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { HiveViewComponent } from './hive-view.component';
 import { GameService } from '../../services/game/game.service';
+import { WelcomeNoticeService } from '../../services/welcome-notice/welcome-notice.service';
 import { describe, beforeEach, afterEach, it, expect, vi } from 'vitest';
-import { signal } from '@angular/core';
+import { signal, NO_ERRORS_SCHEMA } from '@angular/core';
 import { GameBoard } from '../../models/game-board.model';
 import { Cell } from '../../models/cell.model';
 import { ShareScorePayload } from '../../models/share-score.model';
+import { RankTier } from '../../models/rank.model';
+import { ValidationResult } from '../../models/validation.model';
 
 describe('HiveViewComponent', () => {
     let component: HiveViewComponent;
     let fixture: ComponentFixture<HiveViewComponent>;
 
     const loadStatusSignal = signal<'idle' | 'loading' | 'ready' | 'error'>('ready');
+    const loadErrorSignal = signal<string | null>(null);
     const boardSignal = signal<GameBoard | null>({
         date: '2026-08-12',
         seed: 'test-seed',
@@ -36,6 +40,15 @@ describe('HiveViewComponent', () => {
     const invalidWordsSignal = signal<string[]>([]);
     const totalPossibleWordsSignal = signal<number>(10);
     const totalMielegrammiSignal = signal<number>(1);
+    const scoreSignal = signal<number>(50);
+    const maxScoreSignal = signal<number>(100);
+    const rankSignal = signal<RankTier>({
+        threshold: 0,
+        label: '🌱 Iniziato'
+    });
+    const wordMapSignal = signal<any[]>([]);
+
+    const isNoticeOpenSignal = signal<boolean>(false);
 
     const mockPayload: ShareScorePayload = {
         date: '12/08/2026',
@@ -48,11 +61,13 @@ describe('HiveViewComponent', () => {
     };
 
     let mockGameService: Partial<GameService>;
+    let mockWelcomeNoticeService: Partial<WelcomeNoticeService>;
 
     beforeEach(async () => {
         vi.useFakeTimers();
 
         loadStatusSignal.set('ready');
+        loadErrorSignal.set(null);
         currentInputSignal.set('');
         displayCellsSignal.set([
             { id: '0', letter: 'A', isCenter: true, position: 0 },
@@ -77,9 +92,18 @@ describe('HiveViewComponent', () => {
         invalidWordsSignal.set([]);
         totalPossibleWordsSignal.set(10);
         totalMielegrammiSignal.set(1);
+        scoreSignal.set(50);
+        maxScoreSignal.set(100);
+        rankSignal.set({
+            threshold: 0,
+            label: '🌱 Iniziato'
+        });
+
+        isNoticeOpenSignal.set(false);
 
         mockGameService = {
             loadStatus: loadStatusSignal as any,
+            loadError: loadErrorSignal as any,
             board: boardSignal as any,
             isCompleted: isCompletedSignal as any,
             currentInput: currentInputSignal as any,
@@ -89,19 +113,37 @@ describe('HiveViewComponent', () => {
             invalidWords: invalidWordsSignal as any,
             totalPossibleWords: totalPossibleWordsSignal as any,
             totalMielegrammi: totalMielegrammiSignal as any,
+            score: scoreSignal as any,
+            maxScore: maxScoreSignal as any,
+            rank: rankSignal as any,
+            wordMap: wordMapSignal as any,
             loadDailyGame: vi.fn(),
+            retryLoadDailyGame: vi.fn(),
             checkDateRollover: vi.fn(),
-            submitWord: vi.fn().mockReturnValue({ isValid: true, message: 'Ottimo!', isMielegramma: false }),
+            submitWord: vi.fn().mockReturnValue({
+                isValid: true,
+                pointsAwarded: 5,
+                isMielegramma: false
+            } as ValidationResult),
             deleteLastChar: vi.fn(),
             handleInput: vi.fn(),
-            getShareScorePayload: vi.fn().mockReturnValue(mockPayload)
+            getShareScorePayload: vi.fn().mockReturnValue(mockPayload),
+            shuffle: vi.fn()
+        };
+
+        mockWelcomeNoticeService = {
+            isNoticeOpen: isNoticeOpenSignal as any,
+            checkAndShowNotice: vi.fn(),
+            dismissNotice: vi.fn()
         };
 
         await TestBed.configureTestingModule({
             imports: [HiveViewComponent],
             providers: [
-                { provide: GameService, useValue: mockGameService }
-            ]
+                { provide: GameService, useValue: mockGameService },
+                { provide: WelcomeNoticeService, useValue: mockWelcomeNoticeService }
+            ],
+            schemas: [NO_ERRORS_SCHEMA]
         }).compileComponents();
 
         fixture = TestBed.createComponent(HiveViewComponent);
@@ -119,15 +161,19 @@ describe('HiveViewComponent', () => {
     });
 
     describe('Lifecycle & Focus Rollover', () => {
-        it('should call loadDailyGame on ngOnInit if loadStatus is idle', () => {
+        it('should check welcome notice and call loadDailyGame on ngOnInit if loadStatus is idle', () => {
             loadStatusSignal.set('idle');
             component.ngOnInit();
+
+            expect(mockWelcomeNoticeService.checkAndShowNotice).toHaveBeenCalled();
             expect(mockGameService.loadDailyGame).toHaveBeenCalled();
         });
 
-        it('should call checkDateRollover on ngOnInit if loadStatus is NOT idle', () => {
+        it('should check date rollover on ngOnInit if loadStatus is NOT idle', () => {
             loadStatusSignal.set('ready');
             component.ngOnInit();
+
+            expect(mockWelcomeNoticeService.checkAndShowNotice).toHaveBeenCalled();
             expect(mockGameService.checkDateRollover).toHaveBeenCalled();
         });
 
@@ -142,19 +188,32 @@ describe('HiveViewComponent', () => {
 
     describe('Computed Properties', () => {
         it('should compute the correct center letter from board', () => {
-            // @ts-expect-error Accessing protected property for unit test
+            // @ts-expect-error Accessing protected property for unit testing
             expect(component.centerLetter()).toBe('A');
         });
 
         it('should return empty string for centerLetter if board is null', () => {
             boardSignal.set(null);
             fixture.detectChanges();
-            // @ts-expect-error Accessing protected property for unit test
+
+            // @ts-expect-error Accessing protected property for unit testing
             expect(component.centerLetter()).toBe('');
         });
 
+        it('should format date correctly in Italian format', () => {
+            expect(component.formattedDate()).toContain('12');
+            expect(component.formattedDate()).toContain('2026');
+        });
+
+        it('should return empty string for formattedDate if board is null', () => {
+            boardSignal.set(null);
+            fixture.detectChanges();
+
+            expect(component.formattedDate()).toBe('');
+        });
+
         it('should obtain endGamePayload from gameService', () => {
-            // @ts-expect-error Accessing protected property for unit test
+            // @ts-expect-error Accessing protected property for unit testing
             expect(component.endGamePayload()).toEqual(mockPayload);
         });
     });
@@ -162,19 +221,19 @@ describe('HiveViewComponent', () => {
     describe('Modal State Handlers', () => {
         it('should toggle help, stats, and end game modals', () => {
             component.openHelpModal();
-            // @ts-expect-error Accessing protected property for test
+            // @ts-expect-error Accessing protected property
             expect(component.isHelpModalOpen()).toBe(true);
 
             component.openStatsModal();
-            // @ts-expect-error Accessing protected property for test
+            // @ts-expect-error Accessing protected property
             expect(component.isStatsModalOpen()).toBe(true);
 
             component.openEndGame();
-            // @ts-expect-error Accessing protected property for test
+            // @ts-expect-error Accessing protected property
             expect(component.isEndGameModalOpen()).toBe(true);
 
             component.closeEndGame();
-            // @ts-expect-error Accessing protected property for test
+            // @ts-expect-error Accessing protected property
             expect(component.isEndGameModalOpen()).toBe(false);
         });
     });
@@ -205,6 +264,18 @@ describe('HiveViewComponent', () => {
             expect(mockGameService.handleInput).toHaveBeenCalledWith('a');
         });
 
+        it('should ignore keyboard input if a modal or notice is open', () => {
+            isNoticeOpenSignal.set(true);
+            fixture.detectChanges();
+
+            const event = new KeyboardEvent('keydown', { key: 'Enter' });
+            const submitSpy = vi.spyOn(component, 'submit');
+
+            component.handleKeyboardEvent(event);
+
+            expect(submitSpy).not.toHaveBeenCalled();
+        });
+
         it('should ignore non-alphabetic keys or modifier shortcuts', () => {
             const event = new KeyboardEvent('keydown', { key: 'Shift' });
 
@@ -214,13 +285,12 @@ describe('HiveViewComponent', () => {
             expect(mockGameService.deleteLastChar).not.toHaveBeenCalled();
         });
 
-        it('should ignore keyboard events if loadStatus is NOT ready', () => {
-            loadStatusSignal.set('loading');
-            fixture.detectChanges();
-
+        it('should ignore keyboard events if target is an input field', () => {
+            const inputEl = document.createElement('input');
             const event = new KeyboardEvent('keydown', { key: 'Enter' });
-            const submitSpy = vi.spyOn(component, 'submit');
+            Object.defineProperty(event, 'target', { value: inputEl, enumerable: true });
 
+            const submitSpy = vi.spyOn(component, 'submit');
             component.handleKeyboardEvent(event);
 
             expect(submitSpy).not.toHaveBeenCalled();
@@ -231,66 +301,68 @@ describe('HiveViewComponent', () => {
         it('should handle successful submit and display success message', () => {
             mockGameService.submitWord = vi.fn().mockReturnValue({
                 isValid: true,
-                message: 'Ottimo!',
+                pointsAwarded: 3,
                 isMielegramma: false
-            });
+            } as ValidationResult);
 
             component.submit();
 
-            // @ts-expect-error Accessing protected property for test
+            // @ts-expect-error Accessing protected property for testing
             expect(component.feedbackType()).toBe('success');
-            // @ts-expect-error Accessing protected property for test
+            // @ts-expect-error Accessing protected property for testing
             expect(component.feedbackMessage()).toBe('Ottimo!');
 
             vi.advanceTimersByTime(1500);
 
-            // @ts-expect-error Accessing protected property for test
+            // @ts-expect-error Accessing protected property for testing
             expect(component.feedbackMessage()).toBe('');
-            // @ts-expect-error Accessing protected property for test
+            // @ts-expect-error Accessing protected property for testing
             expect(component.feedbackType()).toBeNull();
         });
 
         it('should handle Mielegramma submit with special feedback message', () => {
             mockGameService.submitWord = vi.fn().mockReturnValue({
                 isValid: true,
-                message: '🎉 MIELEGRAMMA!',
+                pointsAwarded: 15,
                 isMielegramma: true
-            });
+            } as ValidationResult);
 
             component.submit();
 
-            // @ts-expect-error Accessing protected property for test
+            // @ts-expect-error Accessing protected property for testing
             expect(component.feedbackType()).toBe('success');
-            // @ts-expect-error Accessing protected property for test
+            // @ts-expect-error Accessing protected property for testing
             expect(component.feedbackMessage()).toBe('🎉 MIELEGRAMMA!');
         });
 
-        it('should handle invalid submit and show error message', () => {
+        it('should handle invalid submit and show error message from validation result', () => {
             mockGameService.submitWord = vi.fn().mockReturnValue({
                 isValid: false,
-                message: 'Parola troppo corta',
-                isMielegramma: false
-            });
+                pointsAwarded: 0,
+                isMielegramma: false,
+                errorType: 'TOO_SHORT',
+                message: 'Parola troppo corta'
+            } as ValidationResult);
 
             component.submit();
 
-            // @ts-expect-error Accessing protected property for test
+            // @ts-expect-error Accessing protected property for testing
             expect(component.feedbackType()).toBe('error');
-            // @ts-expect-error Accessing protected property for test
+            // @ts-expect-error Accessing protected property for testing
             expect(component.feedbackMessage()).toBe('Parola troppo corta');
 
             vi.advanceTimersByTime(2000);
 
-            // @ts-expect-error Accessing protected property for test
+            // @ts-expect-error Accessing protected property for testing
             expect(component.feedbackMessage()).toBe('');
         });
 
         it('should auto-open end game modal when puzzle is completed on submit', () => {
             mockGameService.submitWord = vi.fn().mockReturnValue({
                 isValid: true,
-                message: 'Ottimo!',
+                pointsAwarded: 5,
                 isMielegramma: false
-            });
+            } as ValidationResult);
             isCompletedSignal.set(true);
 
             const openEndGameSpy = vi.spyOn(component, 'openEndGame');
@@ -318,14 +390,14 @@ describe('HiveViewComponent', () => {
                 expect.stringContaining('🐝 Beesagono (12/08/2026)\nPunti: 50/100')
             );
 
-            // @ts-expect-error Accessing protected property for test
+            // @ts-expect-error Accessing protected property for testing
             expect(component.feedbackType()).toBe('success');
-            // @ts-expect-error Accessing protected property for test
+            // @ts-expect-error Accessing protected property for testing
             expect(component.feedbackMessage()).toBe('Risultati copiati negli appunti!');
 
             vi.advanceTimersByTime(2000);
 
-            // @ts-expect-error Accessing protected property for test
+            // @ts-expect-error Accessing protected property for testing
             expect(component.feedbackMessage()).toBe('');
         });
     });

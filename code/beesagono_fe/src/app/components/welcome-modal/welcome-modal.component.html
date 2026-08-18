@@ -1,22 +1,23 @@
 @if (noticeService.isNoticeOpen()) {
-<div class="modal-backdrop-custom" (click)="$event.stopPropagation()" (wheel)="$event.preventDefault()"
-    (touchmove)="$event.preventDefault()"></div>
+<div class="modal-backdrop-custom" (click)="$event.stopPropagation()"></div>
 
-<!-- Central wrapper with the modal card perfectly OPAQUE -->
+<!-- Central wrapper with native scroll -->
 <div class="modal-wrapper-custom d-flex align-items-center justify-content-center p-3" role="dialog" aria-modal="true"
-    aria-labelledby="welcomeTitle" (click)="$event.stopPropagation()" (wheel)="$event.preventDefault()"
-    (touchmove)="$event.preventDefault()">
-    <!-- Modal Card (100% white opaque background, zero transparency) -->
-    <div class="modal-card bg-white rounded-4 shadow-lg border-0 overflow-hidden w-100" style="max-width: 500px;">
+    aria-labelledby="welcomeTitle" (click)="$event.stopPropagation()">
+
+     <!-- Modal Card with maximum height relative to the viewport and internal scrolling -->
+    <div class="modal-card bg-white rounded-4 shadow-lg border-0 d-flex flex-column w-100"
+        style="max-width: 31.25rem; max-height: calc(100dvh - 2rem); overflow-y: auto;">
+
         <!-- Header -->
-        <div class="bg-warning bg-opacity-10 border-bottom-0 pb-0 pt-4 px-4">
+        <div class="bg-warning bg-opacity-10 border-bottom-0 pb-0 pt-4 px-4 flex-shrink-0">
             <h5 class="modal-title fw-bold text-warning-emphasis d-flex align-items-center gap-2" id="welcomeTitle">
                 <span class="fs-3">🐝</span> Benvenuto su Mielegrammi!
             </h5>
         </div>
 
         <!-- Body -->
-        <div class="px-4 py-3">
+        <div class="px-4 py-3 overflow-y-auto">
             <p class="text-secondary mb-3">
                 Puoi iniziare a giocare subito senza creare un account! I tuoi progressi verranno salvati direttamente
                 in questo browser.
@@ -37,7 +38,7 @@
         </div>
 
         <!-- Footer -->
-        <div class="border-top-0 pt-0 pb-4 px-4">
+        <div class="border-top-0 pt-0 pb-4 px-4 flex-shrink-0">
             <button #confirmBtn type="button"
                 class="btn btn-warning text-dark fw-bold w-100 py-2.5 rounded-pill shadow-sm" (click)="dismissNotice()">
                 Ho capito, fammi giocare!

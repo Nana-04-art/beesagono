@@ -14,10 +14,10 @@
 
                     <!-- Left Side: Chevron + Circle and Letter -->
                     <div class="d-flex align-items-center gap-2">
-                        <!-- Chevron Icon spostato a sinistra -->
+                        <!-- Chevron Icon -->
                         <svg class="chevron-icon text-muted flex-shrink-0"
                             [class.rotate-180]="expandedLetters().has(group.letter)" fill="none" stroke="currentColor"
-                            viewBox="0 0 24 24" aria-hidden="true" style="width: 14px; height: 14px;">
+                            viewBox="0 0 24 24" aria-hidden="true" style="width: 0.875rem; height: 0.875rem;">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
                         </svg>
 
@@ -45,16 +45,26 @@
                             }
                         </div>
 
-                        <!-- Map button for a single letter (CORRECTED with group.letter) -->
+                        <!-- Map button per la singola lettera con icona dinamica -->
                         <button type="button"
                             class="btn btn-sm btn-outline-secondary p-1 d-flex align-items-center justify-content-center"
-                            (click)="toggleView(group.letter, $event)"
+                            (click)="toggleMapView(group.letter, $event)"
                             [title]="showMapLetters().has(group.letter) ? 'Mostra parole' : 'Mostra mappa'">
+                            @if (showMapLetters().has(group.letter)) {
+                            <!-- SVG Elenco -->
                             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"
-                                style="width: 16px; height: 16px;">
+                                style="width: 1rem; height: 1rem;">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" />
+                            </svg>
+                            } @else {
+                            <!-- SVG Mappa -->
+                            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                                style="width: 1rem; height: 1rem;">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                     d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
                             </svg>
+                            }
                         </button>
                     </div>
 

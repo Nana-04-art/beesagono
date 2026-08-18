@@ -23,11 +23,6 @@ export class FoundWordsComponent {
 
   showMap = signal<boolean>(false);
 
-  // Computed total count of all discovered words
-  readonly totalCount = computed(
-    () => this.foundWords().length + this.foundMielegrammi().length
-  );
-
   // Set lookup helper to identify pangrams efficiently
   private readonly mielegrammiSet = computed(
     () => new Set(this.foundMielegrammi().map((word) => word.toUpperCase()))
@@ -35,7 +30,7 @@ export class FoundWordsComponent {
 
   // Checks whether a given word is classified as a Mielegramma (pangram)
   isMielegramma(word: string): boolean {
-    return this.foundMielegrammi().includes(word);
+    return this.mielegrammiSet().has(word.toUpperCase());
   }
 
   // Toggles the accordion expansion state
@@ -43,12 +38,11 @@ export class FoundWordsComponent {
     this.isExpanded.update((prev) => !prev);
   }
 
-  readonly totalFoundCount = computed(
-    () => this.foundWords().length + this.foundMielegrammi().length
-  );
-
   toggleMapView(event: Event) {
     event.stopPropagation();
-    this.showMap.update(val => !val);
+    if (!this.isExpanded()) {
+      this.isExpanded.set(true);
+    }
+    this.showMap.update((prev) => !prev);
   }
 }

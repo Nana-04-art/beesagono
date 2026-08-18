@@ -86,8 +86,12 @@ export class WordsByLetterComponent {
     });
   }
 
-  toggleView(letter: string, event: Event): void {
+  toggleMapView(letter: string, event: Event): void {
     event.stopPropagation();
+    if (!this._expandedLetters().has(letter)) {
+      this._expandedLetters.update((currentSet) => new Set(currentSet).add(letter));
+    }
+
     this._showMapLetters.update((currentSet) => {
       const nextSet = new Set(currentSet);
       if (nextSet.has(letter)) {

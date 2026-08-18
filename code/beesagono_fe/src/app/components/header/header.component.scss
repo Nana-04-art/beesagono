@@ -1,6 +1,6 @@
 .backdrop-blur {
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(0.5rem);
+    -webkit-backdrop-filter: blur(0.5rem);
 }
 
 .max-w-7xl {
@@ -20,7 +20,7 @@
 }
 
 .date-subtitle {
-    font-size: 10px;
+    font-size: 0.625rem;
     color: rgba(180, 83, 9, 0.7);
 }
 
@@ -45,7 +45,7 @@
 
     &:hover {
         background-color: rgba(254, 243, 199, 0.9);
-        transform: translateY(-1px);
+        transform: translateY(-0.0625rem);
     }
 
     &:active {
@@ -72,7 +72,7 @@
     }
 
     50% {
-        transform: translateY(-2px);
+        transform: translateY(-0.125rem);
     }
 }
 
@@ -80,18 +80,22 @@
     animation: bounce-subtle 2.5s ease-in-out infinite;
 }
 
+.rules-popover-wrapper,
+.stats-popover-wrapper,
 .rank-popover-wrapper {
+    position: relative;
     z-index: 1050;
+}
 
+.rank-popover-wrapper {
     .scoreboard-popover {
-        width: 280px;
+        width: 17.5rem;
         visibility: visible;
         opacity: 1;
         pointer-events: auto;
         view-transition-name: rank-card-popover;
     }
 }
-
 
 .extra-small-text {
     font-size: 0.75rem;
@@ -103,8 +107,35 @@
     animation-duration: 0.25s;
 }
 
-.rules-popover-wrapper,
-.stats-popover-wrapper {
-    position: relative;
-    z-index: 1050;
+@media (max-width: 48rem) {
+
+    .rules-popover-wrapper,
+    .stats-popover-wrapper,
+    .rank-popover-wrapper {
+        position: static !important;
+    }
+
+    .rules-popover-wrapper>div,
+    .stats-popover-wrapper>div,
+    .rank-popover-wrapper .scoreboard-popover {
+        position: fixed !important;
+        top: 4.5rem !important;
+        left: 50% !important;
+        right: auto !important;
+        transform: translateX(-50%) !important;
+        width: min(calc(100vw - 1.5rem), 22.5rem) !important;
+        z-index: 1060 !important;
+        box-shadow: 0 0.625rem 1.5625rem -0.3125rem rgba(0, 0, 0, 0.3) !important;
+    }
+
+    .popover-backdrop {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100dvh;
+        background-color: rgba(15, 23, 42, 0.5);
+        z-index: 1040;
+        touch-action: none;
+    }
 }
