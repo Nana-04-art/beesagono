@@ -9,6 +9,7 @@ import { CAREER_TIERS, STREAK_MILESTONES } from '../../config/career-tiers.const
 export class StatsService {
     private readonly storage = inject(StorageService);
     private readonly STORAGE_KEY = 'stats';
+    private readonly GAME_KEY_PREFIX = 'beesagono:game:';
 
     // Reactive state
     private readonly _stats = signal<PlayerStats>(this.loadStats());
@@ -201,37 +202,64 @@ export class StatsService {
     }
 
     private rebuildStatsFromStorage(): PlayerStats {
+        const currentYear = new Date().getFullYear();
+        const todayStr = new Date().toISOString().split('T')[0];
+
         const newStats: PlayerStats = {
             gamesPlayed: 0,
             gamesCompleted: 0,
             currentStreak: 0,
             maxStreak: 0,
             lastPlayedDate: null,
-            currentSeason: this.createEmptySeason(new Date().getFullYear()),
+            currentSeason: this.createEmptySeason(currentYear),
             seasonHistory: {},
             dailyRankDistribution: {}
         };
 
+        const gameKeys = this.getGameKeysFromStorage();
         const playedDates: string[] = [];
 
-        for (let i = 0; i < localStorage.length; i++) {
-            const key = localStorage.key(i);
-            if (key?.startsWith('beesagono:game:')) {
-                try {
-                    const gameData = JSON.parse(localStorage.getItem(key)!);
+        for (const key of gameKeys) {
+            const gameData = this.storage.load<any>(key);
+            if (!gameData) continue;
 
-                    newStats.currentSeason.basePointsEarned += (gameData.score || 0);
-                    newStats.gamesPlayed++;
+            const date = key.replace(this.GAME_KEY_PREFIX, '');
+            if (!date) continue;
 
-                    if (gameData.isCompleted) {
-                        newStats.gamesCompleted++;
-                    }
+            const year = parseInt(date.split('-')[0], 10);
+            if (isNaN(year)) continue;
 
-                    const date = key.replace('beesagono:game:', '');
-                    playedDates.push(date);
-                } catch (e) {
-                    console.error('Errore nel parsing della chiave di gioco:', key, e);
+            const score = gameData.score || 0;
+            const isCompleted = !!gameData.isCompleted;
+            const rankLabel = gameData.rankLabel || gameData.rank || null;
+
+            playedDates.push(date);
+            newStats.gamesPlayed++;
+
+            if (isCompleted) {
+                newStats.gamesCompleted++;
+            }
+
+            if (rankLabel) {
+                newStats.dailyRankDistribution[rankLabel] = (newStats.dailyRankDistribution[rankLabel] || 0) + 1;
+            }
+
+            // Distribute points to appropriate season
+            if (year === currentYear) {
+                newStats.currentSeason.basePointsEarned += score;
+
+                // If game belongs to today, properly initialize daily state tracking
+                if (date === todayStr) {
+                    newStats.currentSeason._lastRecordedDailyScore = score;
+                    newStats.currentSeason._isCompletedToday = isCompleted;
+                    newStats.currentSeason._lastRecordedRankToday = rankLabel;
                 }
+            } else {
+                if (!newStats.seasonHistory[year]) {
+                    newStats.seasonHistory[year] = this.createEmptySeason(year);
+                }
+                newStats.seasonHistory[year].basePointsEarned += score;
+                newStats.seasonHistory[year].totalSeasonPoints = newStats.seasonHistory[year].basePointsEarned;
             }
         }
 
@@ -261,7 +289,24 @@ export class StatsService {
         }
 
         newStats.currentSeason.totalSeasonPoints = newStats.currentSeason.basePointsEarned;
+        newStats.currentSeason.highestTierAchieved = this.calculateTier(newStats);
+
         return newStats;
+    }
+
+    private getGameKeysFromStorage(): string[] {
+        const keys: string[] = [];
+        try {
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key?.startsWith(this.GAME_KEY_PREFIX)) {
+                    keys.push(key);
+                }
+            }
+        } catch (e) {
+            console.warn('Storage enumeration unavailable:', e);
+        }
+        return keys;
     }
 
     private saveStats(): void {

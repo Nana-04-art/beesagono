@@ -3,6 +3,10 @@ import { test, expect } from '@playwright/test';
 test.describe('Daily Game - Complete Integration & Player Flow', () => {
 
     test('covers initial visit, tile hits, word submission, stats update, mobile viewport, and persistence', async ({ page }) => {
+        // Set the browser date and time before loading the page to ensure a deterministic grid
+        await page.clock.install();
+        await page.clock.setFixedTime(new Date('2026-08-12T10:00:00Z'));
+
         await page.setViewportSize({ width: 375, height: 667 });
 
         await page.goto('/');
