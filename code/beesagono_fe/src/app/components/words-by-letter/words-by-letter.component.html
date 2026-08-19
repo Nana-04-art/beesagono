@@ -77,8 +77,14 @@
 
                     @if (showMapLetters().has(group.letter)) {
                     <div class="py-1">
-                        <app-word-map [items]="gameService.wordMap()" [letterColors]="gameService.letterColors()">
+                        @if (group.wordItems.length > 0) {
+                        <app-word-map [items]="group.wordItems" [letterColors]="gameService.letterColors()">
                         </app-word-map>
+                        } @else {
+                        <p class="extra-small-text text-muted italic mb-0 text-center py-1">
+                            Nessuna parola presente per questa lettera
+                        </p>
+                        }
                     </div>
                     } @else {
                     @if (group.foundWords.length > 0) {

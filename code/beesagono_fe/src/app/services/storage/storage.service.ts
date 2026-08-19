@@ -1,15 +1,15 @@
-import { Injectable } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
+import { inject, Injectable, PLATFORM_ID } from '@angular/core';
 
 @Injectable({ providedIn: 'root' })
 export class StorageService {
   private readonly DEFAULT_PREFIX = 'beesagono:';
-  /** In-memory fallback store for cases where localStorage is blocked or full. */
+  // In-memory fallback store for cases where localStorage is blocked or full
   private inMemoryFallback = new Map<string, string>();
   private usingFallback = false;
 
-  /**
-   * Persists generic data to localStorage or falls back to in-memory store.
-   */
+  // Persists generic data to localStorage or falls back to in-memory store
+
   save<T>(key: string, data: T): boolean {
     if (!key || data === undefined || data === null) {
       console.warn('[StorageService] Attempted to save invalid key or data.');
@@ -32,9 +32,7 @@ export class StorageService {
     }
   }
 
-  /**
-   * Reads and parses data from in-memory fallback or localStorage.
-   */
+  // Reads and parses data from in-memory fallback or localStorage.
   load<T>(key: string): T | null {
     if (!key) return null;
     const fullKey = this.getFullKey(key);
@@ -53,9 +51,7 @@ export class StorageService {
     }
   }
 
-  /**
-   * Removes a stored entry for a given key.
-   */
+  // Removes a stored entry for a given key.
   clear(key: string): void {
     const fullKey = this.getFullKey(key);
     try {
@@ -66,9 +62,7 @@ export class StorageService {
     this.inMemoryFallback.delete(fullKey);
   }
 
-  /**
-   * Returns true if running natively with localStorage.
-   */
+  // Returns true if running natively with localStorage.
   isAvailable(): boolean {
     return !this.usingFallback;
   }

@@ -1,3 +1,223 @@
 /* You can add global styles to this file, and also import other style files */
 @use "bootstrap/scss/bootstrap";
 @use "bootstrap-icons/font/bootstrap-icons.css";
+
+:root {
+    --bg-main: #f8f9fa;
+    --text-main: #1e293b;
+    --text-muted: #64748b;
+    --card-bg: #ffffff;
+    --card-border: #e2e8f0;
+    --cell-bg: #e9ecef;
+    --cell-text: #212529;
+}
+
+[data-theme='dark'] {
+    --bg-main: #0f172a;
+    --text-main: #f8fafc;
+    --text-muted: #94a3b8;
+    --card-bg: #1e293b;
+    --card-border: #334155;
+    --cell-bg: #334155;
+    --cell-text: #ffffff;
+
+    html,
+    body,
+    app-root,
+    main,
+    .main-content,
+    div[class*="container"] {
+        background-color: var(--bg-main) !important;
+        color: var(--text-main) !important;
+    }
+
+    .navbar,
+    .navbar.bg-white {
+        background-color: rgba(15, 23, 42, 0.95) !important;
+        border-bottom-color: rgba(245, 158, 11, 0.25) !important;
+    }
+
+    .text-dark,
+    .text-black,
+    .text-body,
+    .text-secondary,
+    .found-words-title,
+    .kpi-value,
+    .letter,
+    .rank-name,
+    .score-value,
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6,
+    p,
+    span,
+    td,
+    th,
+    li {
+        color: var(--text-main) !important;
+    }
+
+    .text-muted,
+    .date-subtitle,
+    .kpi-label,
+    .extra-small-text,
+    .placeholder-text,
+    small {
+        color: var(--text-muted) !important;
+    }
+
+    .card,
+    .found-words-card,
+    .scoreboard-card,
+    .rules-popover,
+    .stats-popover,
+    .end-game-dialog,
+    .modal-card,
+    .modal-content,
+    .kpi-card,
+    .words-by-letter-container,
+    .word-map,
+    .word-map-container,
+    div[class*="popover"] {
+        background-color: var(--card-bg) !important;
+        color: var(--text-main) !important;
+        border-color: var(--card-border) !important;
+    }
+
+    .rules-popover,
+    .stats-popover {
+
+        .bg-light,
+        .bg-white {
+            background-color: rgba(255, 255, 255, 0.05) !important;
+            border-color: var(--card-border) !important;
+        }
+
+        .table,
+        table {
+            color: var(--text-main) !important;
+            border-color: var(--card-border) !important;
+            background-color: transparent !important;
+
+            thead.table-light,
+            th,
+            td {
+                background-color: rgba(255, 255, 255, 0.05) !important;
+                color: var(--text-main) !important;
+                border-color: var(--card-border) !important;
+            }
+
+            tr.table-warning,
+            tr.table-warning td {
+                background-color: #ffc107 !important;
+                color: #000000 !important;
+
+                strong {
+                    color: #000000 !important;
+                }
+            }
+        }
+
+        .badge.bg-warning,
+        .bg-warning:not(.bg-opacity-10) {
+            background-color: #ffc107 !important;
+            color: #000000 !important;
+
+            *,
+            span,
+            div,
+            strong {
+                color: #000000 !important;
+            }
+        }
+
+        .bg-warning.bg-opacity-10 {
+            background-color: rgba(255, 193, 7, 0.15) !important;
+            border-color: rgba(255, 193, 7, 0.3) !important;
+
+            *,
+            div,
+            strong {
+                color: #fde047 !important;
+            }
+        }
+    }
+
+    .letter-circle {
+        background-color: #334155 !important;
+        color: #ffffff !important;
+    }
+
+    .letter-card {
+        background-color: var(--card-bg) !important;
+
+        .letter-circle.bg-warning,
+        .letter-circle.is-center,
+        .letter-circle[class*="bg-warning"] {
+            background-color: #ffc107 !important;
+            color: #000000 !important;
+            font-weight: 800;
+        }
+
+        &.border-warning,
+        &:has(.letter-circle.bg-warning) {
+            border-color: rgba(255, 193, 7, 0.5) !important;
+        }
+    }
+
+    .hex-tile:not(.is-center) {
+        fill: #334155 !important;
+    }
+
+    .hex-text:not(.is-center-text) {
+        fill: #ffffff !important;
+    }
+
+    .word-display-container,
+    .input-box {
+        background-color: var(--bg-main) !important;
+        border-color: transparent !important;
+        box-shadow: none !important;
+
+        &.has-content {
+            border-color: #f59e0b !important;
+        }
+    }
+
+    .control-btn:not(.control-btn-primary) {
+        background-color: var(--card-bg) !important;
+        border-color: var(--card-border) !important;
+        color: var(--text-main) !important;
+
+        &:hover {
+            background-color: #334155 !important;
+        }
+    }
+
+    .header-btn,
+    .theme-toggle-btn {
+        background-color: rgba(255, 255, 255, 0.08) !important;
+        color: #f8fafc !important;
+        border-color: rgba(255, 255, 255, 0.15) !important;
+
+        &:hover {
+            background-color: rgba(255, 255, 255, 0.2) !important;
+        }
+    }
+
+    .invalid-words-card {
+        background-color: #2c0b0e !important;
+        border-color: #842029 !important;
+    }
+
+    ::-webkit-scrollbar-track {
+        background: var(--bg-main) !important;
+    }
+
+    ::-webkit-scrollbar-thumb {
+        background: var(--card-border) !important;
+    }
+}

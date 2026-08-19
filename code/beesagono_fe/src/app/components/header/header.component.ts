@@ -1,9 +1,10 @@
-import { Component, HostListener, signal, input, output } from '@angular/core';
+import { Component, HostListener, signal, input, output, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RANK_TIERS } from '../../config/rank-tiers.config';
 import { ScoreboardComponent } from './scoreboard/scoreboard.component';
 import { StatsComponent } from './stats/stats.component';
 import { RulesComponent } from './rules/rules.component';
+import { ThemeService } from '../../services/theme/theme.service';
 
 @Component({
   selector: 'app-header',
@@ -13,6 +14,9 @@ import { RulesComponent } from './rules/rules.component';
   styleUrl: './header.component.scss',
 })
 export class HeaderComponent {
+
+  public themeService = inject(ThemeService);
+
   // Import the degrees for the @for loop in the HTML.
   readonly rankTiers = RANK_TIERS;
 

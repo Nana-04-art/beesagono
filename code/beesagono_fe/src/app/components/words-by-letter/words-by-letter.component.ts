@@ -41,7 +41,7 @@ export class WordsByLetterComponent {
     const globalWordMap = this.gameService.wordMap();
 
     return board.cells.map((cell) => {
-      const letter = cell.letter;
+      const letter = cell.letter.toUpperCase();
 
       const totalWordsForLetter = possibleWords.filter((w) => w.startsWith(letter));
       const foundWordsForLetter = foundWords.filter((w) => w.startsWith(letter));
@@ -50,7 +50,10 @@ export class WordsByLetterComponent {
       const foundPangramsForLetter = foundWordsForLetter.filter((w) => foundMielegrammiSet.has(w)).length;
 
       // Filter the map items for this letter only
-      const wordItemsForLetter = globalWordMap.filter((item: WordMapItem) => item.initial === letter);
+      const wordItemsForLetter = globalWordMap.filter((item: WordMapItem) => {
+        const itemInitial = (item.initial || item.word[0]).toUpperCase();
+        return itemInitial === letter;
+      });
 
       return {
         letter,
