@@ -3,6 +3,7 @@ import { GameService } from '../../services/game/game.service';
 import { LetterGroup } from '../../models/letter-group.model';
 import { NgClass } from '@angular/common';
 import { WordMapComponent } from '../word-map/word-map.component';
+import { WordMapItem } from '../../models/word-map-item.model';
 
 @Component({
   selector: 'app-words-by-letter',
@@ -11,7 +12,7 @@ import { WordMapComponent } from '../word-map/word-map.component';
   styleUrl: './words-by-letter.component.scss',
 })
 export class WordsByLetterComponent {
-  private gameService = inject(GameService);
+  gameService = inject(GameService);
 
   private readonly _expandedLetters = signal<Set<string>>(new Set());
   readonly expandedLetters = this._expandedLetters.asReadonly();
@@ -49,7 +50,7 @@ export class WordsByLetterComponent {
       const foundPangramsForLetter = foundWordsForLetter.filter((w) => foundMielegrammiSet.has(w)).length;
 
       // Filter the map items for this letter only
-      const wordItemsForLetter = globalWordMap.filter((item: any) => item.initial === letter);
+      const wordItemsForLetter = globalWordMap.filter((item: WordMapItem) => item.initial === letter);
 
       return {
         letter,

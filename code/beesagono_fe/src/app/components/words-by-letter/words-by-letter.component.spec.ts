@@ -5,6 +5,7 @@ import { vi } from 'vitest';
 import { WordsByLetterComponent } from './words-by-letter.component';
 import { GameService } from '../../services/game/game.service';
 import { GameBoard } from '../../models/game-board.model';
+import { WordMapItem } from '../../models/word-map-item.model';
 
 class MockGameService {
   readonly board: WritableSignal<GameBoard | null> = signal<GameBoard | null>(null);
@@ -12,7 +13,7 @@ class MockGameService {
   readonly foundMielegrammi: WritableSignal<string[]> = signal<string[]>([]);
   readonly totalPossibleWords: WritableSignal<number> = signal<number>(0);
   readonly totalMielegrammi: WritableSignal<number> = signal<number>(0);
-  readonly wordMap: WritableSignal<any[]> = signal<any[]>([]);
+  readonly wordMap: WritableSignal<WordMapItem[]> = signal<WordMapItem[]>([]);
 }
 
 describe('WordsByLetterComponent', () => {

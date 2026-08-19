@@ -61,7 +61,8 @@
 
             @if (showMap()) {
             <div class="py-1">
-                <app-word-map [items]="gameService.wordMap()"></app-word-map>
+                <app-word-map [items]="gameService.wordMap()" [letterColors]="gameService.letterColors()">
+                </app-word-map>
             </div>
             } @else {
             @if (foundWords().length > 0) {

@@ -77,7 +77,8 @@
 
                     @if (showMapLetters().has(group.letter)) {
                     <div class="py-1">
-                        <app-word-map [items]="group.wordItems"></app-word-map>
+                        <app-word-map [items]="gameService.wordMap()" [letterColors]="gameService.letterColors()">
+                        </app-word-map>
                     </div>
                     } @else {
                     @if (group.foundWords.length > 0) {

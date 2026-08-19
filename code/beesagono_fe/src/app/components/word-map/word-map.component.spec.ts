@@ -14,15 +14,13 @@ describe('WordMapComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [WordMapComponent],
-      providers: [
-        { provide: GameService, useValue: mockGameService }
-      ]
     }).compileComponents();
 
     fixture = TestBed.createComponent(WordMapComponent);
     component = fixture.componentInstance;
 
     fixture.componentRef.setInput('items', []);
+    fixture.componentRef.setInput('letterColors', new Map<string, string>());
 
     fixture.detectChanges();
     await fixture.whenStable();

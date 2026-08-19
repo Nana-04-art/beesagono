@@ -1,3 +1,5 @@
+import { WordMapItem } from "./word-map-item.model";
+
 export interface LetterGroup {
   letter: string;
   isCenter: boolean;
@@ -6,5 +8,5 @@ export interface LetterGroup {
   foundWords: string[];
   foundPangrams: number;
   totalPangrams: number;
-  wordItems: any[];
+  wordItems: WordMapItem[];
 }

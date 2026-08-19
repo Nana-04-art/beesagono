@@ -3,12 +3,13 @@ import { HiveViewComponent } from './hive-view.component';
 import { GameService } from '../../services/game/game.service';
 import { WelcomeNoticeService } from '../../services/welcome-notice/welcome-notice.service';
 import { describe, beforeEach, afterEach, it, expect, vi } from 'vitest';
-import { signal, NO_ERRORS_SCHEMA } from '@angular/core';
+import { signal, NO_ERRORS_SCHEMA, WritableSignal } from '@angular/core';
 import { GameBoard } from '../../models/game-board.model';
 import { Cell } from '../../models/cell.model';
 import { ShareScorePayload } from '../../models/share-score.model';
 import { RankTier } from '../../models/rank.model';
 import { ValidationResult } from '../../models/validation.model';
+import { WordMapItem } from '../../models/word-map-item.model';
 
 describe('HiveViewComponent', () => {
     let component: HiveViewComponent;
@@ -46,7 +47,7 @@ describe('HiveViewComponent', () => {
         threshold: 0,
         label: '🌱 Iniziato'
     });
-    const wordMapSignal = signal<any[]>([]);
+    const wordMapSignal: WritableSignal<WordMapItem[]> = signal<WordMapItem[]>([]);
 
     const isNoticeOpenSignal = signal<boolean>(false);
 
@@ -101,6 +102,8 @@ describe('HiveViewComponent', () => {
 
         isNoticeOpenSignal.set(false);
 
+        const letterColorsSignal = signal<Map<string, string>>(new Map());
+
         mockGameService = {
             loadStatus: loadStatusSignal as any,
             loadError: loadErrorSignal as any,
@@ -117,6 +120,7 @@ describe('HiveViewComponent', () => {
             maxScore: maxScoreSignal as any,
             rank: rankSignal as any,
             wordMap: wordMapSignal as any,
+            letterColors: letterColorsSignal as any,
             loadDailyGame: vi.fn(),
             retryLoadDailyGame: vi.fn(),
             checkDateRollover: vi.fn(),

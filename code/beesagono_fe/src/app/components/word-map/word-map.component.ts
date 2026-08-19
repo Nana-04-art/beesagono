@@ -9,8 +9,7 @@ import { GameService } from '../../services/game/game.service';
   styleUrl: './word-map.component.scss',
 })
 export class WordMapComponent {
-  private gameService = inject(GameService);
-
+  
   items = input.required<WordMapItem[]>();
-  letterColors = this.gameService.letterColors;
+  letterColors = input.required<Map<string, string>>();
 }
