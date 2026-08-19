@@ -2,6 +2,7 @@ import { Injectable, computed, inject, signal } from '@angular/core';
 import { PlayerStats, SeasonStats } from '../../models/stats.model';
 import { StorageService } from '../storage/storage.service';
 import { CAREER_TIERS, STREAK_MILESTONES } from '../../config/career-tiers.constant';
+import { getTodayIsoString } from '../game/game.service';
 
 @Injectable({
     providedIn: 'root'
@@ -136,7 +137,16 @@ export class StatsService {
     }
 
     private calculateTier(stats: PlayerStats): string {
-        const refDate = stats.lastPlayedDate ? new Date(stats.lastPlayedDate) : new Date();
+        let refDate: Date;
+
+        // Interpretation of a local date/time without UTC offset
+        if (stats.lastPlayedDate && stats.lastPlayedDate.includes('-')) {
+            const [y, m, d] = stats.lastPlayedDate.split('-').map(Number);
+            refDate = new Date(y, m - 1, d);
+        } else {
+            refDate = new Date();
+        }
+
         const startOfYear = new Date(refDate.getFullYear(), 0, 1);
         const dayOfYear = Math.floor((refDate.getTime() - startOfYear.getTime()) / (1000 * 60 * 60 * 24)) + 1;
 
@@ -171,7 +181,7 @@ export class StatsService {
 
     private loadStats(): PlayerStats {
         const saved = this.storage.load<PlayerStats>(this.STORAGE_KEY);
-        const today = new Date().toISOString().split('T')[0];
+        const today = getTodayIsoString(new Date());
 
         let stats: PlayerStats;
         if (saved) {
@@ -202,8 +212,9 @@ export class StatsService {
     }
 
     private rebuildStatsFromStorage(): PlayerStats {
-        const currentYear = new Date().getFullYear();
-        const todayStr = new Date().toISOString().split('T')[0];
+        const now = new Date();
+        const currentYear = now.getFullYear();
+        const todayStr = getTodayIsoString(now);
 
         const newStats: PlayerStats = {
             gamesPlayed: 0,
@@ -224,14 +235,19 @@ export class StatsService {
             if (!gameData) continue;
 
             const date = key.replace(this.GAME_KEY_PREFIX, '');
-            if (!date) continue;
+            if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) continue;
 
             const year = parseInt(date.split('-')[0], 10);
             if (isNaN(year)) continue;
 
             const score = gameData.score || 0;
             const isCompleted = !!gameData.isCompleted;
-            const rankLabel = gameData.rankLabel || gameData.rank || null;
+
+            // Safe extractor for rankLabel
+            const rankLabel = gameData.rankLabel ||
+                gameData.rank?.label ||
+                gameData.rank ||
+                null;
 
             playedDates.push(date);
             newStats.gamesPlayed++;
@@ -263,7 +279,12 @@ export class StatsService {
             }
         }
 
-        playedDates.sort();
+        // Sort the dates by converting them to UTC timestamps for accurate streak calculation
+        playedDates.sort((a, b) => {
+            const [y1, m1, d1] = a.split('-').map(Number);
+            const [y2, m2, d2] = b.split('-').map(Number);
+            return Date.UTC(y1, m1 - 1, d1) - Date.UTC(y2, m2 - 1, d2);
+        });
 
         if (playedDates.length > 0) {
             newStats.lastPlayedDate = playedDates[playedDates.length - 1];
