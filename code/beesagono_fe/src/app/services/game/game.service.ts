@@ -303,8 +303,10 @@ export class GameService {
             return { isValid: false, pointsAwarded: 0, isMielegramma: false };
         }
 
+        // Only records non-empty words as invalid attempts — pressing Enter on an
+        // empty input must not leave an empty chip in the "Parole Errate" list.
         const trackInvalid = (word: string) => {
-            if (!this._invalidWords().includes(word)) {
+            if (word.length > 0 && !this._invalidWords().includes(word)) {
                 this._invalidWords.update((list) => [...list, word]);
             }
             this.clearInput();

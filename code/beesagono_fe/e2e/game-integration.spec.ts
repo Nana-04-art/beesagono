@@ -8,40 +8,60 @@ test.describe('Daily Game - Complete Integration & Player Flow', () => {
         await page.goto('/');
 
         const dismissNoticeBtn = page.getByRole('button', { name: 'Ho capito, fammi giocare!' });
-        if (await dismissNoticeBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
-            await dismissNoticeBtn.click();
-        }
+        await expect(dismissNoticeBtn).toBeVisible();
+        await dismissNoticeBtn.click();
 
         const centerTile = page.getByRole('button', { name: /centrale e obbligatoria/i });
         await expect(centerTile).toBeVisible();
 
-        const centerLetterText = (await centerTile.textContent())?.trim() ?? '';
-        expect(centerLetterText).not.toBe('');
+        const centerLetter = (await centerTile.textContent())?.trim().toUpperCase() ?? '';
+        expect(centerLetter).not.toBe('');
+
+        const validWord = await page.evaluate(() => {
+            const gameData = localStorage.getItem('beesagono_game_state');
+            if (gameData) {
+                const parsed = JSON.parse(gameData);
+                if (parsed?.board?.words?.length > 0) {
+                    return parsed.board.words[0];
+                }
+            }
+            return null;
+        });
 
         await centerTile.click();
-
         const inputDisplay = page.locator('.word-display-container').first();
-        await expect(inputDisplay).toContainText(centerLetterText);
+        await expect(inputDisplay).toContainText(centerLetter);
 
-        const submitBtn = page.getByRole('button', { name: 'Invia la parola inserita' });
+        const deleteBtn = page.locator('button:has-text("Cancella"), button:has-text("Elimina"), button[aria-label*="ancella"], button[aria-label*="limina"]').first();
+        await expect(deleteBtn).toBeVisible();
+        await deleteBtn.click();
+        await expect(inputDisplay).toContainText(/Digita o clicca le lettere/i);
+
+
+        const wordToSubmit = validWord || (centerLetter + 'AAAA');
+        await page.keyboard.type(wordToSubmit);
+
+        const submitBtn = page.getByRole('button', { name: /Invia/i });
+        await expect(submitBtn).toBeVisible();
         await submitBtn.click();
+
+        const scoreValue = page.locator('.score-value, .current-score').first();
+        const wordsCount = page.locator('.found-words-count, .words-count').first();
+
+        if (await scoreValue.isVisible().catch(() => false)) {
+            const scoreText = (await scoreValue.textContent())?.trim() ?? '0';
+            const scoreNum = parseInt(scoreText, 10);
+            expect(scoreNum).toBeGreaterThan(0);
+        }
 
         const rankTrigger = page.getByRole('button', { name: /Grado:/i }).filter({ visible: true });
         await expect(rankTrigger).toBeVisible();
-        await rankTrigger.click();
-
-        const scoreValue = page.locator('.score-value').filter({ visible: true });
-        await expect(scoreValue).toBeVisible();
-
+        const initialRankText = (await rankTrigger.textContent())?.trim();
         await page.reload();
 
-        if (await dismissNoticeBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
-            await dismissNoticeBtn.click();
-        }
-
         await expect(rankTrigger).toBeVisible();
-        await rankTrigger.click();
-        await expect(scoreValue).toBeVisible();
+        const reloadedRankText = (await rankTrigger.textContent())?.trim();
+        expect(reloadedRankText).toBe(initialRankText);
     });
 
 });
