@@ -4,6 +4,8 @@ import { GameService } from './game.service';
 import { StorageService } from '../storage/storage.service';
 import { PuzzleGeneratorService } from '../puzzle-generator/puzzle-generator.service';
 import { DictionaryService } from '../dictionary/dictionary.service';
+import { ScoreService } from '../score/score.service';
+import { StatsService } from '../stats/stats.service';
 import { GameBoard } from '../../models/game-board.model';
 import { GameState } from '../../models/game-state.model';
 
@@ -12,6 +14,8 @@ describe('GameService', () => {
   let mockPuzzleGenerator: any;
   let mockDictionaryService: any;
   let mockStorageService: any;
+  let mockScoreService: any;
+  let mockStatsService: any;
 
   const mockBoard: GameBoard = {
     date: '2026-07-31',
@@ -47,12 +51,32 @@ describe('GameService', () => {
       clear: vi.fn(),
     };
 
+    mockScoreService = {
+      calculateWordPoints: vi.fn((word: string, isMielegramma: boolean) => {
+        if (isMielegramma) return word.length + 7;
+        return word.length;
+      }),
+      calculateTotalScore: vi.fn((words: string[], mieleSet: Set<string>) => {
+        return words.reduce((acc, word) => {
+          const isM = mieleSet.has(word);
+          return acc + (isM ? word.length + 7 : word.length);
+        }, 0);
+      }),
+    };
+
+    mockStatsService = {
+      recordGameStarted: vi.fn(),
+      recordProgress: vi.fn(),
+    };
+
     TestBed.configureTestingModule({
       providers: [
         GameService,
         { provide: PuzzleGeneratorService, useValue: mockPuzzleGenerator },
         { provide: DictionaryService, useValue: mockDictionaryService },
         { provide: StorageService, useValue: mockStorageService },
+        { provide: ScoreService, useValue: mockScoreService },
+        { provide: StatsService, useValue: mockStatsService },
       ],
     });
 
@@ -64,8 +88,9 @@ describe('GameService', () => {
     vi.restoreAllMocks();
   });
 
-  it('should be created in idle state', () => {
+  it('should be created in ready state after daily game load', () => {
     expect(service).toBeTruthy();
+    expect(service.loadStatus()).toBe('ready');
   });
 
   it('should load daily game successfully and restore empty state when no saved state exists', () => {
@@ -94,7 +119,7 @@ describe('GameService', () => {
     expect(service.score()).toBe(5);
   });
 
-  it('should handle input characters, backspace, clear, and ENTER via handleInput', () => {
+  it('should handle input characters, backspace, and clear via handleInput', () => {
     service.handleInput('M');
     service.handleInput('I');
     expect(service.currentInput()).toBe('MI');
@@ -102,20 +127,18 @@ describe('GameService', () => {
     service.handleInput('BACKSPACE');
     expect(service.currentInput()).toBe('M');
 
-    service.handleInput('CLEAR');
-    expect(service.currentInput()).toBe('M');
-
     service.clearInput();
     expect(service.currentInput()).toBe('');
   });
 
-  it('should process valid word submissions and calculate 4-letter word score (1 pt) and longer word score', () => {
+  it('should process valid word submissions and calculate score', () => {
     'MIELE'.split('').forEach((char) => service.handleInput(char));
     const mieleResult = service.submitWord();
 
     expect(mieleResult.isValid).toBe(true);
     expect(mieleResult.pointsAwarded).toBe(5);
     expect(service.score()).toBe(5);
+    expect(mockStatsService.recordProgress).toHaveBeenCalled();
   });
 
   it('should return error when word is too short', () => {
@@ -132,6 +155,7 @@ describe('GameService', () => {
 
     expect(result.isValid).toBe(false);
     expect(result.errorType).toBe('MISSING_CENTER');
+    expect(service.invalidWords()).toContain('MILAMILA');
   });
 
   it('should track invalid words and return error when using invalid letters', () => {
@@ -140,6 +164,7 @@ describe('GameService', () => {
 
     expect(result.isValid).toBe(false);
     expect(result.errorType).toBe('INVALID_LETTERS');
+    expect(service.invalidWords()).toContain('MIELEZ');
   });
 
   it('should return ALREADY_FOUND error for duplicate submissions without duplicating invalidWords', () => {
@@ -168,9 +193,10 @@ describe('GameService', () => {
 
     expect(result.isValid).toBe(true);
     expect(result.isMielegramma).toBe(true);
+    expect(result.pointsAwarded).toBe(18); // 11 caratteri + 7 di bonus
   });
 
-  it('should compute rank progress, genius rank, and completion correctly', () => {
+  it('should compute rank progress and completion correctly', () => {
     mockBoard.possibleWords.forEach((word) => {
       service.clearInput();
       word.split('').forEach((char) => service.handleInput(char));
@@ -206,6 +232,7 @@ describe('GameService', () => {
 
   it('should trigger reload on checkDateRollover if date changed', () => {
     const spy = vi.spyOn(service, 'loadDailyGame');
+    vi.spyOn(service as any, 'getTodayIsoString').mockReturnValue('2026-08-01');
 
     service.checkDateRollover();
 

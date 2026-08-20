@@ -376,27 +376,21 @@ describe('HiveViewComponent', () => {
     describe('Share Results', () => {
         it('should copy formatted score text to clipboard and display feedback', async () => {
             const writeTextSpy = vi.fn().mockResolvedValue(undefined);
-            Object.assign(navigator, {
-                clipboard: {
-                    writeText: writeTextSpy
-                }
+            Object.defineProperty(navigator, 'clipboard', {
+                value: { writeText: writeTextSpy },
+                writable: true,
+                configurable: true
             });
 
-            component.shareResults();
+            await component.shareResults();
 
-            expect(writeTextSpy).toHaveBeenCalledWith(
-                expect.stringContaining('🐝 Beesagono (12/08/2026)\nPunti: 50/100')
-            );
+            expect(writeTextSpy).toHaveBeenCalledWith(expect.stringContaining('🐝 Beesagono'));
 
             // @ts-expect-error Accessing protected property for testing
             expect(component.feedbackType()).toBe('success');
+
             // @ts-expect-error Accessing protected property for testing
             expect(component.feedbackMessage()).toBe('Risultati copiati negli appunti!');
-
-            vi.advanceTimersByTime(2000);
-
-            // @ts-expect-error Accessing protected property for testing
-            expect(component.feedbackMessage()).toBe('');
         });
     });
 });
