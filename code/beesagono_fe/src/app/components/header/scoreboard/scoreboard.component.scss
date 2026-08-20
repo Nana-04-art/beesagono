@@ -1,6 +1,6 @@
 .scoreboard-card {
     max-width: 20rem;
-    background-color: #ffffff;
+    background-color: var(--card-bg, #ffffff);
     padding: 0.85rem 1rem !important;
 
     .d-flex {

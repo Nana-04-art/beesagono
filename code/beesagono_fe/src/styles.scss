@@ -82,7 +82,6 @@
     .word-map,
     .word-map-container,
     div[class*="popover"] {
-        background-color: var(--card-bg) !important;
         color: var(--text-main) !important;
         border-color: var(--card-border) !important;
     }
@@ -219,5 +218,90 @@
 
     ::-webkit-scrollbar-thumb {
         background: var(--card-border) !important;
+    }
+
+    .word-badge:not(.is-mielegramma) {
+        background-color: var(--cell-bg) !important;
+        color: var(--text-main) !important;
+        border-color: var(--card-border) !important;
+    }
+
+    .words-by-letter-container,
+    .found-words-card,
+    .letter-card {
+
+        div[class*="py-"],
+        .word-map,
+        .word-map-container {
+            background-color: transparent !important;
+            background: transparent !important;
+            box-shadow: none !important;
+        }
+    }
+
+    .hive-cell[style*="rgb(233, 236, 239)"],
+    .hive-cell[style*="#e9ecef"] {
+        background-color: var(--cell-bg) !important;
+    }
+
+    .invalid-words-card {
+        background-color: #1f0a0c !important;
+        border-color: #5c1d24 !important;
+
+        .toggle-button span,
+        .fw-bold {
+            color: #f87171 !important;
+        }
+
+        .word-chip.invalid-chip {
+            background-color: #450a0a !important;
+            color: #fca5a5 !important;
+            border-color: #7f1d1d !important;
+        }
+
+        .badge.bg-danger-subtle {
+            background-color: #450a0a !important;
+            color: #fca5a5 !important;
+            border-color: #7f1d1d !important;
+        }
+    }
+
+    .scoreboard-card {
+        background-color: var(--card-bg) !important;
+        border-color: var(--card-border) !important;
+        color: var(--text-main) !important;
+
+        .progress-container {
+            background-color: transparent !important;
+            background: transparent !important;
+        }
+
+        .progress,
+        .scoreboard-progress {
+            background-color: rgba(255, 255, 255, 0.08) !important;
+            border: 1px solid var(--card-border) !important;
+        }
+
+        .tier-emoji-marker.current {
+            background: var(--card-bg) !important;
+            box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.5) !important;
+        }
+
+        .text-secondary,
+        .text-muted,
+        .extra-small-text {
+            color: var(--text-muted) !important;
+        }
+
+        .text-dark,
+        .rank-name,
+        .score-value,
+        strong {
+            color: var(--text-main) !important;
+        }
+
+        .border-top {
+            border-top-color: var(--card-border) !important;
+        }
     }
 }

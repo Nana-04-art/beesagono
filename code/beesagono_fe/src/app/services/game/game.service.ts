@@ -15,6 +15,13 @@ import { StatsService } from '../stats/stats.service';
 import { RANK_TIERS } from '../../config/rank-tiers.config';
 import { WordMapItem } from '../../models/word-map-item.model';
 
+export function getTodayIsoString(date = new Date()): string {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
 @Injectable({
     providedIn: 'root',
 })
@@ -169,7 +176,7 @@ export class GameService {
 
     // Call this method when starting the game to initialize stats for the day
     initGame(): void {
-        const todayIso = new Date().toISOString().split('T')[0];
+        const todayIso = getTodayIsoString(new Date());
         this.statsService.recordGameStarted(todayIso);
     }
 
@@ -180,7 +187,7 @@ export class GameService {
             const invalidWords = this._invalidWords();
 
             if (currentBoard && this._loadStatus() === 'ready') {
-                const stateToSave: GameState = {
+                const stateToSave: GameState & { rankLabel?: string } = {
                     version: 1,
                     date: currentBoard.date,
                     score: this.score(),
@@ -190,6 +197,7 @@ export class GameService {
                     isCompleted: this.isCompleted(),
                     startTime: this._startTime(),
                     lastUpdated: Date.now(),
+                    rankLabel: this.rank().label,
                 };
 
                 this.storageService.save(`game:${currentBoard.date}`, stateToSave);
@@ -420,11 +428,7 @@ export class GameService {
     }
 
     private getTodayIsoString(): string {
-        const now = new Date();
-        const year = now.getFullYear();
-        const month = String(now.getMonth() + 1).padStart(2, '0');
-        const day = String(now.getDate()).padStart(2, '0');
-        return `${year}-${month}-${day}`;
+        return getTodayIsoString();
     }
 
     readonly wordMap = computed(() => {

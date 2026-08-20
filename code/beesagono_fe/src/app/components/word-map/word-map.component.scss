@@ -10,7 +10,7 @@
     width: 0.625rem;
     height: 0.75rem;
     clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
-    background-color: #e9ecef;
+    background-color: var(--cell-bg, #e9ecef);
     transition: transform 0.1s ease, background-color 0.2s ease;
 
     &.pangram {
