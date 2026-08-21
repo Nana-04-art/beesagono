@@ -148,7 +148,17 @@ describe('StatsService', () => {
 
         mockStorageService.load.mockReturnValue(staleStats);
 
+        TestBed.resetTestingModule();
+        TestBed.configureTestingModule({
+            providers: [
+                StatsService,
+                { provide: StorageService, useValue: mockStorageService },
+            ],
+        });
+
         const newService = TestBed.inject(StatsService);
+
+        expect(mockStorageService.load).toHaveBeenCalledWith('stats');
         expect(newService.stats().currentStreak).toBe(0);
     });
 

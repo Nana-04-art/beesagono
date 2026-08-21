@@ -54,12 +54,13 @@ describe('GameService', () => {
     mockScoreService = {
       calculateWordPoints: vi.fn((word: string, isMielegramma: boolean) => {
         if (isMielegramma) return word.length + 7;
-        return word.length;
+        return word.length === 4 ? 1 : word.length;
       }),
       calculateTotalScore: vi.fn((words: string[], mieleSet: Set<string>) => {
         return words.reduce((acc, word) => {
           const isM = mieleSet.has(word);
-          return acc + (isM ? word.length + 7 : word.length);
+          if (isM) return acc + word.length + 7;
+          return acc + (word.length === 4 ? 1 : word.length);
         }, 0);
       }),
     };
