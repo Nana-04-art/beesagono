@@ -3,6 +3,7 @@ import { PlayerStats, SeasonStats } from '../../models/stats.model';
 import { StorageService } from '../storage/storage.service';
 import { CAREER_TIERS, STREAK_MILESTONES } from '../../config/career-tiers.constant';
 import { getTodayIsoString } from '../game/game.service';
+import { isValidGameState, isValidIsoDate } from '../../utils/game-state.validator';
 
 @Injectable({
     providedIn: 'root'
@@ -40,10 +41,15 @@ export class StatsService {
         dailyRank: string | null
     ): void {
         this._stats.update(currentStats => {
+            // Deep clone of nested objects and arrays to protect state immutability
             const stats: PlayerStats = {
                 ...currentStats,
-                currentSeason: { ...currentStats.currentSeason },
-                dailyRankDistribution: { ...currentStats.dailyRankDistribution }
+                currentSeason: {
+                    ...currentStats.currentSeason,
+                    claimedStreakMilestones: [...currentStats.currentSeason.claimedStreakMilestones]
+                },
+                dailyRankDistribution: { ...currentStats.dailyRankDistribution },
+                seasonHistory: { ...currentStats.seasonHistory }
             };
 
             const todayYear = parseInt(currentDate.split('-')[0], 10);
@@ -52,7 +58,10 @@ export class StatsService {
             if (stats.currentSeason.year !== todayYear) {
                 stats.seasonHistory = {
                     ...stats.seasonHistory,
-                    [stats.currentSeason.year]: { ...stats.currentSeason }
+                    [stats.currentSeason.year]: {
+                        ...stats.currentSeason,
+                        claimedStreakMilestones: [...stats.currentSeason.claimedStreakMilestones]
+                    }
                 };
                 stats.currentSeason = this.createEmptySeason(todayYear);
             }
@@ -77,7 +86,7 @@ export class StatsService {
                 stats.currentSeason._isCompletedToday = false;
                 stats.currentSeason._lastRecordedRankToday = null;
 
-                // Check and award Milestone Bonuses
+                // Milestone bonus assignment (now mutation of claimedStreakMilestones happens on a cloned array)
                 this.checkStreakMilestones(stats.currentStreak, stats.currentSeason);
             }
 
@@ -139,8 +148,7 @@ export class StatsService {
     private calculateTier(stats: PlayerStats): string {
         let refDate: Date;
 
-        // Interpretation of a local date/time without UTC offset
-        if (stats.lastPlayedDate && stats.lastPlayedDate.includes('-')) {
+        if (stats.lastPlayedDate && isValidIsoDate(stats.lastPlayedDate)) {
             const [y, m, d] = stats.lastPlayedDate.split('-').map(Number);
             refDate = new Date(y, m - 1, d);
         } else {
@@ -167,7 +175,9 @@ export class StatsService {
     }
 
     private isConsecutiveDay(lastDate: string | null, currentDate: string): boolean {
-        if (!lastDate) return false;
+        if (!lastDate || !isValidIsoDate(lastDate) || !isValidIsoDate(currentDate)) {
+            return false;
+        }
 
         const [lastY, lastM, lastD] = lastDate.split('-').map(Number);
         const [currY, currM, currD] = currentDate.split('-').map(Number);
@@ -184,19 +194,21 @@ export class StatsService {
         const today = getTodayIsoString(new Date());
 
         let stats: PlayerStats;
+
         if (saved) {
             stats = saved;
             this.checkStreakContinuity(stats, today);
         } else {
-            // Rebuild stats from stored local games if 'stats' key doesn't exist
+            // If stats are rebuilt from storage GameStates, save the result immediately
             stats = this.rebuildStatsFromStorage();
             this.checkStreakContinuity(stats, today);
+            this.saveStats(stats);
         }
         return stats;
     }
 
     private checkStreakContinuity(stats: PlayerStats, today: string): void {
-        if (!stats.lastPlayedDate) return;
+        if (!stats.lastPlayedDate || !isValidIsoDate(stats.lastPlayedDate)) return;
 
         const [y, m, d] = today.split('-').map(Number);
         const [lastY, lastM, lastD] = stats.lastPlayedDate.split('-').map(Number);
@@ -227,27 +239,24 @@ export class StatsService {
             dailyRankDistribution: {}
         };
 
-        const gameKeys = this.getGameKeysFromStorage();
+        // Use the new StorageService method instead of raw localStorage
+        const gameKeys = this.storage.getKeysByPrefix(this.GAME_KEY_PREFIX);
         const playedDates: string[] = [];
 
         for (const key of gameKeys) {
-            const gameData = this.storage.load<any>(key);
-            if (!gameData) continue;
+            const gameData = this.storage.load<unknown>(key);
+
+            // Strict validation of the loaded GameState
+            if (!isValidGameState(gameData)) continue;
 
             const date = key.replace(this.GAME_KEY_PREFIX, '');
-            if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) continue;
+            // Strict format and calendar validation for the date
+            if (!isValidIsoDate(date)) continue;
 
             const year = parseInt(date.split('-')[0], 10);
-            if (isNaN(year)) continue;
-
-            const score = gameData.score || 0;
-            const isCompleted = !!gameData.isCompleted;
-
-            // Safe extractor for rankLabel
-            const rankLabel = gameData.rankLabel ||
-                gameData.rank?.label ||
-                gameData.rank ||
-                null;
+            const score = gameData.score;
+            const isCompleted = gameData.isCompleted;
+            const rankLabel = gameData.rankLabel;
 
             playedDates.push(date);
             newStats.gamesPlayed++;
@@ -279,7 +288,7 @@ export class StatsService {
             }
         }
 
-        // Sort the dates by converting them to UTC timestamps for accurate streak calculation
+        // Safely sort dates after calendar validation succeeds
         playedDates.sort((a, b) => {
             const [y1, m1, d1] = a.split('-').map(Number);
             const [y2, m2, d2] = b.split('-').map(Number);
@@ -315,23 +324,8 @@ export class StatsService {
         return newStats;
     }
 
-    private getGameKeysFromStorage(): string[] {
-        const keys: string[] = [];
-        try {
-            for (let i = 0; i < localStorage.length; i++) {
-                const key = localStorage.key(i);
-                if (key?.startsWith(this.GAME_KEY_PREFIX)) {
-                    keys.push(key);
-                }
-            }
-        } catch (e) {
-            console.warn('Storage enumeration unavailable:', e);
-        }
-        return keys;
-    }
-
-    private saveStats(): void {
-        this.storage.save<PlayerStats>(this.STORAGE_KEY, this._stats());
+    private saveStats(statsToSave?: PlayerStats): void {
+        this.storage.save<PlayerStats>(this.STORAGE_KEY, statsToSave ?? this._stats());
     }
 
     private createEmptySeason(year: number): SeasonStats {

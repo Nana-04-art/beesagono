@@ -1,5 +1,5 @@
 import { Component, input, output } from '@angular/core';
-import { Cell } from '../../models/cell.model'; 
+import { Cell } from '../../models/cell.model';
 
 @Component({
   selector: 'app-honeycomb-grid',
@@ -14,13 +14,26 @@ export class HoneycombGridComponent {
   // Output signal emitting the selected letter
   readonly letterTapped = output<string>();
 
-  onCellClick(letter: string): void {
+  onCellClick(event: MouseEvent, letter: string): void {
+    // Remove focus from the clicked SVG element to prevent 'Enter' key from re-triggering it
+    const target = event.currentTarget as SVGElement | HTMLElement;
+    if (target && typeof target.blur === 'function') {
+      target.blur();
+    }
+
     this.letterTapped.emit(letter);
   }
 
   onKeyDown(event: KeyboardEvent, letter: string): void {
     if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault();
+
+      // Remove focus as well for keyboard interactions if desired
+      const target = event.currentTarget as SVGElement | HTMLElement;
+      if (target && typeof target.blur === 'function') {
+        target.blur();
+      }
+
       this.letterTapped.emit(letter);
     }
   }

@@ -7,12 +7,17 @@ import { CAREER_TIERS, STREAK_MILESTONES } from '../../config/career-tiers.const
 
 describe('StatsService', () => {
     let service: StatsService;
-    let mockStorageService: any;
+    let mockStorageService: {
+        load: ReturnType<typeof vi.fn>;
+        save: ReturnType<typeof vi.fn>;
+        getKeysByPrefix: ReturnType<typeof vi.fn>;
+    };
 
     beforeEach(() => {
         mockStorageService = {
             load: vi.fn().mockReturnValue(null),
             save: vi.fn().mockReturnValue(true),
+            getKeysByPrefix: vi.fn().mockReturnValue([]),
         };
 
         TestBed.configureTestingModule({
@@ -162,16 +167,36 @@ describe('StatsService', () => {
         expect(newService.stats().currentStreak).toBe(0);
     });
 
-    it('should rebuild stats from localStorage game keys when main stats key is missing', () => {
-        vi.spyOn(StatsService.prototype as any, 'getGameKeysFromStorage').mockReturnValue([
+    it('should rebuild stats from StorageService game keys when main stats key is missing', () => {
+        mockStorageService.getKeysByPrefix.mockReturnValue([
             'beesagono:game:2026-08-10',
             'beesagono:game:2026-08-11',
         ]);
 
         mockStorageService.load.mockImplementation((key: string) => {
             if (key === 'stats') return null;
-            if (key === 'beesagono:game:2026-08-10') return { score: 10, isCompleted: false, rankLabel: 'Buono' };
-            if (key === 'beesagono:game:2026-08-11') return { score: 20, isCompleted: true, rankLabel: 'Genio' };
+            if (key === 'beesagono:game:2026-08-10') {
+                return {
+                    version: 1,
+                    date: '2026-08-10',
+                    score: 10,
+                    isCompleted: false,
+                    foundWords: ['CASA'],
+                    invalidWords: [],
+                    rankLabel: 'Buono'
+                };
+            }
+            if (key === 'beesagono:game:2026-08-11') {
+                return {
+                    version: 1,
+                    date: '2026-08-11',
+                    score: 20,
+                    isCompleted: true,
+                    foundWords: ['MARE', 'SOLE'],
+                    invalidWords: [],
+                    rankLabel: 'Genio'
+                };
+            }
             return null;
         });
 
@@ -186,6 +211,7 @@ describe('StatsService', () => {
         const newService = TestBed.inject(StatsService);
         const stats = newService.stats();
 
+        expect(mockStorageService.getKeysByPrefix).toHaveBeenCalledWith('beesagono:game:');
         expect(stats.gamesPlayed).toBe(2);
         expect(stats.gamesCompleted).toBe(1);
         expect(stats.maxStreak).toBe(2);

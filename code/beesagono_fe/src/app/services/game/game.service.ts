@@ -201,6 +201,7 @@ export class GameService {
                     isCompleted: this.isCompleted(),
                     startTime: this._startTime(),
                     lastUpdated: Date.now(),
+                    rankLabel: this.rank().label,
                 };
 
                 this.storageService.save(`game:${currentBoard.date}`, stateToSave);
@@ -227,18 +228,32 @@ export class GameService {
 
             this._board.set(generatedBoard);
 
-            const savedState = this.storageService.load<GameState>(`game:${todayIsoDate}`);
+            const storageKey = `game:${todayIsoDate}`;
+            const savedState = this.storageService.load<any>(storageKey);
 
-            if (savedState && savedState.version === 1) {
+            // Rigorous validation of the saved state to prevent crashes caused by corrupted or incomplete objects (e.g., {"version":1})
+            const isValidState =
+                savedState &&
+                typeof savedState === 'object' &&
+                savedState.version === 1 &&
+                Array.isArray(savedState.foundWords) &&
+                Array.isArray(savedState.invalidWords);
+
+            if (isValidState) {
                 const validWordsSet = new Set(generatedBoard.possibleWords);
                 const sanitizedWords = Array.from(
-                    new Set(savedState.foundWords.filter((w) => validWordsSet.has(w)))
+                    new Set((savedState.foundWords as string[]).filter((w) => validWordsSet.has(w)))
                 );
                 this._foundWords.set(sanitizedWords);
 
-                this._invalidWords.set(savedState.invalidWords ?? []);
-                this._startTime.set(savedState.startTime ?? Date.now());
+                this._invalidWords.set(savedState.invalidWords);
+                this._startTime.set(typeof savedState.startTime === 'number' ? savedState.startTime : Date.now());
             } else {
+                // If the state is corrupt or incomplete, we clear the key to isolate the problem (quarantine/clear)
+                if (savedState !== null) {
+                    this.storageService.clear(storageKey);
+                }
+
                 this._foundWords.set([]);
                 this._invalidWords.set([]);
                 this._startTime.set(Date.now());

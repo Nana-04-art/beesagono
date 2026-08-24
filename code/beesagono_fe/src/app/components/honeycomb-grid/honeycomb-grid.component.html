@@ -5,7 +5,7 @@
 
         <g class="hex-group" tabindex="0" role="button"
             [attr.aria-label]="'Lettera ' + cell.letter + (cell.isCenter ? ' (centrale e obbligatoria)' : '')"
-            (click)="onCellClick(cell.letter)" (keydown)="onKeyDown($event, cell.letter)"
+            (click)="onCellClick($event, cell.letter)" (keydown)="onKeyDown($event, cell.letter)"
             [attr.transform]="'translate(' + coords.x + ',' + coords.y + ')'">
 
             <!-- Polygon Hexagon Tile -->

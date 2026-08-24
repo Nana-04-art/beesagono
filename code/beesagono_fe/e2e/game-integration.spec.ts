@@ -1,8 +1,13 @@
 import { test, expect } from '@playwright/test';
 
+const GAME_RULES = {
+    MIN_WORD_LENGTH: 4,
+    MIELEGRAMMA_BONUS: 7,
+} as const;
+
 test.describe('Daily Game - Complete Player Journey & Integration Flow', () => {
 
-    test('covers onboarding, error handling, valid submission, mielegramma, stats, scoreboard, and persistence', async ({ page }) => {
+    test('covers onboarding, error handling, mielegramma submission, stats, scoreboard, and persistence', async ({ page }) => {
 
         // 1. FIRST ACCESS (Mobile Viewport & Onboarding Modal)
         await page.setViewportSize({ width: 375, height: 667 });
@@ -29,127 +34,123 @@ test.describe('Daily Game - Complete Player Journey & Integration Flow', () => {
         await expect(submitBtn).toBeVisible();
 
         // Interaction with the Shuffle button
-        if (await shuffleBtn.isVisible()) {
-            await shuffleBtn.click();
-            await expect(centerTile).toBeVisible();
-        }
+        await expect(shuffleBtn).toBeVisible();
+        await shuffleBtn.click();
+        await expect(centerTile).toBeVisible();
 
         // 3. ERROR HANDLING & IMMEDIATE FEEDBACK (UX Point 1)
-        // Submitting an invalid/short word to trigger the error feedback
+        await inputDisplay.click();
+
         await page.keyboard.type('NO');
+        await expect(inputDisplay).toContainText(/N\s*O/i);
+
         await submitBtn.click();
 
-        // Verify the appearance of the error message inside the WordDisplay component
         const feedbackBadge = page.locator('.word-display-container .feedback-badge.text-danger');
         await expect(feedbackBadge).toBeVisible();
+        await expect(feedbackBadge).toContainText(/corta/i);
 
-        // Clear input
-        await deleteBtn.click();
+        // A rejected too-short submission clears currentInput automatically.
+        await expect(inputDisplay).toContainText(/Digita o clicca le lettere/i);
 
-        // 4. HIVE TILES EXTRACTION & VALID WORD / MIELEGRAMMA CALCULATION (UX Point 2)
+        // 4. HIVE TILES EXTRACTION & MIELEGRAMMA CALCULATION
         const dictResponse = await page.request.get('/dictionary.json');
         expect(dictResponse.ok()).toBeTruthy();
 
         const dictData = await dictResponse.json();
         const dictionary: string[] = (Array.isArray(dictData) ? dictData : (dictData.words || []))
             .map((w: string) => typeof w === 'string' ? w.trim().toUpperCase() : '')
-            .filter((w: string) => w.length >= 4);
+            .filter((w: string) => w.length >= GAME_RULES.MIN_WORD_LENGTH);
 
-        let wordToSubmit = '';
-        let isMielegramma = false;
+        let mielegrammaWord = '';
 
         await expect.poll(async () => {
-            const availableLetters = await page.evaluate(() => {
+            mielegrammaWord = await page.evaluate((dict) => {
                 const elements = Array.from(document.querySelectorAll('button, .tile, [class*="hex"]'));
-                const letters: string[] = [];
+                const letters = new Set<string>();
+                let center = '';
 
                 elements.forEach(el => {
-                    const txt = (el.textContent || '').trim();
+                    const txt = (el.textContent || '').trim().toUpperCase();
                     const aria = (el.getAttribute('aria-label') || '').toLowerCase();
-
-                    const isSystemBtn = ['invia', 'cancella', 'elimina', 'mescola', 'ho capito', 'grado'].some(
-                        cmd => txt.toLowerCase().includes(cmd) || aria.includes(cmd)
+                    const isSystem = ['invia', 'cancella', 'elimina', 'mescola', 'ho capito', 'grado'].some(
+                        c => txt.toLowerCase().includes(c) || aria.includes(c)
                     );
 
-                    if (!isSystemBtn && txt.length === 1 && /^[A-Z]$/i.test(txt)) {
-                        letters.push(txt.toUpperCase());
+                    if (!isSystem && txt.length === 1 && /^[A-Z]$/.test(txt)) {
+                        letters.add(txt);
+                        if (el.classList.contains('is-center') || aria.includes('centrale')) {
+                            center = txt;
+                        }
                     }
                 });
 
-                return [...new Set(letters)];
-            });
+                if (!center && letters.size > 0) {
+                    center = Array.from(letters)[0];
+                }
 
-            if (availableLetters.length === 0) return null;
+                const match = dict.find((w: string) => {
+                    if (!center || !w.includes(center)) return false;
+                    const unique = new Set(w);
+                    if (unique.size !== 7) return false;
+                    return w.split('').every((char: string) => letters.has(char));
+                });
 
-            // Look for a Mielegramma first (7 unique letters using all tiles)
-            const mielegrammaMatch = dictionary.find(word => {
-                if (!word.includes(centerLetter)) return false;
-                const uniqueChars = [...new Set(word.split(''))];
-                return uniqueChars.length === 7 && word.split('').every(char => availableLetters.includes(char));
-            });
+                return match || '';
+            }, dictionary);
 
-            if (mielegrammaMatch) {
-                wordToSubmit = mielegrammaMatch;
-                isMielegramma = true;
-                return mielegrammaMatch;
-            }
-
-            // Otherwise, fall back to a normal valid word
-            const normalMatch = dictionary.find(word => {
-                if (!word.includes(centerLetter)) return false;
-                return word.split('').every(char => availableLetters.includes(char));
-            });
-
-            if (normalMatch) {
-                wordToSubmit = normalMatch;
-                return normalMatch;
-            }
-
-            return null;
+            return mielegrammaWord.length > 0 ? mielegrammaWord : null;
         }, {
-            message: 'Waiting to calculate a valid word from the hive tiles',
+            message: "Waiting to find today's Mielegramma among the hive tiles",
             timeout: 7000
         }).toBeTruthy();
 
-        expect(wordToSubmit, 'Unable to find a valid word for the test').toBeTruthy();
+        expect(mielegrammaWord).toBeTruthy();
 
-        // 5. INPUT FOCUS & TYPING
-        if (await inputDisplay.isVisible()) {
-            await inputDisplay.click();
-        } else {
-            await page.locator('body').click({ position: { x: 10, y: 10 } });
-        }
+        // 5. READ THE SCORE BEFORE SUBMISSION (must be 0: no valid word accepted yet)
+        const rankTriggerMobile = page.locator('#scoreboard-trigger-mobile');
+        const popoverMobile = page.locator('#scoreboard-popover-mobile');
+        const scoreElement = popoverMobile.locator('.score-value');
 
-        await page.keyboard.type(wordToSubmit);
+        await expect(rankTriggerMobile).toBeVisible();
+        await rankTriggerMobile.click();
+        await expect(popoverMobile).toBeVisible();
+        await expect(scoreElement).toHaveText('0');
+        await rankTriggerMobile.click();
+        await expect(popoverMobile).not.toBeVisible();
 
-        const letterPattern = wordToSubmit.split('').join('\\s*');
+        // 6. INPUT FOCUS, TYPING & SUBMISSION OF THE MIELEGRAMMA
+        await inputDisplay.click();
+        await page.keyboard.type(mielegrammaWord);
+
+        const letterPattern = mielegrammaWord.split('').join('\\s*');
         await expect(inputDisplay).toHaveText(new RegExp(letterPattern, 'i'));
 
-        // Safely and reliably submit the word
-        await submitBtn.waitFor({ state: 'visible' });
-        await page.waitForTimeout(100); // Short breathing room for the UI
-        await submitBtn.click({ force: true });
+        await expect(submitBtn).toBeEnabled();
+        await submitBtn.click();
 
-        // Reset display (the word is accepted and the input resets)
-        await expect(inputDisplay).toContainText(/Digita o clicca le lettere/i);
+        // Faithful verification of success feedback using a new name for the constant
+        const successFeedbackBadge = page.locator('.word-display-container .feedback-badge');
+        await expect(successFeedbackBadge).toBeVisible();
+        await expect(successFeedbackBadge).toContainText(/mielegramma/i);
+        await expect(successFeedbackBadge).toHaveClass(/text-success/);
 
-        // 6. VERIFY WORD IN THE ACCORDION (.found-words-card)
+        // 7. VERIFY WORD IN THE ACCORDION (.found-words-card), marked as a Mielegramma
         const foundWordsCard = page.locator('.found-words-card');
         await expect(foundWordsCard).toBeVisible();
 
         const toggleWordsBtn = foundWordsCard.locator('.toggle-button');
         await toggleWordsBtn.click();
 
-        const wordChip = foundWordsCard.locator('.word-chip', { hasText: wordToSubmit });
+        const wordChip = foundWordsCard.locator('.word-chip', { hasText: mielegrammaWord });
         await expect(wordChip).toBeVisible();
+        await expect(wordChip).toHaveClass(/mielegramma/);
 
-        // Close the accordion again
         await toggleWordsBtn.click();
 
-        // 7. STATS PANEL CONSULTATION (UX Point 3)
+        // 8. STATS PANEL CONSULTATION (UX Point 3)
         await page.evaluate(() => window.scrollTo(0, 0));
 
-        // The stats button in the navbar
         const statsBtn = page.locator('button[title*="statistiche"], .stats-popover-wrapper button').first();
         await expect(statsBtn).toBeVisible();
         await statsBtn.click();
@@ -157,51 +158,133 @@ test.describe('Daily Game - Complete Player Journey & Integration Flow', () => {
         const statsPopover = page.locator('app-stats, .stats-popover-wrapper > div').first();
         await expect(statsPopover).toBeVisible();
 
-        // Close the stats popover by clicking the button again
         await statsBtn.click();
         await expect(statsPopover).not.toBeVisible();
 
-        // 8. OPENING MOBILE POPOVER/SCOREBOARD
-        const rankTriggerMobile = page.locator('#scoreboard-trigger-mobile');
+        // 9. SCOREBOARD: VERIFY THE EXACT MIELEGRAMMA SCORE (word length + bonus)
+        const expectedScore = mielegrammaWord.length + GAME_RULES.MIELEGRAMMA_BONUS;
+
         await expect(rankTriggerMobile).toBeVisible();
         await rankTriggerMobile.click();
-
-        const popoverMobile = page.locator('#scoreboard-popover-mobile');
         await expect(popoverMobile).toBeVisible();
-
-        // Extract and verify the score and progress bar
-        const scoreElement = popoverMobile.locator('.score-value');
-        await expect(scoreElement).toBeVisible();
+        await expect(scoreElement).toHaveText(String(expectedScore));
 
         const progressBar = popoverMobile.locator('.scoreboard-bar');
         await expect(progressBar).toBeVisible();
-
-        const scoreText = (await scoreElement.textContent())?.trim() ?? '0';
-        const scoreNum = parseInt(scoreText.replace(/\D/g, '') || '0', 10);
-        expect(scoreNum).toBeGreaterThan(0);
 
         const initialRankText = (await rankTriggerMobile.textContent())?.trim();
 
         await rankTriggerMobile.click();
         await expect(popoverMobile).not.toBeVisible();
 
-        // 9. PERSISTENCE UPON RELOAD
+        // 10. PERSISTENCE CHECK ON LOCALSTORAGE & RELOAD
+        await expect.poll(async () => {
+            return await page.evaluate((expected) => {
+                for (let i = 0; i < localStorage.length; i++) {
+                    const key = localStorage.key(i);
+                    if (key && key.includes('game:')) {
+                        try {
+                            const val = JSON.parse(localStorage.getItem(key) || '{}');
+                            if (val && val.score === expected) return true;
+                        } catch {
+                            // ignore invalid JSON
+                        }
+                    }
+                }
+                return false;
+            }, expectedScore);
+        }).toBeTruthy();
+
         await page.reload();
 
         await expect(dismissNoticeBtn).not.toBeVisible();
 
-        // Reopen and verify data after reload
         await page.evaluate(() => window.scrollTo(0, 0));
         await expect(rankTriggerMobile).toBeVisible();
         await rankTriggerMobile.click();
-
         await expect(popoverMobile).toBeVisible();
 
         const reloadedScoreText = (await popoverMobile.locator('.score-value').textContent())?.trim();
         const reloadedRankText = (await rankTriggerMobile.textContent())?.trim();
 
-        expect(reloadedScoreText).toBe(scoreText);
+        expect(reloadedScoreText).toBe(String(expectedScore));
         expect(reloadedRankText).toBe(initialRankText);
+    });
+
+    test('accepts a normal (non-pangram) valid word and updates the found words list', async ({ page }) => {
+        await page.setViewportSize({ width: 375, height: 667 });
+        await page.goto('/');
+
+        // Secure and blocking closure of the welcome modal for the second test as well
+        const dismissNoticeBtn = page.getByRole('button', { name: 'Ho capito, fammi giocare!' });
+        await expect(dismissNoticeBtn).toBeVisible();
+        await dismissNoticeBtn.click();
+        await expect(dismissNoticeBtn).not.toBeVisible();
+
+        const centerTile = page.getByRole('button', { name: /centrale e obbligatoria/i });
+        await expect(centerTile).toBeVisible();
+        const centerLetter = (await centerTile.textContent())?.trim().toUpperCase() ?? '';
+
+        const inputDisplay = page.locator('.word-display-container').first();
+        const submitBtn = page.getByRole('button', { name: 'Invia la parola inserita' });
+
+        const dictResponse = await page.request.get('/dictionary.json');
+        const dictData = await dictResponse.json();
+        const dictionary: string[] = (Array.isArray(dictData) ? dictData : (dictData.words || []))
+            .map((w: string) => typeof w === 'string' ? w.trim().toUpperCase() : '')
+            .filter((w: string) => w.length >= GAME_RULES.MIN_WORD_LENGTH);
+
+        let normalWord = '';
+
+        await expect.poll(async () => {
+            const availableLetters = await page.evaluate(() => {
+                const elements = Array.from(document.querySelectorAll('button, .tile, [class*="hex"]'));
+                const letters: string[] = [];
+                elements.forEach(el => {
+                    const txt = (el.textContent || '').trim();
+                    const aria = (el.getAttribute('aria-label') || '').toLowerCase();
+                    const isSystemBtn = ['invia', 'cancella', 'elimina', 'mescola', 'ho capito', 'grado'].some(
+                        cmd => txt.toLowerCase().includes(cmd) || aria.includes(cmd)
+                    );
+                    if (!isSystemBtn && txt.length === 1 && /^[A-Z]$/i.test(txt)) {
+                        letters.push(txt.toUpperCase());
+                    }
+                });
+                return [...new Set(letters)];
+            });
+
+            if (availableLetters.length === 0) return null;
+
+            const match = dictionary.find(word => {
+                if (!word.includes(centerLetter)) return false;
+                const uniqueChars = new Set(word.split(''));
+                if (uniqueChars.size === 7) return false;
+                return word.split('').every(char => availableLetters.includes(char));
+            });
+
+            normalWord = match ?? '';
+            return match ?? null;
+        }, {
+            message: 'Waiting to find a normal (non-pangram) valid word among the hive tiles',
+            timeout: 7000
+        }).toBeTruthy();
+
+        expect(normalWord).toBeTruthy();
+
+        await inputDisplay.click();
+        await page.keyboard.type(normalWord);
+
+        const letterPattern = normalWord.split('').join('\\s*');
+        await expect(inputDisplay).toHaveText(new RegExp(letterPattern, 'i'));
+
+        await expect(submitBtn).toBeEnabled();
+        await submitBtn.click();
+
+        await expect(inputDisplay).toContainText(/Digita o clicca le lettere/i);
+
+        const foundWordsCard = page.locator('.found-words-card');
+        await foundWordsCard.locator('.toggle-button').click();
+        await expect(foundWordsCard.locator('.word-chip', { hasText: normalWord })).toBeVisible();
     });
 
 });

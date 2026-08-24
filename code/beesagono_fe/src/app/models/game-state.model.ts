@@ -23,4 +23,6 @@ export interface GameState {
   /** Timestamps for stats tracking */
   startTime: number;
   lastUpdated: number;
+
+  rankLabel?: string;
 }
