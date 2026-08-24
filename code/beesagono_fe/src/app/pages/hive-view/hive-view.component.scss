@@ -1,0 +1,40 @@
+.main-content {
+    width: 100%;
+    max-width: 1024px;
+    overflow-y: auto;
+}
+
+.max-w-lg {
+    max-width: 32rem;
+}
+
+.max-w-md {
+    max-width: 28rem;
+}
+
+app-honeycomb-grid,
+app-hive-controls,
+app-word-display {
+    width: 100%;
+    max-width: 500px;
+    margin: 0 auto;
+}
+
+.spinner-lg {
+    width: 3.5rem;
+    height: 3.5rem;
+    border-width: 0.3em;
+}
+
+@media (max-height: 700px) {
+    .main-content {
+        padding-top: 0.25rem !important;
+        padding-bottom: 0.25rem !important;
+    }
+}
+
+app-words-by-letter {
+    width: 100%;
+    max-width: 1024px;
+    margin: 0 auto;
+}

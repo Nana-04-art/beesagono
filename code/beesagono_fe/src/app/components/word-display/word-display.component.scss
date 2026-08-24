@@ -1,0 +1,70 @@
+.word-display-container {
+    min-height: 100px;
+}
+
+.feedback-badge {
+    font-size: 0.95rem;
+    letter-spacing: 0.5px;
+    animation: fadeIn 0.2s ease-in-out;
+}
+
+.input-box {
+    min-height: 48px;
+    min-width: 200px;
+    max-width: 100%;
+    border-color: #dee2e6 !important;
+    transition: border-color 0.2s ease;
+
+    &.has-content {
+        border-color: #212529 !important;
+    }
+}
+
+.placeholder-text {
+    color: #adb5bd;
+    font-size: 1rem;
+}
+
+.letters-wrapper {
+    gap: 2px;
+}
+
+.letter {
+    font-size: 1.8rem;
+    color: #212529;
+
+    &.is-center {
+        color: #f59e0b;
+    }
+}
+
+.cursor {
+    font-size: 1.8rem;
+    color: #f59e0b;
+    margin-left: 2px;
+    animation: blink 1s infinite;
+}
+
+@keyframes blink {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0;
+    }
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-4px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}

@@ -1,0 +1,22 @@
+<div class="honeycomb-container">
+    <svg class="honeycomb-svg" viewBox="0 0 320 320" role="group" aria-label="Alveare delle lettere">
+        @for (cell of cells(); track cell.letter) {
+        @let coords = getHexCoordinates(cell.position);
+
+        <g class="hex-group" tabindex="0" role="button"
+            [attr.aria-label]="'Lettera ' + cell.letter + (cell.isCenter ? ' (centrale e obbligatoria)' : '')"
+            (click)="onCellClick($event, cell.letter)" (keydown)="onKeyDown($event, cell.letter)"
+            [attr.transform]="'translate(' + coords.x + ',' + coords.y + ')'">
+
+            <!-- Polygon Hexagon Tile -->
+            <polygon class="hex-tile" [class.is-center]="cell.isCenter"
+                points="0,-40 34.64,-20 34.64,20 0,40 -34.64,20 -34.64,-20" />
+
+            <!-- Hexagon Text -->
+            <text class="hex-text" [class.is-center-text]="cell.isCenter">
+                {{ cell.letter }}
+            </text>
+        </g>
+        }
+    </svg>
+</div>

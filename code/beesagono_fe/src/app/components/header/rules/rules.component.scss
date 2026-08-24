@@ -1,0 +1,29 @@
+.rules-popover {
+    width: 320px;
+    max-height: 380px;
+    background-color: #ffffff;
+    border-color: rgba(245, 158, 11, 0.3) !important;
+    z-index: 1050;
+    min-width: 300px;
+    max-width: 360px;
+}
+
+.rules-popover-body {
+    max-height: 350px;
+    overflow-y: auto;
+    padding-right: 4px;
+
+    &::-webkit-scrollbar {
+        width: 4px;
+    }
+
+    &::-webkit-scrollbar-thumb {
+        background-color: rgba(245, 158, 11, 0.4);
+        border-radius: 4px;
+    }
+}
+
+.extra-small-text {
+    font-size: 0.75rem;
+    line-height: 1.25;
+}

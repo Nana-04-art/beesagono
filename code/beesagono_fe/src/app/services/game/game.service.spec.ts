@@ -4,14 +4,35 @@ import { GameService } from './game.service';
 import { StorageService } from '../storage/storage.service';
 import { PuzzleGeneratorService } from '../puzzle-generator/puzzle-generator.service';
 import { DictionaryService } from '../dictionary/dictionary.service';
+import { ScoreService } from '../score/score.service';
+import { StatsService } from '../stats/stats.service';
 import { GameBoard } from '../../models/game-board.model';
 import { GameState } from '../../models/game-state.model';
 
 describe('GameService', () => {
   let service: GameService;
-  let mockPuzzleGenerator: any;
-  let mockDictionaryService: any;
-  let mockStorageService: any;
+
+  let mockPuzzleGenerator: {
+    generateDailyPuzzle: ReturnType<typeof vi.fn>;
+  };
+  let mockDictionaryService: {
+    loadDictionary: ReturnType<typeof vi.fn>;
+    getWordSet: ReturnType<typeof vi.fn>;
+  };
+  let mockStorageService: {
+    load: ReturnType<typeof vi.fn>;
+    save: ReturnType<typeof vi.fn>;
+    isAvailable: ReturnType<typeof vi.fn>;
+    clear: ReturnType<typeof vi.fn>;
+  };
+  let mockScoreService: {
+    calculateWordPoints: ReturnType<typeof vi.fn>;
+    calculateTotalScore: ReturnType<typeof vi.fn>;
+  };
+  let mockStatsService: {
+    recordGameStarted: ReturnType<typeof vi.fn>;
+    recordProgress: ReturnType<typeof vi.fn>;
+  };
 
   const mockBoard: GameBoard = {
     date: '2026-07-31',
@@ -47,12 +68,33 @@ describe('GameService', () => {
       clear: vi.fn(),
     };
 
+    mockScoreService = {
+      calculateWordPoints: vi.fn((word: string, isMielegramma: boolean) => {
+        if (isMielegramma) return word.length + 7;
+        return word.length === 4 ? 1 : word.length;
+      }),
+      calculateTotalScore: vi.fn((words: string[], mieleSet: Set<string>) => {
+        return words.reduce((acc, word) => {
+          const isM = mieleSet.has(word);
+          if (isM) return acc + word.length + 7;
+          return acc + (word.length === 4 ? 1 : word.length);
+        }, 0);
+      }),
+    };
+
+    mockStatsService = {
+      recordGameStarted: vi.fn(),
+      recordProgress: vi.fn(),
+    };
+
     TestBed.configureTestingModule({
       providers: [
         GameService,
         { provide: PuzzleGeneratorService, useValue: mockPuzzleGenerator },
         { provide: DictionaryService, useValue: mockDictionaryService },
         { provide: StorageService, useValue: mockStorageService },
+        { provide: ScoreService, useValue: mockScoreService },
+        { provide: StatsService, useValue: mockStatsService },
       ],
     });
 
@@ -64,14 +106,16 @@ describe('GameService', () => {
     vi.restoreAllMocks();
   });
 
-  it('should be created in idle state', () => {
+  it('should be created in ready state after daily game load', () => {
     expect(service).toBeTruthy();
+    expect(service.loadStatus()).toBe('ready');
   });
 
   it('should load daily game successfully and restore empty state when no saved state exists', () => {
     expect(service.board()).toEqual(mockBoard);
     expect(service.score()).toBe(0);
     expect(service.foundWords()).toEqual([]);
+    expect(mockStatsService.recordGameStarted).toHaveBeenCalled();
   });
 
   it('should restore saved game state from storage if available and valid', async () => {
@@ -85,6 +129,7 @@ describe('GameService', () => {
       isCompleted: false,
       startTime: 1000,
       lastUpdated: 2000,
+      rankLabel: 'Principiante',
     };
     mockStorageService.load.mockReturnValue(savedState);
 
@@ -94,7 +139,22 @@ describe('GameService', () => {
     expect(service.score()).toBe(5);
   });
 
-  it('should handle input characters, backspace, clear, and ENTER via handleInput', () => {
+  it('should clear storage and notify stats service when saved state is invalid or corrupted', async () => {
+    const corruptedState = {
+      version: 1,
+    };
+    mockStorageService.load.mockReturnValue(corruptedState);
+
+    const todayIsoDate = (service as any).getTodayIsoString();
+
+    await service.loadDailyGame();
+
+    expect(mockStorageService.clear).toHaveBeenCalledWith(`game:${todayIsoDate}`);
+    expect(service.foundWords()).toEqual([]);
+    expect(mockStatsService.recordGameStarted).toHaveBeenCalledWith(todayIsoDate);
+  });
+
+  it('should handle input characters, backspace, and clear via handleInput', () => {
     service.handleInput('M');
     service.handleInput('I');
     expect(service.currentInput()).toBe('MI');
@@ -102,20 +162,18 @@ describe('GameService', () => {
     service.handleInput('BACKSPACE');
     expect(service.currentInput()).toBe('M');
 
-    service.handleInput('CLEAR');
-    expect(service.currentInput()).toBe('M');
-
     service.clearInput();
     expect(service.currentInput()).toBe('');
   });
 
-  it('should process valid word submissions and calculate 4-letter word score (1 pt) and longer word score', () => {
+  it('should process valid word submissions and calculate score', () => {
     'MIELE'.split('').forEach((char) => service.handleInput(char));
     const mieleResult = service.submitWord();
 
     expect(mieleResult.isValid).toBe(true);
     expect(mieleResult.pointsAwarded).toBe(5);
     expect(service.score()).toBe(5);
+    expect(mockStatsService.recordProgress).toHaveBeenCalled();
   });
 
   it('should return error when word is too short', () => {
@@ -132,6 +190,7 @@ describe('GameService', () => {
 
     expect(result.isValid).toBe(false);
     expect(result.errorType).toBe('MISSING_CENTER');
+    expect(service.invalidWords()).toContain('MILAMILA');
   });
 
   it('should track invalid words and return error when using invalid letters', () => {
@@ -140,6 +199,7 @@ describe('GameService', () => {
 
     expect(result.isValid).toBe(false);
     expect(result.errorType).toBe('INVALID_LETTERS');
+    expect(service.invalidWords()).toContain('MIELEZ');
   });
 
   it('should return ALREADY_FOUND error for duplicate submissions without duplicating invalidWords', () => {
@@ -168,9 +228,10 @@ describe('GameService', () => {
 
     expect(result.isValid).toBe(true);
     expect(result.isMielegramma).toBe(true);
+    expect(result.pointsAwarded).toBe(18);
   });
 
-  it('should compute rank progress, genius rank, and completion correctly', () => {
+  it('should compute rank progress and completion correctly', () => {
     mockBoard.possibleWords.forEach((word) => {
       service.clearInput();
       word.split('').forEach((char) => service.handleInput(char));
@@ -206,6 +267,7 @@ describe('GameService', () => {
 
   it('should trigger reload on checkDateRollover if date changed', () => {
     const spy = vi.spyOn(service, 'loadDailyGame');
+    vi.spyOn(service as any, 'getTodayIsoString').mockReturnValue('2026-08-01');
 
     service.checkDateRollover();
 

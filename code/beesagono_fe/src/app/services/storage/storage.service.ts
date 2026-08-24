@@ -1,140 +1,101 @@
 import { Injectable } from '@angular/core';
-import { GameState } from '../../models/game-state.model';
 
 @Injectable({ providedIn: 'root' })
 export class StorageService {
-  private readonly PREFIX = 'beesagono:game:';
-  /** In-memory fallback store for cases where localStorage is blocked or full. */
-  private inMemoryFallback = new Map<string, string>();
+  private readonly DEFAULT_PREFIX = 'beesagono:';
+  // In-memory fallback store for cases where localStorage is blocked or full
+  private readonly inMemoryFallback = new Map<string, string>();
   private usingFallback = false;
 
-  /**
-   * Persists the GameState object to localStorage or falls back to in-memory store.
-   */
-  save(state: GameState): boolean {
-    if (!state || !state.date) {
-      console.warn('[StorageService] Attempted to save an invalid game state.');
+  // Persists generic data to localStorage or falls back to in-memory store.
+  save<T>(key: string, data: T): boolean {
+    if (!key || data === undefined || data === null) {
+      console.warn('[StorageService] Attempted to save invalid key or data.');
       return false;
     }
 
-    const key = `${this.PREFIX}${state.date}`;
-    const payload = JSON.stringify(state);
+    const fullKey = this.getFullKey(key);
+    const payload = JSON.stringify(data);
 
     try {
-      localStorage.setItem(key, payload);
-      // If successful, clear any fallback data for this key
-      this.inMemoryFallback.delete(key);
+      localStorage.setItem(fullKey, payload);
+      this.inMemoryFallback.delete(fullKey);
       this.usingFallback = false;
       return true;
     } catch (error) {
       console.warn('[StorageService] Unable to save to localStorage (quota exceeded or blocked).', error);
-      this.inMemoryFallback.set(key, payload);
+      this.inMemoryFallback.set(fullKey, payload);
       this.usingFallback = true;
       return false;
     }
   }
 
-  /**
-   * Reads and validates the GameState object for a given date.
-   */
-  load(date: string): GameState | null {
-    const key = `${this.PREFIX}${date}`;
+  // Reads and parses data from in-memory fallback or localStorage.
+  load<T>(key: string): T | null {
+    if (!key) return null;
+    const fullKey = this.getFullKey(key);
 
     try {
-      // Attempt to read from inMemoryFallback first
-      let raw = this.inMemoryFallback.get(key);
-      // If not found in fallback, try localStorage
+      let raw = this.inMemoryFallback.get(fullKey);
       if (!raw) {
-        raw = localStorage.getItem(key) ?? undefined;
+        raw = localStorage.getItem(fullKey) ?? undefined;
       }
       if (!raw) return null;
-      const parsed = JSON.parse(raw);
 
-      // Structure and Schema Version validation (§10.3)
-      if (!this.isValidGameState(parsed, date)) {
-        console.warn('[StorageService] Corrupted or mismatched saved state.');
-        return null;
-      }
-
-      // Sanitize and deduplicate invalidWords if present
-      if (Array.isArray(parsed.invalidWords)) {
-        parsed.invalidWords = Array.from(
-          new Set(
-            parsed.invalidWords.filter((item: unknown): item is string => typeof item === 'string')
-          )
-        );
-      } else {
-        parsed.invalidWords = [];
-      }
-
-      return parsed as GameState;
+      return JSON.parse(raw) as T;
     } catch (error) {
-      console.error('[StorageService] Error occurred while parsing the saved state:', error);
-      // Attempt to recover from in-memory fallback if available
-      const fallbackRaw = this.inMemoryFallback.get(key);
-      if (fallbackRaw) {
-        try {
-          const parsedFallback = JSON.parse(fallbackRaw);
-          if (this.isValidGameState(parsedFallback, date)) {
-            if (Array.isArray(parsedFallback.invalidWords)) {
-              parsedFallback.invalidWords = Array.from(
-                new Set(
-                  parsedFallback.invalidWords.filter(
-                    (item: unknown): item is string => typeof item === 'string'
-                  )
-                )
-              );
-            } else {
-              parsedFallback.invalidWords = [];
-            }
-            return parsedFallback as GameState;
-          }
-        } catch {
-          // Fallback parsing failed
-        }
-      }
+      console.error('[StorageService] Error occurred while parsing saved data:', error);
       return null;
     }
   }
 
-  /**
-   * Removes a stored entry for a given date.
-   */
-  clear(date: string): void {
-    const key = `${this.PREFIX}${date}`;
+  // Removes a stored entry for a given key.
+  clear(key: string): void {
+    const fullKey = this.getFullKey(key);
     try {
-      localStorage.removeItem(key);
+      localStorage.removeItem(fullKey);
     } catch {
       // Ignored
     }
-    this.inMemoryFallback.delete(key);
+    this.inMemoryFallback.delete(fullKey);
   }
 
-  /**
-   * Returns true if running natively with localStorage.
-   */
+  // Returns true if running natively with localStorage.
   isAvailable(): boolean {
     return !this.usingFallback;
   }
 
   /**
-   * Defensive validation check for loaded objects.
+   * Retrieves all keys starting with a given prefix,
+   * unifying localStorage and in-memory fallback sources.
    */
-  private isValidGameState(obj: any, expectedDate: string): obj is GameState {
-    const isInvalidWordsValid =
-      obj.invalidWords === undefined ||
-      (Array.isArray(obj.invalidWords) &&
-        obj.invalidWords.every((item: unknown) => typeof item === 'string'));
+  getKeysByPrefix(prefix: string): string[] {
+    const fullPrefix = this.getFullKey(prefix);
+    const keys = new Set<string>();
 
-    return (
-      obj &&
-      typeof obj === 'object' &&
-      obj.version === 1 &&
-      obj.date === expectedDate &&
-      Array.isArray(obj.foundWords) &&
-      typeof obj.startTime === 'number' &&
-      typeof obj.lastUpdated === 'number' &&
-      isInvalidWordsValid
-    );
+    // Search in localStorage if available
+    try {
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith(fullPrefix)) {
+          keys.add(key);
+        }
+      }
+    } catch (e) {
+      console.warn('[StorageService] localStorage enumeration failed or unavailable:', e);
+    }
+
+    // Merge keys saved in the in-memory fallback
+    for (const key of this.inMemoryFallback.keys()) {
+      if (key.startsWith(fullPrefix)) {
+        keys.add(key);
+      }
+    }
+
+    return Array.from(keys);
+  }
+
+  private getFullKey(key: string): string {
+    return key.startsWith(this.DEFAULT_PREFIX) ? key : `${this.DEFAULT_PREFIX}${key}`;
   }
 }

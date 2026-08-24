@@ -1,0 +1,75 @@
+:host {
+  display: block;
+  width: 100%;
+  max-width: 1024px;
+  margin: 0 auto;
+}
+
+.words-by-letter-container {
+  width: 100%;
+}
+
+.letter-card {
+  width: 100%;
+  max-width: 504px;
+  min-height: 110px;
+  height: auto;
+  margin: 0 auto;
+  border-radius: 14px;
+  background-color: #ffffff;
+  border-color: #e2e8f0 !important;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  box-sizing: border-box;
+
+  &:hover {
+    border-color: rgba(245, 158, 11, 0.4) !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  }
+}
+
+.letter-circle {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  font-size: 1.15rem;
+
+  &.ring-warning {
+    box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.3);
+  }
+}
+
+.chevron-icon {
+  width: 18px;
+  height: 18px;
+  transition: transform 0.2s ease-in-out;
+
+  &.rotate-180 {
+    transform: rotate(180deg);
+  }
+}
+
+.extra-small-text {
+  font-size: 0.75rem;
+}
+
+.cursor-pointer {
+  cursor: pointer;
+}
+
+.word-badge {
+  transition: all 0.2s ease-in-out;
+
+  &.is-mielegramma {
+    background: linear-gradient(135deg, #fff3cd 0%, #ffe69c 100%) !important;
+    color: #664d03 !important;
+    border-color: #ffc107 !important;
+    font-weight: 700;
+    box-shadow: 0 2px 4px rgba(255, 193, 7, 0.25);
+  }
+}
+
+button.btn:focus-visible {
+  outline: 2px solid #ffc107 !important;
+  outline-offset: 2px !important;
+  border-radius: 8px !important;
+}

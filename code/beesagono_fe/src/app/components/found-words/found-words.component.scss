@@ -1,0 +1,111 @@
+:host {
+    display: block;
+    width: 1024px;
+    max-width: 100%;
+    margin: 0 auto;
+}
+
+.found-words-card {
+    width: 100%;
+    min-height: 60px;
+    border-radius: 12px !important;
+    border-color: #e2e8f0 !important;
+    transition: border-color 0.25s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+
+    &.is-expanded {
+        border-color: rgba(245, 158, 11, 0.4) !important;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06) !important;
+    }
+}
+
+.toggle-button {
+    height: 60px;
+    padding: 0 1rem !important;
+    background-color: #ffffff;
+    transition: background-color 0.2s ease;
+
+    &:hover {
+        background-color: #f8fafc;
+    }
+
+    &:focus-visible {
+        outline: 2px solid #f59e0b;
+        outline-offset: -2px;
+    }
+}
+
+.chevron {
+    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    font-size: 0.7rem;
+
+    &.open {
+        transform: rotate(180deg);
+    }
+}
+
+.extra-small {
+    font-size: 0.75rem;
+}
+
+.words-grid {
+    max-height: 250px;
+    overflow-y: auto;
+
+    &::-webkit-scrollbar {
+        width: 5px;
+    }
+
+    &::-webkit-scrollbar-track {
+        background: #f1f5f9;
+        border-radius: 4px;
+    }
+
+    &::-webkit-scrollbar-thumb {
+        background: #cbd5e1;
+        border-radius: 4px;
+    }
+}
+
+.word-chip {
+    padding: 0.4em 0.8em;
+    background-color: #f1f5f9;
+    color: #334155;
+    font-size: 0.85rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    border-radius: 50rem;
+    border: 1px solid transparent;
+    transition: transform 0.15s ease, background-color 0.15s ease;
+
+    &:hover {
+        transform: translateY(-1px);
+        background-color: #e2e8f0;
+    }
+
+    &.mielegramma {
+        background-color: #fef3c7;
+        color: #78350f;
+        border-color: #f59e0b;
+        font-weight: 700;
+
+        &:hover {
+            background-color: #fde68a;
+        }
+    }
+}
+
+.animate-fade-in {
+    animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-4px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}

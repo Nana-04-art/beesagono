@@ -1,0 +1,96 @@
+.scoreboard-card {
+    max-width: 320px;
+    background-color: #ffffff;
+    padding: 0.85rem 1rem !important;
+
+    .d-flex {
+        flex-wrap: nowrap;
+    }
+}
+
+.extra-small-text {
+    font-size: 0.72rem;
+}
+
+.rank-name {
+    font-size: 0.85rem;
+    white-space: nowrap;
+    line-height: 1;
+}
+
+.score-value {
+    font-size: 0.85rem;
+    line-height: 1;
+}
+
+.progress-container {
+    padding-top: 10px !important;
+    padding-bottom: 10px !important;
+    position: relative;
+}
+
+.scoreboard-progress {
+    height: 12px;
+    background-color: rgba(222, 226, 230, 0.6);
+    border-radius: 10px;
+    overflow: visible;
+    position: relative;
+}
+
+.scoreboard-bar {
+    background-color: #ffc107;
+    border-radius: 10px;
+    transition: width 0.4s ease-in-out;
+}
+
+.tier-emoji-marker {
+    position: absolute;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 0.95rem;
+    line-height: 1;
+    z-index: 3;
+    user-select: none;
+    transition: left 0.4s ease-in-out;
+
+    &.current {
+        opacity: 1 !important;
+        filter: none !important;
+        font-size: 1.1rem;
+        background: #ffffff;
+        border-radius: 50%;
+        padding: 2px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    &.next {
+        opacity: 0.4;
+        filter: grayscale(90%);
+        font-size: 0.85rem;
+    }
+}
+
+.rank-list-scroll {
+    max-height: 180px;
+    overflow-y: auto;
+    padding-right: 2px;
+
+    &::-webkit-scrollbar {
+        width: 4px;
+    }
+
+    &::-webkit-scrollbar-thumb {
+        background-color: rgba(245, 158, 11, 0.3);
+        border-radius: 4px;
+    }
+}
+
+.tier-row {
+    &.bg-warning-subtle {
+        background-color: rgba(255, 193, 7, 0.18) !important;
+        color: #664d03;
+    }
+}

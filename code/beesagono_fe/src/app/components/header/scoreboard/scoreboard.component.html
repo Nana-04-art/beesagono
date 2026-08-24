@@ -1,0 +1,58 @@
+<div class="card scoreboard-card border shadow-sm p-3 w-100 mx-auto position-relative" role="region"
+    aria-label="Punteggio e livello di gioco">
+
+    <!-- HEADING: Level and Current Score -->
+    <div class="d-flex justify-content-between align-items-center mb-2">
+        <!-- Current Level -->
+        <div class="d-flex align-items-center gap-1">
+            <span class="extra-small-text text-secondary">Grado:</span>
+            <span class="small fw-bold text-dark rank-name">
+                {{ rankName() }}
+            </span>
+        </div>
+
+        <!-- Current points -->
+        <div class="d-flex align-items-center gap-1">
+            <span class="extra-small-text text-secondary me-1">Punti:</span>
+            <span class="small fw-bold score-value text-dark">{{ score() }}</span>
+            <span class="extra-small-text text-muted">/ {{ maxScore() }}</span>
+        </div>
+    </div>
+
+    <!-- Progress bar -->
+    <div class="progress-container position-relative mb-2 py-1" tabindex="0" role="region"
+        aria-label="Progresso e tabella gradi">
+
+        <div class="progress scoreboard-progress" role="progressbar" [attr.aria-valuenow]="score()"
+            [attr.aria-valuemin]="0" [attr.aria-valuemax]="maxScore()"
+            [attr.aria-label]="'Progresso totale: ' + progressPercentage() + '%'">
+
+            <div class="progress-bar scoreboard-bar" [style.width.%]="progressPercentage()"></div>
+
+            <!-- Current level emoji "walking" along the bar -->
+            <span class="tier-emoji-marker current" [style.left.%]="progressPercentage()">
+                {{ currentRankEmoji() }}
+            </span>
+
+            <!-- Emoji for the next level to reach -->
+            @if (nextRankEmoji()) {
+            <span class="tier-emoji-marker next" [style.left.%]="nextRankThreshold()">
+                {{ nextRankEmoji() }}
+            </span>
+            }
+        </div>
+    </div>
+
+    <!-- NEXT GOAL INFO -->
+    <div class="text-end mt-2 pt-1 border-top">
+        <span class="extra-small-text text-secondary">
+            @if (pointsToNextRank() > 0) {
+            Mancano <strong>{{ pointsToNextRank() }}</strong> {{ pointsToNextRank() === 1 ? 'punto' : 'punti' }} al
+            prossimo grado
+            } @else {
+            🎉 Grado massimo raggiunto (Regina)!
+            }
+        </span>
+    </div>
+
+</div>
