@@ -113,16 +113,71 @@ export class HiveViewComponent implements OnInit {
   }
 
   // Copies formatted game results to the user clipboard
-  shareResults(): void {
+  async shareResults(): Promise<void> {
     const payload = this.endGamePayload();
     const text = `🐝 Beesagono (${payload.date})\nPunti: ${payload.score}/${payload.maxScore}\nParole: ${payload.wordsFound}/${payload.totalWords}\nMielegrammi: ${payload.mielegrammiFound}/${payload.totalMielegrammi}`;
 
-    if (navigator.clipboard) {
-      navigator.clipboard.writeText(text);
-      this.feedbackType.set('success');
-      this.feedbackMessage.set('Risultati copiati negli appunti!');
-      setTimeout(() => this.clearFeedback(), 2000);
+    if (this.feedbackTimeout) {
+      clearTimeout(this.feedbackTimeout);
     }
+
+    // Attempt 1: Standard Clipboard API (writeText)
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      try {
+        await navigator.clipboard.writeText(text);
+        this.feedbackType.set('success');
+        this.feedbackMessage.set('Risultati copiati negli appunti!');
+        this.feedbackTimeout = setTimeout(() => this.clearFeedback(), 2000);
+        return;
+      } catch (err) {
+        // Permission denied or write rejected, fallback to Share API or ExecCommand below
+      }
+    }
+
+    // Attempt 2: Web Share API (Mobile / Supporting browsers)
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: 'Beesagono Risultati',
+          text: text
+        });
+        this.feedbackType.set('success');
+        this.feedbackMessage.set('Risultati condivisi con successo!');
+        this.feedbackTimeout = setTimeout(() => this.clearFeedback(), 2000);
+        return;
+      } catch (err) {
+        // User cancelled sharing or share failed
+        if ((err as DOMException)?.name === 'AbortError') {
+          return; // Ignore manual user cancellation
+        }
+      }
+    }
+
+    // Attempt 3: Legacy execCommand Fallback
+    try {
+      const textArea = document.createElement('textarea');
+      textArea.value = text;
+      textArea.style.position = 'fixed';
+      textArea.style.opacity = '0';
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+
+      const successful = document.execCommand('copy');
+      document.body.removeChild(textArea);
+
+      if (successful) {
+        this.feedbackType.set('success');
+        this.feedbackMessage.set('Risultati copiati negli appunti!');
+      } else {
+        throw new Error('Copy command failed');
+      }
+    } catch {
+      this.feedbackType.set('error');
+      this.feedbackMessage.set('Impossibile copiare i risultati');
+    }
+
+    this.feedbackTimeout = setTimeout(() => this.clearFeedback(), 2000);
   }
 
   submit(): void {

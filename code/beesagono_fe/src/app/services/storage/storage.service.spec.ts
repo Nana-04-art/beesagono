@@ -1,7 +1,14 @@
 import { TestBed } from '@angular/core/testing';
+import { signal } from '@angular/core';
 import { vi, describe, beforeEach, afterEach, it, expect } from 'vitest';
 import { StorageService } from './storage.service';
 import { GameState } from '../../models/game-state.model';
+
+export class MockThemeService {
+  readonly currentTheme = signal<'light' | 'dark'>('light');
+  isDarkMode = vi.fn().mockReturnValue(false);
+  toggleTheme = vi.fn();
+}
 
 describe('StorageService', () => {
   let service: StorageService;
@@ -53,7 +60,7 @@ describe('StorageService', () => {
     expect(loaded).toEqual(mockStateA);
   });
 
-  it('should return null and warn when saving invalid key or undefined/null data', () => {
+  it('should return false and warn when saving invalid key or undefined/null data', () => {
     const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => { });
 
     expect(service.save('', mockStateA)).toBe(false);
@@ -77,7 +84,7 @@ describe('StorageService', () => {
     expect(consoleErrorSpy).toHaveBeenCalled();
   });
 
-  it('should clear stored items correctly', () => {
+  it('should clear stored items correctly from localStorage and fallback', () => {
     service.save('temp-key', mockStateA);
     expect(service.load('temp-key')).not.toBeNull();
 
@@ -85,26 +92,47 @@ describe('StorageService', () => {
     expect(service.load('temp-key')).toBeNull();
   });
 
-  it('should prioritize in-memory fallback when localStorage save fails', () => {
-    service.save('2026-07-31', mockStateA);
+  describe('getKeysByPrefix', () => {
+    it('should retrieve all full keys matching prefix including default prefix', () => {
+      service.save('game:2026-08-01', mockStateA);
+      service.save('game:2026-08-02', mockStateB);
+      service.save('stats:user', { gamesPlayed: 2 });
 
-    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
-      throw new Error('QuotaExceededError');
+      const gameKeys = service.getKeysByPrefix('game:');
+      expect(gameKeys).toContain('beesagono:game:2026-08-01');
+      expect(gameKeys).toContain('beesagono:game:2026-08-02');
+      expect(gameKeys).not.toContain('beesagono:stats:user');
     });
 
-    const success = service.save('2026-07-31', mockStateB);
-    expect(success).toBe(false);
-    expect(service.isAvailable()).toBe(false);
-
-    const loaded = service.load<GameState>('2026-07-31');
-    expect(loaded?.foundWords).toEqual(['A', 'B']);
-    expect(loaded?.score).toBe(2);
+    it('should return empty array if no keys match the prefix', () => {
+      service.save('other:key', mockStateA);
+      const keys = service.getKeysByPrefix('game:');
+      expect(keys).toEqual([]);
+    });
   });
 
-  it('should read from inMemoryFallback if localStorage value is missing but fallback has it', () => {
-    (service as any).inMemoryFallback.set('beesagono:fallback-key', JSON.stringify(mockStateA));
+  describe('Fallback mechanisms', () => {
+    it('should prioritize in-memory fallback when localStorage save fails', () => {
+      service.save('2026-07-31', mockStateA);
 
-    const loaded = service.load<GameState>('fallback-key');
-    expect(loaded).toEqual(mockStateA);
+      vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+        throw new Error('QuotaExceededError');
+      });
+
+      const success = service.save('2026-07-31', mockStateB);
+      expect(success).toBe(false);
+      expect(service.isAvailable()).toBe(false);
+
+      const loaded = service.load<GameState>('2026-07-31');
+      expect(loaded?.foundWords).toEqual(['A', 'B']);
+      expect(loaded?.score).toBe(2);
+    });
+
+    it('should read from inMemoryFallback if localStorage value is missing but fallback has it', () => {
+      (service as any).inMemoryFallback.set('beesagono:fallback-key', JSON.stringify(mockStateA));
+
+      const loaded = service.load<GameState>('fallback-key');
+      expect(loaded).toEqual(mockStateA);
+    });
   });
 });

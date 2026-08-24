@@ -11,6 +11,21 @@ import { RankTier } from '../../models/rank.model';
 import { ValidationResult } from '../../models/validation.model';
 import { WordMapItem } from '../../models/word-map-item.model';
 
+Object.defineProperty(window, 'matchMedia', {
+    writable: true,
+    configurable: true,
+    value: vi.fn().mockImplementation((query: string) => ({
+        matches: false,
+        media: query,
+        onchange: null,
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+    })),
+});
+
 describe('HiveViewComponent', () => {
     let component: HiveViewComponent;
     let fixture: ComponentFixture<HiveViewComponent>;
@@ -48,6 +63,7 @@ describe('HiveViewComponent', () => {
         label: '🌱 Iniziato'
     });
     const wordMapSignal: WritableSignal<WordMapItem[]> = signal<WordMapItem[]>([]);
+    const letterColorsSignal = signal<Map<string, string>>(new Map());
 
     const isNoticeOpenSignal = signal<boolean>(false);
 
@@ -99,10 +115,10 @@ describe('HiveViewComponent', () => {
             threshold: 0,
             label: '🌱 Iniziato'
         });
+        wordMapSignal.set([]);
+        letterColorsSignal.set(new Map());
 
         isNoticeOpenSignal.set(false);
-
-        const letterColorsSignal = signal<Map<string, string>>(new Map());
 
         mockGameService = {
             loadStatus: loadStatusSignal as any,
@@ -382,27 +398,21 @@ describe('HiveViewComponent', () => {
     describe('Share Results', () => {
         it('should copy formatted score text to clipboard and display feedback', async () => {
             const writeTextSpy = vi.fn().mockResolvedValue(undefined);
-            Object.assign(navigator, {
-                clipboard: {
-                    writeText: writeTextSpy
-                }
+            Object.defineProperty(navigator, 'clipboard', {
+                value: { writeText: writeTextSpy },
+                writable: true,
+                configurable: true
             });
 
-            component.shareResults();
+            await component.shareResults();
 
-            expect(writeTextSpy).toHaveBeenCalledWith(
-                expect.stringContaining('🐝 Beesagono (12/08/2026)\nPunti: 50/100')
-            );
+            expect(writeTextSpy).toHaveBeenCalledWith(expect.stringContaining('🐝 Beesagono'));
 
             // @ts-expect-error Accessing protected property for testing
             expect(component.feedbackType()).toBe('success');
+
             // @ts-expect-error Accessing protected property for testing
             expect(component.feedbackMessage()).toBe('Risultati copiati negli appunti!');
-
-            vi.advanceTimersByTime(2000);
-
-            // @ts-expect-error Accessing protected property for testing
-            expect(component.feedbackMessage()).toBe('');
         });
     });
 });

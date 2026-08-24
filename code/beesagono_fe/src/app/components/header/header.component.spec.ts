@@ -1,32 +1,72 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { Component, input } from '@angular/core';
+import { Component, input, output, signal } from '@angular/core';
 import { vi, describe, beforeEach, it, expect } from 'vitest';
 import { HeaderComponent } from './header.component';
 import { ScoreboardComponent } from './scoreboard/scoreboard.component';
+import { StatsComponent } from './stats/stats.component';
+import { RulesComponent } from './rules/rules.component';
+import { ThemeService } from '../../services/theme/theme.service';
 
 @Component({
   selector: 'app-scoreboard',
   standalone: true,
-  template: ''
+  template: '<div data-testid="scoreboard-mock">Scoreboard</div>',
 })
 class MockScoreboardComponent {
   score = input<number>(0);
-  rankName = input<string>();
+  rank = input<{ label: string }>({ label: '' });
+  rankTiers = input<unknown[]>([]);
+  close = output<void>();
+}
+
+@Component({
+  selector: 'app-stats',
+  standalone: true,
+  template: '<div data-testid="stats-mock">Stats</div>',
+})
+class MockStatsComponent {
+  close = output<void>();
+  shareRequested = output<void>();
+}
+
+@Component({
+  selector: 'app-rules',
+  standalone: true,
+  template: '<div data-testid="rules-mock">Rules</div>',
+})
+class MockRulesComponent {
+  close = output<void>();
+}
+
+class MockThemeService {
+  currentTheme = signal<'light' | 'dark'>('light');
+  isDarkMode = vi.fn().mockReturnValue(false);
+  toggleTheme = vi.fn();
 }
 
 describe('HeaderComponent', () => {
   let component: HeaderComponent;
   let fixture: ComponentFixture<HeaderComponent>;
+  let themeServiceMock: MockThemeService;
 
   beforeEach(async () => {
-    await TestBed.configureTestingModule({
+    themeServiceMock = new MockThemeService();
+
+    TestBed.configureTestingModule({
       imports: [HeaderComponent],
-    })
-      .overrideComponent(HeaderComponent, {
-        remove: { imports: [ScoreboardComponent] },
-        add: { imports: [MockScoreboardComponent] }
-      })
-      .compileComponents();
+      providers: [{ provide: ThemeService, useValue: themeServiceMock }],
+    });
+
+    TestBed.overrideComponent(HeaderComponent, {
+      remove: {
+        imports: [ScoreboardComponent, StatsComponent, RulesComponent],
+      },
+      add: {
+        imports: [MockScoreboardComponent, MockStatsComponent, MockRulesComponent],
+      },
+    });
+
+    await TestBed.compileComponents();
 
     fixture = TestBed.createComponent(HeaderComponent);
     component = fixture.componentInstance;
@@ -43,7 +83,24 @@ describe('HeaderComponent', () => {
     expect(component).toBeTruthy();
   });
 
-  describe('Scoreboard & Rules Toggle State', () => {
+  describe('Input Signals', () => {
+    it('should receive inputs correctly', () => {
+      expect(component.score()).toBe(120);
+      expect(component.rank().label).toBe('🐝 Ape Operaia');
+      expect(component.formattedDate()).toBe('5 AGOSTO 2026');
+    });
+
+    it('should fall back to default input values', () => {
+      const defaultFixture = TestBed.createComponent(HeaderComponent);
+      const defaultComponent = defaultFixture.componentInstance;
+
+      expect(defaultComponent.score()).toBe(0);
+      expect(defaultComponent.rank()).toEqual({ label: '🌱 Iniziato' });
+      expect(defaultComponent.formattedDate()).toBe('');
+    });
+  });
+
+  describe('Popover State & Mutually Exclusive Toggles', () => {
     it('should initialize activePopover as null', () => {
       expect(component.activePopover()).toBeNull();
     });
@@ -64,6 +121,25 @@ describe('HeaderComponent', () => {
       expect(component.activePopover()).toBeNull();
     });
 
+    it('should toggle stats popover when toggleStats() is called', () => {
+      component.toggleStats();
+      expect(component.activePopover()).toBe('stats');
+
+      component.toggleStats();
+      expect(component.activePopover()).toBeNull();
+    });
+
+    it('should ensure popovers are mutually exclusive when toggled sequentially', () => {
+      component.toggleScoreboard();
+      expect(component.activePopover()).toBe('scoreboard');
+
+      component.toggleRules();
+      expect(component.activePopover()).toBe('rules');
+
+      component.toggleStats();
+      expect(component.activePopover()).toBe('stats');
+    });
+
     it('should close popovers when closeAll() is called', () => {
       component.toggleRules();
       expect(component.activePopover()).toBe('rules');
@@ -72,7 +148,7 @@ describe('HeaderComponent', () => {
       expect(component.activePopover()).toBeNull();
     });
 
-    it('should close all popovers when Escape key is pressed', () => {
+    it('should close all popovers when HostListener catches Escape key', () => {
       component.toggleScoreboard();
       expect(component.activePopover()).toBe('scoreboard');
 
@@ -80,17 +156,19 @@ describe('HeaderComponent', () => {
 
       expect(component.activePopover()).toBeNull();
     });
-  });
 
-  describe('Input Signals', () => {
-    it('should receive inputs correctly', () => {
-      expect(component.score()).toBe(120);
-      expect(component.rank().label).toBe('🐝 Ape Operaia');
-      expect(component.formattedDate()).toBe('5 AGOSTO 2026');
+    it('should trigger handleEscape via real DOM Escape keydown event', () => {
+      component.toggleStats();
+      expect(component.activePopover()).toBe('stats');
+
+      const escapeEvent = new KeyboardEvent('keydown', { key: 'Escape', code: 'Escape' });
+      document.dispatchEvent(escapeEvent);
+
+      expect(component.activePopover()).toBeNull();
     });
   });
 
-  describe('Outputs and Events', () => {
+  describe('Outputs and Event Emitters', () => {
     it('should emit statsRequested when statsRequested.emit() is called', () => {
       const spy = vi.fn();
       component.statsRequested.subscribe(spy);
@@ -116,6 +194,12 @@ describe('HeaderComponent', () => {
       component.onLogoClick();
 
       expect(spy).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('Dependency Injection & Services', () => {
+    it('should inject ThemeService correctly', () => {
+      expect(component.themeService).toBeDefined();
     });
   });
 });

@@ -1,12 +1,15 @@
 import { isPlatformBrowser } from '@angular/common';
-import { inject, Injectable, PLATFORM_ID } from '@angular/core';
+import { Injectable, PLATFORM_ID, inject } from '@angular/core';
 
 @Injectable({ providedIn: 'root' })
 export class StorageService {
+  private readonly platformId = inject(PLATFORM_ID);
+  private readonly isBrowser = isPlatformBrowser(this.platformId);
+
   private readonly DEFAULT_PREFIX = 'beesagono:';
   // In-memory fallback store for cases where localStorage is blocked or full
-  private inMemoryFallback = new Map<string, string>();
-  private usingFallback = false;
+  private readonly inMemoryFallback = new Map<string, string>();
+  private usingFallback = !this.isBrowser;
 
   // Persists generic data to localStorage or falls back to in-memory store
 
@@ -65,6 +68,37 @@ export class StorageService {
   // Returns true if running natively with localStorage.
   isAvailable(): boolean {
     return !this.usingFallback;
+  }
+
+  /**
+ * Retrieves all keys starting with a given prefix,
+ * unifying localStorage and in-memory fallback sources.
+ */
+  getKeysByPrefix(prefix: string): string[] {
+    const fullPrefix = this.getFullKey(prefix);
+    const keys = new Set<string>();
+
+    if (this.isBrowser) {
+      try {
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && key.startsWith(fullPrefix)) {
+            keys.add(key);
+          }
+        }
+      } catch (e) {
+        console.warn('[StorageService] localStorage enumeration failed or unavailable:', e);
+      }
+    }
+
+    // Unisce le chiavi salvate nel fallback in memoria
+    for (const key of this.inMemoryFallback.keys()) {
+      if (key.startsWith(fullPrefix)) {
+        keys.add(key);
+      }
+    }
+
+    return Array.from(keys);
   }
 
   private getFullKey(key: string): string {

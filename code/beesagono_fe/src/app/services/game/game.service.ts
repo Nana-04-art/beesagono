@@ -215,7 +215,6 @@ export class GameService {
         try {
             await this.dictionaryService.loadDictionary();
             const wordSet = this.dictionaryService.getWordSet();
-
             const todayIsoDate = this.getTodayIsoString();
             const generatedBoard = this.puzzleGeneratorService.generateDailyPuzzle(
                 todayIsoDate,
@@ -224,18 +223,30 @@ export class GameService {
 
             this._board.set(generatedBoard);
 
-            const savedState = this.storageService.load<GameState>(`game:${todayIsoDate}`);
+            const storageKey = `game:${todayIsoDate}`;
+            const savedState = this.storageService.load<any>(storageKey);
 
-            if (savedState && savedState.version === 1) {
+            const isValidState =
+                savedState &&
+                typeof savedState === 'object' &&
+                savedState.version === 1 &&
+                Array.isArray(savedState.foundWords) &&
+                Array.isArray(savedState.invalidWords);
+
+            if (isValidState) {
                 const validWordsSet = new Set(generatedBoard.possibleWords);
                 const sanitizedWords = Array.from(
-                    new Set(savedState.foundWords.filter((w) => validWordsSet.has(w)))
+                    new Set((savedState.foundWords as string[]).filter((w) => validWordsSet.has(w)))
                 );
                 this._foundWords.set(sanitizedWords);
 
-                this._invalidWords.set(savedState.invalidWords ?? []);
-                this._startTime.set(savedState.startTime ?? Date.now());
+                this._invalidWords.set(savedState.invalidWords);
+                this._startTime.set(typeof savedState.startTime === 'number' ? savedState.startTime : Date.now());
             } else {
+                if (savedState !== null) {
+                    this.storageService.clear(storageKey);
+                }
+
                 this._foundWords.set([]);
                 this._invalidWords.set([]);
                 this._startTime.set(Date.now());
@@ -245,7 +256,6 @@ export class GameService {
 
             this.clearInput();
             this._shuffleOrder.set([1, 2, 3, 4, 5, 6]);
-
             this._loadStatus.set('ready');
         } catch (err: any) {
             this._loadStatus.set('error');
@@ -301,7 +311,7 @@ export class GameService {
         }
 
         const trackInvalid = (word: string) => {
-            if (!this._invalidWords().includes(word)) {
+            if (word.length > 0 && !this._invalidWords().includes(word)) {
                 this._invalidWords.update((list) => [...list, word]);
             }
             this.clearInput();
