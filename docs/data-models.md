@@ -74,15 +74,10 @@ export interface GameBoard {
    */
   cells: Cell[];
 
-  /**
-   * DERIVED / READ-ONLY CACHE — computed once at puzzle generation time
-   * from `cells`, and never mutated independently afterward (including
-   * during shuffle). Do not write to these fields directly; regenerate
-   * them only if `cells` itself is rebuilt from scratch.
-   */
-  readonly centerLetter: string;
-  readonly outerLetters: string[];
-  readonly availableLetters: string[];
+ // NOTE: centerLetter / outerLetters / availableLetters are intentionally
+  // NOT stored here. They are cheap to derive from `cells` and storing them
+  // separately would duplicate the single source of truth. See the pure
+  // selector functions in `game-board.selectors.ts`, Section 3a below.
 
   /** List of all valid target words for today's board (length >= MIN_WORD_LENGTH) */
   possibleWords: string[];
@@ -92,6 +87,24 @@ export interface GameBoard {
 
   /** Maximum possible score for this board (sum of word points + mielegramma bonuses) */
   maxScore: number;
+}
+```
+
+### 3a. `GameBoard` Selectors (`game-board.selectors.ts`)
+
+Pure, side-effect-free functions — the only sanctioned way to read letters off a board. Never re-derive these inline elsewhere.
+
+```typescript
+export function getCenterLetter(board: GameBoard): string {
+  return board.cells.find((c) => c.isCenter)!.letter;
+}
+
+export function getOuterLetters(board: GameBoard): string[] {
+  return board.cells.filter((c) => !c.isCenter).map((c) => c.letter);
+}
+
+export function getAvailableLetters(board: GameBoard): string[] {
+  return board.cells.map((c) => c.letter);
 }
 ```
 
@@ -111,19 +124,15 @@ export interface GameState {
   /** Date string key (YYYY-MM-DD) */
   date: string;
 
-  /** Accumulated player points */
-  score: number;
-
-  /** List of words successfully found today */
+  /**
+   * The ONLY source-of-truth game-progress field. score, foundMielegrammi,
+   * and isCompleted are NEVER persisted — they are always recomputed by
+   * GameService as computed() signals from (foundWords + the current
+   * GameBoard), so storage corruption or a stale version can never
+   * desynchronize them from foundWords.
+   */
   foundWords: string[];
 
-  /** List of Mielegrammi (pangrams) found today */
-  foundMielegrammi: string[];
-
-  /** True if all possible target words have been found */
-  isCompleted: boolean;
-
-  /** Timestamps for stats tracking */
   startTime: number;
   lastUpdated: number;
 }
@@ -206,44 +215,76 @@ export const GAME_RULES = {
 ## 8. Daily Puzzle Generation Algorithm
 
 ### 8.1 Determinism
-The puzzle is fully deterministic: the **client's local date string** (`YYYY-MM-DD`) is used to derive a numeric seed for a seeded PRNG (e.g. Mulberry32 or equivalent lightweight implementation). Given the same date, the algorithm always produces the same puzzle — no server round-trip is required.
+The puzzle is fully deterministic. Two algorithms are frozen exactly as implemented in `puzzle-generator.service.ts` (the canonical reference — any port to another language/runtime must match it bit-for-bit):
 
-### 8.2 Generation Loop
+**Date → seed hash** (djb2 variant):
+```typescript
+function hashDateString(date: string): number {
+  let hash = 5381;
+  for (let i = 0; i < date.length; i++) {
+    hash = (hash * 33) ^ date.charCodeAt(i);
+  }
+  return hash >>> 0;
+}
+```
+
+**PRNG** (Mulberry32, exact bit operations):
+```typescript
+function mulberry32(seed: number): () => number {
+  let state = seed >>> 0;
+  return () => {
+    state = (state + 0x6d2b79f5) >>> 0;
+    let t = state;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+```
+
+**Dictionary pinning:** because letter weighting (§8.2.b) is derived from the dictionary's own content, `dictionary.json` must be treated as versioned input. Regenerating a *past* date's puzzle after editing `dictionary.json` may produce a different board. This is not a bug for normal play (only "today" is ever generated live), but any test vectors below are only valid against the exact `dictionary.json` snapshot they were computed from.
+
+**Test vector:** To be verified against the current `dictionary.json` snapshot via the first unit test run (`puzzle-generator.service.spec.ts`).
+
+| Input | Value |
+| :--- | :--- |
+| `date` | `"2026-07-27"` |
+| seed (`hashDateString`) | `1385072001` |
+| attempts before Quality Gate passed | `12` |
+| resulting letters | `C, E, G, N, O, R, S` |
+| center letter | `R` |
+| target words count | `19` |
+| mielegrammi | `["CONGRESSO"]` |
+
+Any implementation must reproduce this exact result for this date against this dictionary snapshot. Add this as an automated unit test (`puzzle-generator.service.spec.ts`) before writing more logic on top of `PuzzleGeneratorService`.
+
+### 8.2 Generation Loop (Candidate Pangrams Strategy)
 
 ```
-1. seed = hash(dateString)
-2. attempt = 0
-3. LOOP (max GAME_RULES.MAX_GENERATION_ATTEMPTS iterations):
+1. seed = hashDateString(date)
+2. candidates = extractPangrams(dictionary)
+   // Pre-filters dictionary to words with exactly 7 unique letters (Set.size === 7)
+3. attempt = 0
+4. LOOP (max GAME_RULES.MAX_GENERATION_ATTEMPTS iterations):
    a. rng = PRNG(seed + attempt)
-   b. candidateLetters = pick REQUIRED_LETTERS_COUNT (7) unique letters
-      using rng, weighted by each letter's real frequency of occurrence
-      across the dictionary (letters appearing in more words are
-      proportionally more likely to be picked), restricted to letters
-      that actually appear in the dictionary, ensuring at least 1 vowel
-      is included. Uniform random selection from the full alphabet is
-      NOT used — it produces unplayable boards far too often given
-      natural language letter-frequency skew (verified empirically).
-   c. FOR EACH letter L in candidateLetters (as a candidate center):
-        - compute targetWords(L) = filter dictionary where:
-            * word.length >= GAME_RULES.MIN_WORD_LENGTH
-            * word contains L at least once
-            * every character in word belongs to candidateLetters
-              (letter SET membership, not letter count — repeats allowed)
-        - compute mielegrammi(L) = subset of targetWords(L) using all 7
-          candidateLetters at least once each
-        - IF targetWords(L).length >= MIN_TARGET_WORDS_COUNT
-           AND mielegrammi(L).length >= MIN_MIELEGRAMMI_COUNT:
-             mark L as a QUALIFYING center candidate
-   d. IF at least one qualifying center candidate exists:
-        - pick one among them via rng -> this is the center letter
-        - ACCEPT this puzzle (candidateLetters + chosen center +
-          corresponding targetWords/mielegrammi), STOP
+   b. targetPangram = candidates[ floor(rng() * candidates.length) ]
+  // Deterministically pick today's candidate pangram
+   c. uniqueLetters = Array.from( new Set(targetPangram) )
+   d. centerLetter = uniqueLetters[ floor(rng() * 7) ]
+  // Deterministically pick 1 mandatory center letter out of the 7
+   e. compute targetWords = filter dictionary where:
+   * word.length >= GAME_RULES.MIN_WORD_LENGTH (4)
+   * word contains centerLetter at least once
+   * every character in word belongs to uniqueLetters
+   (letter SET membership, repeated characters allowed)
+   f. compute mielegrammi = subset of targetWords using all 7 uniqueLetters
+   g. IF targetWords.length >= GAME_RULES.MIN_TARGET_WORDS_COUNT (15)
+      AND mielegrammi.length >= GAME_RULES.MIN_MIELEGRAMMI_COUNT (1):
+        - ACCEPT this puzzle (uniqueLetters + centerLetter + targetWords + mielegrammi), STOP
       ELSE:
-        - attempt += 1, GO TO step a (discard candidateLetters, re-seed)
-4. IF loop exhausts MAX_GENERATION_ATTEMPTS without success:
-   - log an error (malformed/too-small dictionary)
-   - fall back to the last generated candidate regardless of Quality Gate,
-     to guarantee the app never fails to render a board
+        - attempt += 1, GO TO step a (increment seed and test the next candidate pangram)
+5. IF loop exhausts MAX_GENERATION_ATTEMPTS without success:
+   - log an error and fall back to the last generated candidate regardless of Quality Gate, guaranteeing the app never fails to render a playable board.
 ```
 
 ### 8.3 Constraints Recap
@@ -280,6 +321,11 @@ A word is a valid target word if and only if:
 
 ### 10.3 Schema Versioning
 `GameState.version` starts at `1`. If a future release changes the persisted shape, `StorageService.load()` must check `version` and either migrate the object or discard it and start fresh — a mismatched-version object must never be passed directly into the live game state.
+
+**Reconciliation on load (mandatory, beyond version-matching):** a matching `version` alone does not prove `foundWords` is still valid — the array must additionally be revalidated against the just-generated `GameBoard` before being applied to live signals:
+1. Filter out any entry not present in `board.possibleWords` (defends against a corrupted/hand-edited storage entry or a dictionary change between sessions).
+2. De-duplicate.
+3. Only then recompute `score`, `foundMielegrammi`, and `isCompleted` from the cleaned list — never trust these values if they were ever persisted by an older client.
 
 ### 10.4 Failure Handling (Quota Exceeded / Blocked Storage)
 All `localStorage` calls are wrapped in `try/catch` inside `StorageService`:

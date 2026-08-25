@@ -41,7 +41,7 @@ export class StatsService {
         dailyRank: string | null
     ): void {
         this._stats.update(currentStats => {
-            // Deep clone nested objects and arrays to protect state immutability
+            // Deep clone of nested objects and arrays to protect state immutability
             const stats: PlayerStats = {
                 ...currentStats,
                 currentSeason: {
@@ -93,7 +93,7 @@ export class StatsService {
                 stats.currentSeason._isCompletedToday = false;
                 stats.currentSeason._lastRecordedRankToday = null;
 
-                // Check and award Milestone Bonuses
+                // Milestone bonus assignment (now mutation of claimedStreakMilestones happens on a cloned array)
                 this.checkStreakMilestones(stats.currentStreak, stats.currentSeason);
             }
 
@@ -205,6 +205,7 @@ export class StatsService {
             stats = saved;
             this.checkStreakContinuity(stats, today);
         } else {
+            // If stats are rebuilt from storage GameStates, save the result immediately
             stats = this.rebuildStatsFromStorage();
             this.checkStreakContinuity(stats, today);
             this.saveStats(stats);

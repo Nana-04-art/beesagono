@@ -28,7 +28,7 @@ export class FoundWordsComponent {
     () => new Set(this.foundMielegrammi().map((word) => word.toUpperCase()))
   );
 
-  // Checks whether a given word is classified as a Mielegramma (pangram)
+  // Checks whether a given word is classified as a Mielegramma (pangram) using the Set helper
   isMielegramma(word: string): boolean {
     return this.mielegrammiSet().has(word.toUpperCase());
   }

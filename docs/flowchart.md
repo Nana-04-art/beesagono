@@ -9,7 +9,7 @@ graph TD
     QG -->|No, retry next seed| B
     QG -->|Yes| D{Saved State for Today in LocalStorage?}
     D -->|Yes| DR{LocalStorage Read OK?}
-    DR -->|Yes| E[Restore Score, Found Words & Mielegrammi]
+    DR -->|Yes| E[Restore Found Words & Recompute Score/Mielegrammi]
     DR -->|No, fallback| F
     D -->|No| F[Initialize Fresh Daily Game State]
     
@@ -53,7 +53,7 @@ graph TD
     R --> S[Update Score & LocalStorage]
     S --> T[Clear Input Field]
     
-    T --> U{All Target Words Found OR User Ended Game?}
+    T --> U{All Target Words Found?}
     U -->|No| H
     U -->|Yes| V[Display End Game Summary Screen / Modal]
 

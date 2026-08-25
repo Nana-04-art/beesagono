@@ -21,6 +21,28 @@ describe('GameService', () => {
   const getTodayIsoString = (d = new Date()) => d.toISOString().split('T')[0];
   const todayStr = getTodayIsoString();
 
+  let mockPuzzleGenerator: {
+    generateDailyPuzzle: ReturnType<typeof vi.fn>;
+  };
+  let mockDictionaryService: {
+    loadDictionary: ReturnType<typeof vi.fn>;
+    getWordSet: ReturnType<typeof vi.fn>;
+  };
+  let mockStorageService: {
+    load: ReturnType<typeof vi.fn>;
+    save: ReturnType<typeof vi.fn>;
+    isAvailable: ReturnType<typeof vi.fn>;
+    clear: ReturnType<typeof vi.fn>;
+  };
+  let mockScoreService: {
+    calculateWordPoints: ReturnType<typeof vi.fn>;
+    calculateTotalScore: ReturnType<typeof vi.fn>;
+  };
+  let mockStatsService: {
+    recordGameStarted: ReturnType<typeof vi.fn>;
+    recordProgress: ReturnType<typeof vi.fn>;
+  };
+
   const mockBoard: GameBoard = {
     date: todayStr,
     seed: '123_0',
@@ -124,6 +146,7 @@ describe('GameService', () => {
       isCompleted: false,
       startTime: 1000,
       lastUpdated: 2000,
+      rankLabel: 'Principiante',
     };
     mockStorageService.load.mockReturnValue(savedState);
 
@@ -286,6 +309,7 @@ describe('GameService', () => {
 
   it('should trigger reload on checkDateRollover if date changed', () => {
     const spy = vi.spyOn(service, 'loadDailyGame');
+    vi.spyOn(service as any, 'getTodayIsoString').mockReturnValue('2026-08-01');
 
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);

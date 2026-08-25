@@ -22,6 +22,13 @@ export function getTodayIsoString(date = new Date()): string {
     return `${year}-${month}-${day}`;
 }
 
+export function getTodayIsoString(date = new Date()): string {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
 @Injectable({
     providedIn: 'root',
 })
@@ -226,6 +233,7 @@ export class GameService {
             const storageKey = `game:${todayIsoDate}`;
             const savedState = this.storageService.load<any>(storageKey);
 
+            // Rigorous validation of the saved state to prevent crashes caused by corrupted or incomplete objects (e.g., {"version":1})
             const isValidState =
                 savedState &&
                 typeof savedState === 'object' &&
@@ -243,6 +251,7 @@ export class GameService {
                 this._invalidWords.set(savedState.invalidWords);
                 this._startTime.set(typeof savedState.startTime === 'number' ? savedState.startTime : Date.now());
             } else {
+                // If the state is corrupt or incomplete, we clear the key to isolate the problem (quarantine/clear)
                 if (savedState !== null) {
                     this.storageService.clear(storageKey);
                 }
@@ -310,6 +319,8 @@ export class GameService {
             return { isValid: false, pointsAwarded: 0, isMielegramma: false };
         }
 
+        // Only records non-empty words as invalid attempts — pressing Enter on an
+        // empty input must not leave an empty chip in the "Parole Errate" list.
         const trackInvalid = (word: string) => {
             if (word.length > 0 && !this._invalidWords().includes(word)) {
                 this._invalidWords.update((list) => [...list, word]);
@@ -436,7 +447,6 @@ export class GameService {
             totalMielegrammi: currentBoard ? currentBoard.mielegrammi.length : 0,
         };
     }
-
     private getTodayIsoString(): string {
         return getTodayIsoString();
     }

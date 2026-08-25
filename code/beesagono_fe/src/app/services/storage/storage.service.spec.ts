@@ -70,9 +70,9 @@ describe('StorageService', () => {
     expect(consoleWarnSpy).toHaveBeenCalled();
   });
 
-  it('should return null when loading non-existent key', () => {
-    const loaded = service.load('non-existent');
-    expect(loaded).toBeNull();
+  it('should return null when loading non-existent or empty key', () => {
+    expect(service.load('')).toBeNull();
+    expect(service.load('non-existent')).toBeNull();
   });
 
   it('should handle JSON parse errors gracefully and return null', () => {
@@ -84,7 +84,7 @@ describe('StorageService', () => {
     expect(consoleErrorSpy).toHaveBeenCalled();
   });
 
-  it('should clear stored items correctly from localStorage and fallback', () => {
+  it('should clear stored items correctly from both localStorage and inMemoryFallback', () => {
     service.save('temp-key', mockStateA);
     expect(service.load('temp-key')).not.toBeNull();
 
@@ -92,11 +92,25 @@ describe('StorageService', () => {
     expect(service.load('temp-key')).toBeNull();
   });
 
-  describe('getKeysByPrefix', () => {
-    it('should retrieve all full keys matching prefix including default prefix', () => {
-      service.save('game:2026-08-01', mockStateA);
-      service.save('game:2026-08-02', mockStateB);
-      service.save('stats:user', { gamesPlayed: 2 });
+  it('should handle errors thrown by removeItem gracefully in clear()', () => {
+    const fullKey = 'beesagono:temp-key';
+    (service as unknown as { inMemoryFallback: Map<string, string> }).inMemoryFallback.set(
+      fullKey,
+      JSON.stringify(mockStateA)
+    );
+
+    vi.spyOn(Storage.prototype, 'removeItem').mockImplementation(() => {
+      throw new Error('Access Denied');
+    });
+
+    vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => null);
+
+    expect(() => service.clear('temp-key')).not.toThrow();
+    expect(service.load('temp-key')).toBeNull();
+  });
+
+  it('should prioritize in-memory fallback when localStorage save fails', () => {
+    service.save('2026-07-31', mockStateA);
 
       const gameKeys = service.getKeysByPrefix('game:');
       expect(gameKeys).toContain('beesagono:game:2026-08-01');
@@ -133,6 +147,45 @@ describe('StorageService', () => {
 
       const loaded = service.load<GameState>('fallback-key');
       expect(loaded).toEqual(mockStateA);
+    });
+  });
+
+  describe('getKeysByPrefix', () => {
+    it('should retrieve and unify keys matching prefix from both localStorage and fallback', () => {
+      service.save('game:2026-07-30', mockStateA);
+      service.save('game:2026-07-31', mockStateB);
+      service.save('stats:overview', { streak: 5 });
+
+      vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+        throw new Error('QuotaExceededError');
+      });
+      service.save('game:2026-08-01', mockStateA);
+
+      const gameKeys = service.getKeysByPrefix('game:');
+
+      expect(gameKeys).toContain('beesagono:game:2026-07-30');
+      expect(gameKeys).toContain('beesagono:game:2026-07-31');
+      expect(gameKeys).toContain('beesagono:game:2026-08-01');
+      expect(gameKeys).not.toContain('beesagono:stats:overview');
+      expect(gameKeys.length).toBe(3);
+    });
+
+    it('should handle enumeration failure in localStorage gracefully and return keys from fallback', () => {
+      const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => { });
+
+      vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+        throw new Error('QuotaExceededError');
+      });
+      service.save('game:2026-08-01', mockStateA);
+
+      vi.spyOn(Storage.prototype, 'key').mockImplementation(() => {
+        throw new Error('SecurityError: localStorage blocked');
+      });
+
+      const keys = service.getKeysByPrefix('game:');
+
+      expect(keys).toEqual(['beesagono:game:2026-08-01']);
+      expect(consoleWarnSpy).toHaveBeenCalled();
     });
   });
 });
