@@ -1,6 +1,6 @@
 # Functional & Non-Functional Requirements — Beesagono
 
-> See `data-models.md` for TypeScript interfaces, the full puzzle generation algorithm, rank thresholds, and storage schema referenced throughout this document.
+> See `data-models.md` for TypeScript interfaces, the full puzzle generation algorithm, rank/career thresholds, and storage schema referenced throughout this document.
 
 ## 1. Functional Requirements (FR)
 
@@ -12,30 +12,31 @@
   - **Mielegramma (Pangram):** Gold celebration effects triggered when a word using all 7 daily letters is discovered.
 
 ### User Input Management
-- **FR-03 (Unified Input Handling):** The application must process all letter entries—whether coming from physical keyboard presses, mouse clicks, or touch screen taps on SVG hexagons—through a single, unified input handler method (`handleInput`).
+- **FR-03 (Unified Input Handling):** `GameService.handleInput(rawChar)` is the single entry point for character input.
   - Every character is normalized to uppercase (`.toUpperCase()`).
   - Non-alphabetic characters (numbers, symbols, whitespace) are silently discarded, never appended to `currentInput`.
-  - On mobile/touch devices, the native virtual keyboard is disabled (`readonly` / `inputmode="none"` on the input field) to avoid layout overlay issues; input is exclusively via the on-screen hexagons and controls.
-- **FR-04 (Action Controls):** Provide dedicated control handlers for non-character interactions (*Delete*, *Shuffle*, *Submit*).
+  - Two reserved tokens, `'BACKSPACE'` and `'ENTER'`, are also recognized and routed to `deleteLastChar()` / `submitWord()` respectively, so alternate input sources can reuse the same handler. In the shipped UI, the physical-keyboard listener (`HiveViewComponent`) calls `deleteLastChar()` / `submitWord()` directly for the Backspace/Enter keys and only routes plain letters through `handleInput()`; honeycomb tile taps and typed letters both funnel through it.
+  - On mobile/touch devices, the native virtual keyboard is disabled (`readonly` / `inputmode="none"` on the input field); input is exclusively via the on-screen hexagons and controls.
+- **FR-04 (Action Controls):** `HiveControlsComponent` (formerly `ControlsComponent`) provides dedicated Delete/Shuffle/Submit handlers and adds an internal ~200ms re-entrancy guard on Submit to ignore accidental rapid double taps/clicks.
 - **FR-05 (Shuffle Mechanism):** Shuffling must re-organize the 6 outer letters visually on the grid while keeping the mandatory center letter fixed.
 
 ### Daily Game Specifications
-- **FR-ALG-01 (Midnight Puzzle Renewal):** At midnight (00:00, **local browser timezone** — not UTC) or upon the first application launch of the day, the system automatically clears the previous session and generates a brand-new daily puzzle (1 center letter and 6 outer letters). While the app remains open across midnight, detection happens via the `visibilitychange` event: when the tab/PWA regains foreground focus, the system compares the current local date against the loaded puzzle's date and triggers renewal on mismatch, showing a toast to the player before swapping puzzles.
-- **FR-ALG-02 (Pre-Calculated Daily Sets):** Upon puzzle generation, `GameService` extracts:
-  1. `targetWords`: All valid dictionary words containing the center letter and using only the 7 daily letters (length ≥ 4).
-  2. `mielegrammi`: Words in `targetWords` that use all 7 unique daily letters.
-- **FR-ALG-03 (Zero-Lag In-Memory Validation):** `GameService` holds `targetWords` in an in-memory `Set` for instant $O(1)$ validation without querying external services during gameplay.
-- **FR-ALG-04 (Deterministic Generation):** The daily puzzle is generated deterministically from a PRNG seeded by the local date string (`YYYY-MM-DD`), so every player sees the identical puzzle on the same calendar day, with no server round-trip required.
-- **FR-ALG-05 (Puzzle Quality Gate):** A candidate 7-letter set is only accepted if it yields at least 15 target words and at least 1 Mielegramma. If the gate fails, the generator retries with the next PRNG seed (capped at 500 attempts) until a valid board is found.
+- **FR-ALG-01 (Midnight Puzzle Renewal):** At midnight (00:00, **local browser timezone**) or on first launch of the day, the system clears the previous session and generates a new daily puzzle. Detection happens via both the `visibilitychange` event and a `window:focus` listener (acting only when `document.visibilityState === 'visible'`): the current local date is compared against the loaded puzzle's date, and renewal is triggered on mismatch, with a toast shown before swapping puzzles.
+- **FR-ALG-02 (Pre-Calculated Daily Sets):** Upon generation, `GameService` extracts `targetWords` (all valid dictionary words containing the center letter, using only the 7 daily letters, length ≥ 4) and `mielegrammi` (the subset using all 7 unique daily letters).
+- **FR-ALG-03 (Zero-Lag In-Memory Validation):** `targetWords`/`mielegrammi` are held in in-memory `Set`s for instant O(1) validation.
+- **FR-ALG-04 (Deterministic Generation — Candidate Pangrams Strategy):** The generation algorithm differs from earlier drafts of this document, which described direct weighted letter-frequency sampling of 7 letters. `PuzzleGeneratorService` now:
+  1. Pre-extracts every dictionary word with exactly 7 unique letters ("pangram candidates"); if the dictionary yields none, falls back to a hardcoded seed word (`ALBERGO`) so the app can never fail to render a board.
+  2. Seeds a Mulberry32 PRNG from a djb2 hash of the local date string (`YYYY-MM-DD`).
+  3. On each attempt, deterministically (via the seeded RNG) picks one candidate pangram, derives its 7 unique letters (sorted alphabetically for tie-break determinism), and picks one of those 7 letters as the center.
+  4. Computes `targetWords`/`mielegrammi` for that 7-letter set + center letter and checks the FR-ALG-05 quality gate.
+  5. Retries with the next RNG draw up to `MAX_GENERATION_ATTEMPTS` (500); the last generated candidate is used as a guaranteed fallback if every attempt fails the gate.
+  - Given the same date and dictionary, generation remains fully deterministic with no server round-trip.
+- **FR-ALG-05 (Puzzle Quality Gate):** A candidate is only accepted if it yields ≥ 15 target words and ≥ 1 Mielegramma.
 
 ### Word Validation Rules
-- **FR-06 (Validation Constraints):** Upon submission, check constraints in sequence:
-  1. Minimum length (at least 4 letters).
-  2. Contains the mandatory center letter.
-  3. Uses only allowed letters from the daily set of 7.
-  4. Is not already in the `foundWords` set.
-  5. Exists in today's pre-calculated `targetWords` set.
-- **FR-07 (Error Feedback):** Display specific error toasts (e.g., *"Missing center letter"*, *"Too short"*, *"Not in word list"*) alongside a visual shake animation on the input field.
+- **FR-06 (Validation Constraints):** Upon submission, check in sequence: (1) minimum length ≥ 4, (2) contains the center letter, (3) uses only the 7 daily letters, (4) not already in `foundWords`, (5) exists in `targetWords`.
+- **FR-06a (Invalid Word Tracking):** Any submission failing rules 1–3 or 5 is appended (de-duplicated) to an `invalidWords` list, surfaced in a dedicated collapsible panel (`InvalidWordsComponent`) and persisted alongside the day's `GameState`. A duplicate of an already-found word (rule 4) is **not** added to `invalidWords`, since it was previously valid.
+- **FR-07 (Error Feedback):** Display specific error toasts alongside a visual shake animation on the input field.
 
 ### Scoring & Game Progress
 - **FR-08 (Scoring Engine):**
@@ -63,3 +64,5 @@
   - **Non-Color Visual Cues:** Visual states (e.g., center vs. outer tiles, valid vs. error states) must rely on shape, iconography, or explicit typography in addition to color contrast (WCAG 2.1 SC 1.4.1).
   - **Reduced Motion Support:** All shake and celebration animations must respect `@media (prefers-reduced-motion: reduce)` by disabling transitions or replacing them with static visual indicators.
 - **NFR-03 (Performance):** Zero-lag user input response with optimized SVG rendering.
+- **NFR-04 (UI Framework):** Visual layout is built primarily with **Bootstrap 5** utility/component classes and **Bootstrap Icons**, complemented by targeted custom SCSS for the honeycomb SVG, popovers, and bespoke animations — this corrects earlier drafts of this document, which stated Tailwind CSS.
+- **NFR-05 (Testability / Separation of Concerns):** Business logic that doesn't strictly need to live inside `GameService` — scoring math (`ScoreService`) and career/streak statistics (`StatsService`) — is factored into dedicated singleton services for isolated unit testing, following the same rationale already documented for `StorageService` / `DictionaryService` / `PuzzleGeneratorService` in `service-component-contracts.md` §1.
