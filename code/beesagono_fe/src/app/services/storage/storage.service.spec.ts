@@ -109,22 +109,6 @@ describe('StorageService', () => {
     expect(service.load('temp-key')).toBeNull();
   });
 
-  it('should prioritize in-memory fallback when localStorage save fails', () => {
-    service.save('2026-07-31', mockStateA);
-
-      const gameKeys = service.getKeysByPrefix('game:');
-      expect(gameKeys).toContain('beesagono:game:2026-08-01');
-      expect(gameKeys).toContain('beesagono:game:2026-08-02');
-      expect(gameKeys).not.toContain('beesagono:stats:user');
-    });
-
-    it('should return empty array if no keys match the prefix', () => {
-      service.save('other:key', mockStateA);
-      const keys = service.getKeysByPrefix('game:');
-      expect(keys).toEqual([]);
-    });
-  });
-
   describe('Fallback mechanisms', () => {
     it('should prioritize in-memory fallback when localStorage save fails', () => {
       service.save('2026-07-31', mockStateA);
@@ -168,6 +152,12 @@ describe('StorageService', () => {
       expect(gameKeys).toContain('beesagono:game:2026-08-01');
       expect(gameKeys).not.toContain('beesagono:stats:overview');
       expect(gameKeys.length).toBe(3);
+    });
+
+    it('should return empty array if no keys match the prefix', () => {
+      service.save('other:key', mockStateA);
+      const keys = service.getKeysByPrefix('game:');
+      expect(keys).toEqual([]);
     });
 
     it('should handle enumeration failure in localStorage gracefully and return keys from fallback', () => {

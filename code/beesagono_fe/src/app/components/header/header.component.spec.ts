@@ -14,8 +14,7 @@ import { ThemeService } from '../../services/theme/theme.service';
 })
 class MockScoreboardComponent {
   score = input<number>(0);
-  rank = input<{ label: string }>({ label: '' });
-  rankTiers = input<unknown[]>([]);
+  rankName = input<string>('');
   close = output<void>();
 }
 

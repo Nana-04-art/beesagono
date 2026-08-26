@@ -91,7 +91,7 @@
                     <div class="d-flex flex-wrap gap-1">
                         @for (word of group.foundWords; track word) {
                         <span class="badge border font-monospace word-badge"
-                            [class.is-mielegramma]="isMielegramma(word)">
+                            [ngClass]="isMielegramma(word) ? 'is-mielegramma' : 'bg-light text-dark'">
                             {{ word }}
                         </span>
                         }

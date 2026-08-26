@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { vi, describe, beforeEach, afterEach, it, expect } from 'vitest';
-import { GameService } from './game.service';
+import { GameService, getTodayIsoString } from './game.service';
 import { StorageService } from '../storage/storage.service';
 import { PuzzleGeneratorService } from '../puzzle-generator/puzzle-generator.service';
 import { DictionaryService } from '../dictionary/dictionary.service';
@@ -12,13 +12,7 @@ import { RANK_TIERS } from '../../config/rank-tiers.config';
 
 describe('GameService', () => {
   let service: GameService;
-  let mockPuzzleGenerator: any;
-  let mockDictionaryService: any;
-  let mockStorageService: any;
-  let mockScoreService: any;
-  let mockStatsService: any;
 
-  const getTodayIsoString = (d = new Date()) => d.toISOString().split('T')[0];
   const todayStr = getTodayIsoString();
 
   let mockPuzzleGenerator: {
@@ -37,6 +31,7 @@ describe('GameService', () => {
   let mockScoreService: {
     calculateWordPoints: ReturnType<typeof vi.fn>;
     calculateTotalScore: ReturnType<typeof vi.fn>;
+    getCurrentRank: ReturnType<typeof vi.fn>;
   };
   let mockStatsService: {
     recordGameStarted: ReturnType<typeof vi.fn>;
@@ -57,7 +52,7 @@ describe('GameService', () => {
     ],
     possibleWords: ['MIELE', 'MELE', 'MIELEGRAMMA'],
     mielegrammi: ['MIELEGRAMMA'],
-    maxScore: 25,
+    maxScore: 24,
   };
 
   beforeEach(async () => {
@@ -82,13 +77,13 @@ describe('GameService', () => {
         let score = 0;
         if (words.includes('MELE')) score += 1;
         if (words.includes('MIELE')) score += 5;
-        if (words.includes('MIELEGRAMMA')) score += 19;
+        if (words.includes('MIELEGRAMMA')) score += 18; // 11 letters + 7 honeygram bonuses = 18
         return score;
       }),
       calculateWordPoints: vi.fn((word: string, isMielegramma: boolean) => {
         if (word === 'MELE') return 1;
         if (word === 'MIELE') return 5;
-        if (isMielegramma) return 19;
+        if (isMielegramma) return 18; // 11 letters + 7 honeygram bonuses = 18
         return 0;
       }),
       getCurrentRank: vi.fn((score: number, maxScore: number) => {
@@ -251,6 +246,8 @@ describe('GameService', () => {
 
     expect(result.isValid).toBe(true);
     expect(result.isMielegramma).toBe(true);
+    expect(result.pointsAwarded).toBe(18);
+    expect(service.score()).toBe(18);
     expect(service.foundMielegrammi()).toContain('MIELEGRAMMA');
   });
 
@@ -300,7 +297,7 @@ describe('GameService', () => {
     const payload = service.getShareScorePayload();
 
     expect(payload.score).toBe(5);
-    expect(payload.maxScore).toBe(25);
+    expect(payload.maxScore).toBe(24);
     expect(payload.wordsFound).toBe(1);
     expect(payload.totalWords).toBe(3);
     expect(payload.mielegrammiFound).toBe(0);

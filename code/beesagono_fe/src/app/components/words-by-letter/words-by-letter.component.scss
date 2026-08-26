@@ -57,14 +57,25 @@
 }
 
 .word-badge {
-  transition: all 0.2s ease-in-out;
+  font-size: 0.8125rem;
+  padding: 0.35em 0.65em;
+  font-weight: 500;
 
+  // Stile per Mielegramma (supera lo stile standard)
   &.is-mielegramma {
-    background: linear-gradient(135deg, #fff3cd 0%, #ffe69c 100%) !important;
-    color: #664d03 !important;
+    background-color: #ffc107 !important;
+    color: #000000 !important;
     border-color: #ffc107 !important;
     font-weight: 700;
-    box-shadow: 0 0.125rem 0.25rem rgba(255, 193, 7, 0.25);
+  }
+}
+
+// Compatibilità con il Dark Theme di Bootstrap
+[data-bs-theme="dark"] {
+  .word-badge:not(.is-mielegramma) {
+    background-color: var(--bs-tertiary-bg) !important;
+    color: var(--bs-body-color) !important;
+    border-color: var(--bs-border-color) !important;
   }
 }
 

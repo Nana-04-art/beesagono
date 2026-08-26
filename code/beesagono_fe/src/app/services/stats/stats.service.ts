@@ -249,8 +249,28 @@ export class StatsService {
         const gameEntries: { date: string; score: number; isCompleted: boolean; rankLabel: string | null; year: number }[] = [];
 
         for (const key of gameKeys) {
-            const gameData = this.storage.load<unknown>(key);
-            if (!isValidGameState(gameData)) continue;
+            const rawGameData = this.storage.load<unknown>(key);
+            if (!rawGameData || typeof rawGameData !== 'object') continue;
+
+            const rawGame = rawGameData as Record<string, unknown>;
+
+            // Pre-normalization of legacy rank/rankLabel structures
+            const extractedRankLabel =
+                typeof rawGame['rankLabel'] === 'string'
+                    ? rawGame['rankLabel']
+                    : typeof rawGame['rank'] === 'string'
+                        ? rawGame['rank']
+                        : typeof rawGame['rank'] === 'object' && rawGame['rank'] !== null
+                            ? ((rawGame['rank'] as { label?: string }).label ?? null)
+                            : null;
+
+            const normalizedGameData = {
+                ...rawGame,
+                rankLabel: extractedRankLabel
+            };
+
+            // Perform validation on the normalized object
+            if (!isValidGameState(normalizedGameData)) continue;
 
             const date = key.replace(this.GAME_KEY_PREFIX, '');
             if (!isValidIsoDate(date)) continue;
@@ -258,21 +278,10 @@ export class StatsService {
             const year = parseInt(date.split('-')[0], 10);
             if (isNaN(year)) continue;
 
-            const rawGame = (gameData as unknown) as Record<string, unknown>;
-            const score = gameData.score || 0;
-            const isCompleted = !!gameData.isCompleted;
+            const score = typeof normalizedGameData.score === 'number' ? normalizedGameData.score : 0;
+            const isCompleted = !!normalizedGameData.isCompleted;
 
-            // Backward compatibility for safe grade extraction
-            const rankLabel =
-                typeof gameData.rankLabel === 'string'
-                    ? gameData.rankLabel
-                    : typeof rawGame['rank'] === 'string'
-                        ? (rawGame['rank'] as string)
-                        : typeof rawGame['rank'] === 'object' && rawGame['rank'] !== null
-                            ? ((rawGame['rank'] as { label?: string }).label ?? null)
-                            : null;
-
-            gameEntries.push({ date, score, isCompleted, rankLabel, year });
+            gameEntries.push({ date, score, isCompleted, rankLabel: extractedRankLabel, year });
         }
 
         // Sort the games by date chronologically

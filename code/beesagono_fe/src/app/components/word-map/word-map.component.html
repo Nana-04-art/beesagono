@@ -1,8 +1,10 @@
-<div class="word-map-container">
+<div class="word-map-container" role="list" aria-label="Mappa visiva delle parole da trovare">
     @for (item of items(); track item.word) {
-    <div class="hive-cell" [class.pangram]="item.isPangram"
+    <div class="hive-cell" [class.found]="item.isFound" [class.pangram]="item.isPangram"
         [style.background-color]="item.isFound ? (item.isPangram ? '#ffc107' : letterColors().get(item.initial)) : 'var(--cell-bg)'"
-        [title]="item.isFound ? item.word : 'Parola nascosta'">
+        role="listitem" [attr.aria-label]="item.isFound 
+        ? (item.isPangram ? 'Parola trovata: ' + item.word + ' (Mielegramma)' : 'Parola trovata: ' + item.word) 
+        : 'Parola nascosta di ' + item.word.length + ' lettere'">
     </div>
     }
 </div>

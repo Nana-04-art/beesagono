@@ -11,6 +11,7 @@
     --cell-bg: #e9ecef;
     --cell-text: #212529;
 }
+
 .rules-popover,
 .stats-popover,
 .popover,
@@ -370,6 +371,26 @@
             p {
                 color: #fde047 !important;
             }
+        }
+    }
+
+    .stats-popover {
+        .text-warning-emphasis {
+            color: #ffda6a !important;
+        }
+    }
+
+    .text-warning-emphasis {
+        color: #f59e0b !important;
+    }
+
+    .found-words-card,
+    .words-by-letter-container {
+
+        .text-warning-emphasis,
+        .text-warning {
+            color: #f59e0b !important;
+            font-weight: 700 !important;
         }
     }
 }

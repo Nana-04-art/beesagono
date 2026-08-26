@@ -18,7 +18,7 @@ export class ThemeService {
 
     if (savedTheme) {
       this.currentTheme.set(savedTheme);
-    } else {
+    } else if (typeof window !== 'undefined' && window.matchMedia) {
       // Fallback to the operating system theme
       const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
       this.currentTheme.set(prefersDark ? 'dark' : 'light');
@@ -27,7 +27,9 @@ export class ThemeService {
     // Applying the data-theme attribute to the HTML element and saving
     effect(() => {
       const theme = this.currentTheme();
+      document.documentElement.setAttribute('data-bs-theme', theme);
       document.documentElement.setAttribute('data-theme', theme);
+
       this.storageService.save(this.THEME_KEY, theme);
     });
   }
