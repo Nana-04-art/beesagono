@@ -8,6 +8,10 @@ on:
     branches:
       - main
 
+defaults:
+  run:
+    working-directory: code/beesagono_fe
+
 jobs:
   build-and-test:
     name: Test & Build
@@ -22,8 +26,9 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: "npm"
+          cache-dependency-path: code/beesagono_fe/package-lock.json
 
       # 3. Install dependencies
       - name: Install dependencies
@@ -31,7 +36,7 @@ jobs:
 
       # 4. Runs Unit Tests (Angular)
       - name: Run Unit Tests
-        run: npm run test -- --watch=false --browsers=ChromeHeadless
+        run: npm test -- --watch=false
 
       # 5. Install Playwright browsers and run E2E tests
       - name: Install Playwright Browsers
@@ -46,9 +51,10 @@ jobs:
 
       # 7. Upload the deployment artifact (dist folder)
       - name: Upload artifact for deployment
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         uses: actions/upload-pages-artifact@v3
         with:
-          path: ./dist/beesagono/browser
+          path: code/beesagono_fe/dist/beesagono/browser
 
   deploy:
     name: Deploy to GitHub Pages
