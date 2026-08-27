@@ -13,6 +13,7 @@ import { StorageService } from '../storage/storage.service';
 import { ScoreService } from '../score/score.service';
 import { StatsService } from '../stats/stats.service';
 import { RANK_TIERS } from '../../config/rank-tiers.config';
+import { WordMapItem } from '../../models/word-map-item.model';
 
 export function getTodayIsoString(date = new Date()): string {
     const year = date.getFullYear();
@@ -52,14 +53,9 @@ export class GameService {
     readonly rank = computed<RankTier>(() => {
         const currentBoard = this._board();
         const currentScore = this.score();
+        const maxScore = currentBoard ? currentBoard.maxScore : 0;
 
-        if (!currentBoard || currentBoard.maxScore === 0) {
-            return RANK_TIERS[0];
-        }
-
-        // Use Math.round or simple division to avoid losing crucial decimals on the first points
-        const percentage = (currentScore / currentBoard.maxScore) * 100;
-        return this.getRankForPercentage(percentage);
+        return this.scoreService.getCurrentRank(currentScore, maxScore);
     });
 
     private readonly _board = signal<GameBoard | null>(null);
@@ -180,7 +176,7 @@ export class GameService {
 
     // Call this method when starting the game to initialize stats for the day
     initGame(): void {
-        const todayIso = new Date().toISOString().split('T')[0];
+        const todayIso = getTodayIsoString(new Date());
         this.statsService.recordGameStarted(todayIso);
     }
 
@@ -191,7 +187,7 @@ export class GameService {
             const invalidWords = this._invalidWords();
 
             if (currentBoard && this._loadStatus() === 'ready') {
-                const stateToSave: GameState = {
+                const stateToSave: GameState & { rankLabel?: string } = {
                     version: 1,
                     date: currentBoard.date,
                     score: this.score(),
@@ -219,7 +215,6 @@ export class GameService {
         try {
             await this.dictionaryService.loadDictionary();
             const wordSet = this.dictionaryService.getWordSet();
-
             const todayIsoDate = this.getTodayIsoString();
             const generatedBoard = this.puzzleGeneratorService.generateDailyPuzzle(
                 todayIsoDate,
@@ -263,7 +258,6 @@ export class GameService {
 
             this.clearInput();
             this._shuffleOrder.set([1, 2, 3, 4, 5, 6]);
-
             this._loadStatus.set('ready');
         } catch (err: any) {
             this._loadStatus.set('error');
@@ -449,4 +443,42 @@ export class GameService {
     private getTodayIsoString(): string {
         return getTodayIsoString();
     }
+
+    readonly wordMap = computed(() => {
+        const currentBoard = this._board();
+        if (!currentBoard) return [];
+
+        const validWords = currentBoard.possibleWords;
+        const mSet = this.mielegrammiSet();
+        const found = this._foundWords();
+
+        return validWords.map((word: string) => ({
+            word: word,
+            length: word.length,
+            initial: word.toUpperCase()[0],
+            isFound: found.includes(word),
+            isPangram: mSet.has(word)
+        })).sort((a, b) => {
+            if (a.length !== b.length) {
+                return a.length - b.length;
+            }
+            return a.word.localeCompare(b.word);
+        });
+    });
+
+    private readonly letterPalette = [
+        '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4',
+        '#FFEEAD', '#D4A5A5', '#9B59B6'
+    ];
+
+    readonly letterColors = computed(() => {
+        const board = this.board();
+        if (!board) return new Map<string, string>();
+
+        const map = new Map<string, string>();
+        board.cells.forEach((cell, index) => {
+            map.set(cell.letter, this.letterPalette[index % this.letterPalette.length]);
+        });
+        return map;
+    });
 }

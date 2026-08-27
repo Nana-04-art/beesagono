@@ -1,6 +1,6 @@
 .scoreboard-card {
-    max-width: 320px;
-    background-color: #ffffff;
+    max-width: 20rem;
+    background-color: var(--card-bg, #ffffff);
     padding: 0.85rem 1rem !important;
 
     .d-flex {
@@ -24,22 +24,22 @@
 }
 
 .progress-container {
-    padding-top: 10px !important;
-    padding-bottom: 10px !important;
+    padding-top: 0.625rem !important;
+    padding-bottom: 0.625rem !important;
     position: relative;
 }
 
 .scoreboard-progress {
-    height: 12px;
+    height: 0.75rem;
     background-color: rgba(222, 226, 230, 0.6);
-    border-radius: 10px;
+    border-radius: 0.625rem;
     overflow: visible;
     position: relative;
 }
 
 .scoreboard-bar {
     background-color: #ffc107;
-    border-radius: 10px;
+    border-radius: 0.625rem;
     transition: width 0.4s ease-in-out;
 }
 
@@ -59,8 +59,8 @@
         font-size: 1.1rem;
         background: #ffffff;
         border-radius: 50%;
-        padding: 2px;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        padding: 0.125rem;
+        box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.2);
         display: inline-flex;
         align-items: center;
         justify-content: center;
@@ -74,17 +74,17 @@
 }
 
 .rank-list-scroll {
-    max-height: 180px;
+    max-height: 11.25rem;
     overflow-y: auto;
-    padding-right: 2px;
+    padding-right: 0.125rem;
 
     &::-webkit-scrollbar {
-        width: 4px;
+        width: 0.25rem;
     }
 
     &::-webkit-scrollbar-thumb {
         background-color: rgba(245, 158, 11, 0.3);
-        border-radius: 4px;
+        border-radius: 0.25rem;
     }
 }
 

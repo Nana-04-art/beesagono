@@ -5,16 +5,18 @@
 .end-game-dialog {
     padding: 0;
     border: none;
-    border-radius: 16px;
+    border-radius: 1rem;
     background: var(--surface-bg, #ffffff);
     color: var(--text-primary, #1e293b);
-    max-width: 400px;
+    max-width: 25rem;
     width: 90vw;
-    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+    max-height: calc(100dvh - 2rem);
+    overflow-y: auto;
+    box-shadow: 0 1.25rem 1.5625rem -0.3125rem rgba(0, 0, 0, 0.1);
 
     &::backdrop {
         background-color: rgba(15, 23, 42, 0.6);
-        backdrop-filter: blur(4px);
+        backdrop-filter: blur(0.25rem);
     }
 }
 
@@ -41,8 +43,8 @@
 
 .score-card {
     background-color: #fef3c7;
-    border: 1px solid #f59e0b;
-    border-radius: 12px;
+    border: 0.0625rem solid #f59e0b;
+    border-radius: 0.75rem;
     padding: 1rem;
     margin-bottom: 1rem;
     display: flex;
@@ -70,8 +72,8 @@
 
     .stat-item {
         background-color: var(--chip-bg, #f8fafc);
-        border: 1px solid var(--border-color, #e2e8f0);
-        border-radius: 8px;
+        border: 0.0625rem solid var(--border-color, #e2e8f0);
+        border-radius: 0.5rem;
         padding: 0.75rem;
         display: flex;
         flex-direction: column;
@@ -96,7 +98,7 @@
     .btn {
         flex: 1;
         padding: 0.625rem;
-        border-radius: 8px;
+        border-radius: 0.5rem;
         font-weight: 600;
         font-size: 0.875rem;
         cursor: pointer;
@@ -112,4 +114,9 @@
             color: var(--text-primary, #334155);
         }
     }
+}
+
+.btn-icon {
+    width: 1.125rem;
+    height: 1.125rem;
 }

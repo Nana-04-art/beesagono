@@ -4,68 +4,107 @@
         <div class="col">
             <div class="card letter-card p-3 d-flex flex-column justify-content-between">
 
-                <!-- Header Card -->
-                <button type="button"
-                    class="btn w-100 border-0 p-0 text-start bg-transparent shadow-none d-flex align-items-center justify-content-between"
-                    [attr.aria-expanded]="expandedLetters().has(group.letter)"
-                    [attr.aria-controls]="'words-group-' + group.letter"
-                    [attr.aria-label]="'Parole con lettera ' + group.letter + ', ' + group.foundCount + ' di ' + group.totalCount + ' trovate'"
-                    (click)="toggleExpand(group.letter)">
+                <!-- Header Card Container -->
+                <div class="w-100 d-flex align-items-center justify-content-between gap-2">
 
-                    <!-- Left Side: Circle and Letter -->
-                    <div class="d-flex align-items-center gap-2">
-                        <div class="letter-circle d-flex align-items-center justify-content-center fw-bold" [ngClass]="{
-                            'bg-warning text-dark ring-warning': group.isCenter,
-                            'bg-light text-secondary border': !group.isCenter
-                        }">
+                    <!-- Button 1: Toggle Accordion -->
+                    <button type="button"
+                        class="btn p-0 border-0 text-start bg-transparent shadow-none d-flex align-items-center gap-2 flex-grow-1 min-w-0"
+                        [attr.aria-expanded]="expandedLetters().has(group.letter)"
+                        [attr.aria-controls]="'words-group-' + group.letter"
+                        [attr.aria-label]="'Parole con lettera ' + group.letter + ', ' + group.foundCount + ' di ' + group.totalCount + ' trovate'"
+                        (click)="toggleExpand(group.letter)">
+
+                        <!-- Chevron Icon -->
+                        <svg class="chevron-icon text-muted flex-shrink-0"
+                            [class.rotate-180]="expandedLetters().has(group.letter)" fill="none" stroke="currentColor"
+                            viewBox="0 0 24 24" aria-hidden="true" style="width: 0.875rem; height: 0.875rem;">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                        </svg>
+
+                        <!-- Letter Circle -->
+                        <div class="letter-circle d-flex align-items-center justify-content-center fw-bold flex-shrink-0"
+                            [ngClass]="{
+                                'bg-warning text-dark ring-warning': group.isCenter,
+                                'bg-light text-secondary border': !group.isCenter
+                            }">
                             {{ group.letter }}
                         </div>
-                    </div>
 
-                    <!-- Right Side: Counters in columns + Chevron -->
-                    <div class="d-flex align-items-center gap-2">
-                        <div class="d-flex flex-column align-items-end text-end">
-                            <!-- Words (Top) -->
+                        <!-- Word/Mielegram Counters -->
+                        <div class="d-flex flex-column align-items-start ms-auto text-end pe-1">
                             <span class="extra-small-text text-muted fw-semibold">
                                 {{ group.foundCount }}/{{ group.totalCount }} parole
                             </span>
-
-                            <!-- Mielegrammi (Bottom) -->
                             @if (group.totalPangrams > 0) {
                             <span class="extra-small-text text-warning-emphasis fw-bold">
                                 mielegrammi {{ group.foundPangrams }}/{{ group.totalPangrams }}
                             </span>
                             }
                         </div>
+                    </button>
 
-                        <!-- Chevron Icon -->
-                        <svg class="chevron-icon text-muted flex-shrink-0"
-                            [class.rotate-180]="expandedLetters().has(group.letter)" fill="none" stroke="currentColor"
-                            viewBox="0 0 24 24" aria-hidden="true">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                    <!-- Button 2: Toggle Map -->
+                    <button type="button"
+                        class="btn btn-sm btn-outline-secondary p-1 d-flex align-items-center justify-content-center flex-shrink-0"
+                        (click)="toggleMapView(group.letter, $event)"
+                        [title]="showMapLetters().has(group.letter) ? 'Mostra parole' : 'Mostra mappa'"
+                        [attr.aria-label]="(showMapLetters().has(group.letter) ? 'Mostra elenco parole' : 'Mostra mappa') + ' per lettera ' + group.letter">
+
+                        @if (showMapLetters().has(group.letter)) {
+                        <!-- SVG Elenco -->
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width: 1rem; height: 1rem;"
+                            aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" />
                         </svg>
-                    </div>
+                        } @else {
+                        <!-- SVG Mappa -->
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width: 1rem; height: 1rem;"
+                            aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+                        </svg>
+                        }
+                    </button>
 
-                </button>
+                </div>
 
-                <!-- Found Words Section / Empty State -->
+                <!-- Expanded Content -->
                 @if (expandedLetters().has(group.letter)) {
                 <div [id]="'words-group-' + group.letter" class="mt-2 pt-2 border-top" role="region"
                     [attr.aria-label]="'Elenco parole trovate per la lettera ' + group.letter">
+
+                    @if (showMapLetters().has(group.letter)) {
+                    <div class="py-1">
+                        @if (group.wordItems.length > 0) {
+                        <app-word-map [items]="group.wordItems" [letterColors]="gameService.letterColors()">
+                        </app-word-map>
+                        } @else {
+                        <p class="extra-small-text text-muted italic mb-0 text-center py-1">
+                            Nessuna parola presente per questa lettera
+                        </p>
+                        }
+                    </div>
+                    } @else {
                     @if (group.foundWords.length > 0) {
                     <div class="d-flex flex-wrap gap-1">
                         @for (word of group.foundWords; track word) {
                         <span class="badge border font-monospace word-badge"
-                            [class.is-mielegramma]="isMielegramma(word)" [class.bg-light]="!isMielegramma(word)"
-                            [class.text-dark]="!isMielegramma(word)">
+                            [ngClass]="isMielegramma(word) ? 'is-mielegramma' : 'bg-light text-dark'">
                             {{ word }}
                         </span>
                         }
                     </div>
                     } @else {
                     <p class="extra-small-text text-muted italic mb-0 text-center py-1">
+                        @if (group.totalCount === 0) {
+                        Nessuna parola presente per questa lettera
+                        } @else {
                         Ancora nessuna parola trovata
+                        }
                     </p>
+                    }
                     }
                 </div>
                 }

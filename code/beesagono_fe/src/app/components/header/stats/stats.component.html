@@ -1,11 +1,11 @@
-<div class="stats-popover">
+<div class="stats-popover shadow-lg">
     <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-2">
         <h6 class="fw-bold text-warning-emphasis mb-0 d-flex align-items-center gap-2 fs-6">
             Statistiche Giocatore
         </h6>
     </div>
 
-    <!-- Livello Carriera -->
+    <!-- Career Level -->
     <div class="p-2 bg-light rounded border mb-2 text-center">
         <div class="extra-small-text text-muted text-uppercase fw-bold mb-1" style="font-size: 0.65rem;">
             Livello Carriera Attuale
@@ -13,55 +13,48 @@
         <div class="fw-bold text-warning-emphasis">{{ stats().currentSeason.highestTierAchieved }}</div>
     </div>
 
-    <!-- Griglia KPI con altezze uguali -->
-    <div class="row g-1 text-center mb-2">
-        <div class="col-3">
-            <div class="kpi-card">
-                <span class="kpi-value">{{ stats().gamesPlayed }}</span>
-                <span class="kpi-label">Giocate</span>
-            </div>
+    <!-- KPI Grid -->
+    <div class="kpi-grid mb-2">
+        <div class="kpi-card">
+            <span class="kpi-value">{{ stats().gamesPlayed }}</span>
+            <span class="kpi-label">Giocate</span>
         </div>
-        <div class="col-3">
-            <div class="kpi-card">
-                <span class="kpi-value">{{ completionRate() }}%</span>
-                <span class="kpi-label">Completate</span>
-            </div>
+        <div class="kpi-card">
+            <span class="kpi-value">{{ completionRate() }}%</span>
+            <span class="kpi-label">Completate</span>
         </div>
-        <div class="col-3">
-            <div class="kpi-card">
-                <span class="kpi-value">{{ stats().currentStreak }}</span>
-                <span class="kpi-label">Serie</span>
-            </div>
+        <div class="kpi-card">
+            <span class="kpi-value">{{ stats().currentStreak }}</span>
+            <span class="kpi-label">Serie</span>
         </div>
-        <div class="col-3">
-            <div class="kpi-card">
-                <span class="kpi-value">{{ stats().maxStreak }}</span>
-                <span class="kpi-label">Record</span>
-            </div>
+        <div class="kpi-card">
+            <span class="kpi-value">{{ stats().maxStreak }}</span>
+            <span class="kpi-label">Record</span>
         </div>
     </div>
 
-    <!-- Detail Season (Spostato fuori dalla griglia KPI) -->
+    <!-- Detail Season -->
     <div class="p-2 bg-light rounded border mb-2">
         <div class="d-flex justify-content-between align-items-center mb-1">
-            <span class="fw-bold text-dark extra-small-text">Stagione {{ stats().currentSeason.year }}</span>
-            <span class="badge bg-warning text-dark extra-small-text py-1 px-2">
+            <span class="fw-semibold text-dark" style="font-size: 0.7rem;">Stagione {{ stats().currentSeason.year
+                }}</span>
+            <span class="badge bg-warning text-dark py-0.5 px-1.5" style="font-size: 0.6rem;">
                 {{ stats().currentSeason.highestTierAchieved }}
             </span>
         </div>
-        <div class="d-flex justify-content-between extra-small-text text-muted mb-1">
+        <div class="d-flex justify-content-between text-muted mb-1" style="font-size: 0.65rem;">
             <span>Punti Base: <strong>{{ stats().currentSeason.basePointsEarned }}</strong></span>
             <span>Bonus Serie: <strong>{{ stats().currentSeason.bonusStreakPoints }}</strong></span>
         </div>
-        <div class="fw-bold extra-small-text text-warning-emphasis text-end pt-1 border-top">
+        <div class="fw-bold text-warning-emphasis text-end pt-1 border-top" style="font-size: 0.7rem;">
             Totale Punti Stagionali: {{ stats().currentSeason.totalSeasonPoints }}
         </div>
     </div>
 
-    <!-- Warning Salvataggio Locale (Spostato fuori dalla griglia KPI) -->
+    <!-- Warning Local Save -->
     <div
-        class="p-2 bg-warning bg-opacity-10 rounded border border-warning border-opacity-25 d-flex align-items-start gap-2">
-        <div class="extra-small-text text-dark">
+        class="p-2 bg-warning bg-opacity-10 rounded border border-warning border-opacity-25 d-flex align-items-start gap-1.5">
+        <div class="text-dark" style="font-size: 0.65rem; line-height: 1.3;">
             <strong>Salvataggio Locale:</strong> I dati e i tuoi progressi sono salvati SOLO in questo browser.
         </div>
     </div>

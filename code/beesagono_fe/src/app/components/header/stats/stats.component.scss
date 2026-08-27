@@ -1,18 +1,25 @@
-.stats-popover {
-    width: 320px;
-    background-color: #ffffff;
-    border: 1px solid rgba(245, 158, 11, 0.3);
-    border-radius: 0.5rem;
-    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
-    z-index: 1050;
-    padding: 0.75rem;
+:host {
+    display: block;
+    width: min(calc(100vw - 2rem), 22.5rem);
 }
 
-/* Forziamo i blocchi KPI ad avere la stessa altezza e il testo su una riga */
-.row.g-1 {
-    >div {
-        display: flex;
-    }
+.stats-popover {
+    width: 100%;
+    max-height: 85dvh;
+    overflow-y: auto;
+    overflow-x: hidden;
+    background-color: #ffffff;
+    border: 0.0625rem solid rgba(245, 158, 11, 0.3);
+    border-radius: 0.5rem;
+    padding: 1rem;
+    box-sizing: border-box;
+}
+
+.kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.375rem;
+    width: 100%;
 }
 
 .kpi-card {
@@ -20,31 +27,26 @@
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    width: 100%;
-    padding: 0.4rem 0.2rem;
-    background-color: #f8f9fa;
-    border: 1px solid #dee2e6;
+    padding: 0.5rem 0.1rem;
+    background-color: rgba(248, 249, 250, 0.8);
+    border: 0.0625rem solid #dee2e6;
     border-radius: 0.375rem;
-    height: 100%;
+    text-align: center;
+    min-width: 0;
 }
 
 .kpi-value {
     font-size: 0.95rem;
     font-weight: 700;
-    color: #212529;
-    line-height: 1.2;
+    line-height: 1.1;
+    margin-bottom: 0.15rem;
 }
 
 .kpi-label {
-    font-size: 0.6rem;
+    font-size: 0.55rem;
     font-weight: 600;
     text-transform: uppercase;
-    color: #6c757d;
+    line-height: 1;
+    letter-spacing: -0.01em;
     white-space: nowrap;
-    letter-spacing: -0.02em;
-}
-
-.extra-small-text {
-    font-size: 0.7rem;
-    line-height: 1.2;
 }

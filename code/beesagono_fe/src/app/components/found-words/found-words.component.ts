@@ -1,13 +1,17 @@
-import { Component, computed, input, signal } from '@angular/core';
+import { Component, computed, inject, input, signal } from '@angular/core';
+import { WordMapComponent } from '../word-map/word-map.component';
+import { GameService } from '../../services/game/game.service';
 
 @Component({
   selector: 'app-found-words',
   standalone: true,
-  imports: [],
+  imports: [WordMapComponent],
   templateUrl: './found-words.component.html',
   styleUrl: './found-words.component.scss',
 })
 export class FoundWordsComponent {
+  gameService = inject(GameService);
+
   // Signal inputs for found words,  optional pangrams (Mielegrammi), and total counts
   foundWords = input<string[]>([]);
   foundMielegrammi = input<string[]>([]);
@@ -16,6 +20,8 @@ export class FoundWordsComponent {
 
   // Local state for toggling section visibility on smaller viewports
   isExpanded = signal<boolean>(false);
+
+  showMap = signal<boolean>(false);
 
   // Set lookup helper to identify pangrams efficiently
   private readonly mielegrammiSet = computed(
@@ -32,4 +38,11 @@ export class FoundWordsComponent {
     this.isExpanded.update((prev) => !prev);
   }
 
+  toggleMapView(event: Event) {
+    event.stopPropagation();
+    if (!this.isExpanded()) {
+      this.isExpanded.set(true);
+    }
+    this.showMap.update((prev) => !prev);
+  }
 }

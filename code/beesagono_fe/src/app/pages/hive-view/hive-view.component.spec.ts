@@ -3,12 +3,28 @@ import { HiveViewComponent } from './hive-view.component';
 import { GameService } from '../../services/game/game.service';
 import { WelcomeNoticeService } from '../../services/welcome-notice/welcome-notice.service';
 import { describe, beforeEach, afterEach, it, expect, vi } from 'vitest';
-import { signal, NO_ERRORS_SCHEMA } from '@angular/core';
+import { signal, NO_ERRORS_SCHEMA, WritableSignal } from '@angular/core';
 import { GameBoard } from '../../models/game-board.model';
 import { Cell } from '../../models/cell.model';
 import { ShareScorePayload } from '../../models/share-score.model';
 import { RankTier } from '../../models/rank.model';
 import { ValidationResult } from '../../models/validation.model';
+import { WordMapItem } from '../../models/word-map-item.model';
+
+Object.defineProperty(window, 'matchMedia', {
+    writable: true,
+    configurable: true,
+    value: vi.fn().mockImplementation((query: string) => ({
+        matches: false,
+        media: query,
+        onchange: null,
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+    })),
+});
 
 describe('HiveViewComponent', () => {
     let component: HiveViewComponent;
@@ -46,6 +62,8 @@ describe('HiveViewComponent', () => {
         threshold: 0,
         label: '🌱 Iniziato'
     });
+    const wordMapSignal: WritableSignal<WordMapItem[]> = signal<WordMapItem[]>([]);
+    const letterColorsSignal = signal<Map<string, string>>(new Map());
 
     const isNoticeOpenSignal = signal<boolean>(false);
 
@@ -97,6 +115,8 @@ describe('HiveViewComponent', () => {
             threshold: 0,
             label: '🌱 Iniziato'
         });
+        wordMapSignal.set([]);
+        letterColorsSignal.set(new Map());
 
         isNoticeOpenSignal.set(false);
 
@@ -115,6 +135,8 @@ describe('HiveViewComponent', () => {
             score: scoreSignal as any,
             maxScore: maxScoreSignal as any,
             rank: rankSignal as any,
+            wordMap: wordMapSignal as any,
+            letterColors: letterColorsSignal as any,
             loadDailyGame: vi.fn(),
             retryLoadDailyGame: vi.fn(),
             checkDateRollover: vi.fn(),

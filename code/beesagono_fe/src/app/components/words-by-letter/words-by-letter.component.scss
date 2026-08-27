@@ -1,7 +1,7 @@
 :host {
   display: block;
   width: 100%;
-  max-width: 1024px;
+  max-width: 64rem;
   margin: 0 auto;
 }
 
@@ -11,11 +11,11 @@
 
 .letter-card {
   width: 100%;
-  max-width: 504px;
-  min-height: 110px;
+  max-width: 31.5rem;
+  min-height: 6.875rem;
   height: auto;
   margin: 0 auto;
-  border-radius: 14px;
+  border-radius: 0.875rem;
   background-color: #ffffff;
   border-color: #e2e8f0 !important;
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
@@ -23,24 +23,24 @@
 
   &:hover {
     border-color: rgba(245, 158, 11, 0.4) !important;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    box-shadow: 0 0.125rem 0.5rem rgba(0, 0, 0, 0.04);
   }
 }
 
 .letter-circle {
-  width: 42px;
-  height: 42px;
+  width: 2.625rem;
+  height: 2.625rem;
   border-radius: 50%;
   font-size: 1.15rem;
 
   &.ring-warning {
-    box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.3);
+    box-shadow: 0 0 0 0.125rem rgba(245, 158, 11, 0.3);
   }
 }
 
 .chevron-icon {
-  width: 18px;
-  height: 18px;
+  width: 1.125rem;
+  height: 1.125rem;
   transition: transform 0.2s ease-in-out;
 
   &.rotate-180 {
@@ -57,19 +57,30 @@
 }
 
 .word-badge {
-  transition: all 0.2s ease-in-out;
+  font-size: 0.8125rem;
+  padding: 0.35em 0.65em;
+  font-weight: 500;
 
+  // Stile per Mielegramma (supera lo stile standard)
   &.is-mielegramma {
-    background: linear-gradient(135deg, #fff3cd 0%, #ffe69c 100%) !important;
-    color: #664d03 !important;
+    background-color: #ffc107 !important;
+    color: #000000 !important;
     border-color: #ffc107 !important;
     font-weight: 700;
-    box-shadow: 0 2px 4px rgba(255, 193, 7, 0.25);
+  }
+}
+
+// Compatibilità con il Dark Theme di Bootstrap
+[data-bs-theme="dark"] {
+  .word-badge:not(.is-mielegramma) {
+    background-color: var(--bs-tertiary-bg) !important;
+    color: var(--bs-body-color) !important;
+    border-color: var(--bs-border-color) !important;
   }
 }
 
 button.btn:focus-visible {
-  outline: 2px solid #ffc107 !important;
-  outline-offset: 2px !important;
-  border-radius: 8px !important;
+  outline: 0.125rem solid #ffc107 !important;
+  outline-offset: 0.125rem !important;
+  border-radius: 0.5rem !important;
 }

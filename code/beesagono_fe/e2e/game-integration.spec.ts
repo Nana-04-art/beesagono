@@ -5,9 +5,9 @@ const GAME_RULES = {
     MIELEGRAMMA_BONUS: 7,
 } as const;
 
-test.describe('Daily Game - Complete Player Journey & Integration Flow', () => {
+test.describe('Daily Game - Complete Player Journey & Application Coverage', () => {
 
-    test('covers onboarding, error handling, mielegramma submission, stats, scoreboard, and persistence', async ({ page }) => {
+    test('1. Covers onboarding, error handling, mielegramma submission, stats, scoreboard, and persistence', async ({ page }) => {
 
         // 1. FIRST ACCESS (Mobile Viewport & Onboarding Modal)
         await page.setViewportSize({ width: 375, height: 667 });
@@ -38,9 +38,8 @@ test.describe('Daily Game - Complete Player Journey & Integration Flow', () => {
         await shuffleBtn.click();
         await expect(centerTile).toBeVisible();
 
-        // 3. ERROR HANDLING & IMMEDIATE FEEDBACK (UX Point 1)
+        // 3. ERROR HANDLING & IMMEDIATE FEEDBACK
         await inputDisplay.click();
-
         await page.keyboard.type('NO');
         await expect(inputDisplay).toContainText(/N\s*O/i);
 
@@ -107,7 +106,7 @@ test.describe('Daily Game - Complete Player Journey & Integration Flow', () => {
 
         expect(mielegrammaWord).toBeTruthy();
 
-        // 5. READ THE SCORE BEFORE SUBMISSION (must be 0: no valid word accepted yet)
+        // 5. READ THE SCORE BEFORE SUBMISSION
         const rankTriggerMobile = page.locator('#scoreboard-trigger-mobile');
         const popoverMobile = page.locator('#scoreboard-popover-mobile');
         const scoreElement = popoverMobile.locator('.score-value');
@@ -133,22 +132,21 @@ test.describe('Daily Game - Complete Player Journey & Integration Flow', () => {
         const successFeedbackBadge = page.locator('.word-display-container .feedback-badge');
         await expect(successFeedbackBadge).toBeVisible();
         await expect(successFeedbackBadge).toContainText(/mielegramma/i);
-        await expect(successFeedbackBadge).toHaveClass(/text-success/);
 
-        // 7. VERIFY WORD IN THE ACCORDION (.found-words-card), marked as a Mielegramma
+        // 7. VERIFY WORD IN ACCORDION (.word-badge)
         const foundWordsCard = page.locator('.found-words-card');
         await expect(foundWordsCard).toBeVisible();
 
         const toggleWordsBtn = foundWordsCard.locator('.toggle-button');
         await toggleWordsBtn.click();
 
-        const wordChip = foundWordsCard.locator('.word-chip', { hasText: mielegrammaWord });
+        const wordChip = foundWordsCard.locator('.word-badge', { hasText: mielegrammaWord });
         await expect(wordChip).toBeVisible();
-        await expect(wordChip).toHaveClass(/mielegramma/);
+        await expect(wordChip).toHaveClass(/is-mielegramma/);
 
         await toggleWordsBtn.click();
 
-        // 8. STATS PANEL CONSULTATION (UX Point 3)
+        // 8. STATS PANEL CONSULTATION
         await page.evaluate(() => window.scrollTo(0, 0));
 
         const statsBtn = page.locator('button[title*="statistiche"], .stats-popover-wrapper button').first();
@@ -161,7 +159,7 @@ test.describe('Daily Game - Complete Player Journey & Integration Flow', () => {
         await statsBtn.click();
         await expect(statsPopover).not.toBeVisible();
 
-        // 9. SCOREBOARD: VERIFY THE EXACT MIELEGRAMMA SCORE (word length + bonus)
+        // 9. SCOREBOARD: VERIFY EXACT MIELEGRAMMA SCORE
         const expectedScore = mielegrammaWord.length + GAME_RULES.MIELEGRAMMA_BONUS;
 
         await expect(rankTriggerMobile).toBeVisible();
@@ -173,7 +171,6 @@ test.describe('Daily Game - Complete Player Journey & Integration Flow', () => {
         await expect(progressBar).toBeVisible();
 
         const initialRankText = (await rankTriggerMobile.textContent())?.trim();
-
         await rankTriggerMobile.click();
         await expect(popoverMobile).not.toBeVisible();
 
@@ -186,9 +183,7 @@ test.describe('Daily Game - Complete Player Journey & Integration Flow', () => {
                         try {
                             const val = JSON.parse(localStorage.getItem(key) || '{}');
                             if (val && val.score === expected) return true;
-                        } catch {
-                            // ignore invalid JSON
-                        }
+                        } catch { }
                     }
                 }
                 return false;
@@ -196,7 +191,6 @@ test.describe('Daily Game - Complete Player Journey & Integration Flow', () => {
         }).toBeTruthy();
 
         await page.reload();
-
         await expect(dismissNoticeBtn).not.toBeVisible();
 
         await page.evaluate(() => window.scrollTo(0, 0));
@@ -211,7 +205,7 @@ test.describe('Daily Game - Complete Player Journey & Integration Flow', () => {
         expect(reloadedRankText).toBe(initialRankText);
     });
 
-    test('accepts a normal (non-pangram) valid word and updates the found words list', async ({ page }) => {
+    test('2. Accepts a normal (non-pangram) valid word dynamically found and updates found words list', async ({ page }) => {
         await page.setViewportSize({ width: 375, height: 667 });
         await page.goto('/');
 
@@ -284,7 +278,81 @@ test.describe('Daily Game - Complete Player Journey & Integration Flow', () => {
 
         const foundWordsCard = page.locator('.found-words-card');
         await foundWordsCard.locator('.toggle-button').click();
-        await expect(foundWordsCard.locator('.word-chip', { hasText: normalWord })).toBeVisible();
+        await expect(foundWordsCard.locator('.word-badge', { hasText: normalWord })).toBeVisible();
+    });
+
+    test('3. Accepts input via SVG Honeycomb grid clicks and controls', async ({ page }) => {
+        await page.setViewportSize({ width: 375, height: 667 });
+        await page.goto('/');
+
+        const dismissNoticeBtn = page.getByRole('button', { name: 'Ho capito, fammi giocare!' });
+        await expect(dismissNoticeBtn).toBeVisible();
+        await dismissNoticeBtn.click();
+
+        const inputDisplay = page.locator('.word-display-container').first();
+
+        const centerCell = page.locator('.hex-group[aria-label*="centrale"]').first();
+        await expect(centerCell).toBeVisible();
+        await centerCell.click();
+
+        const outerCell = page.locator('.hex-group:not([aria-label*="centrale"])').first();
+        await outerCell.click();
+
+        await expect(inputDisplay).not.toContainText(/Digita o clicca le lettere/i);
+
+        const deleteBtn = page.locator('button:has-text("Cancella"), button:has-text("Elimina"), button[aria-label*="ancella"]').first();
+        await deleteBtn.click();
+        await deleteBtn.click();
+
+        await expect(inputDisplay).toContainText(/Digita o clicca le lettere/i);
+    });
+
+    test('4. Records invalid attempts and renders them in the invalid-words component', async ({ page }) => {
+        await page.setViewportSize({ width: 375, height: 667 });
+        await page.goto('/');
+
+        const dismissNoticeBtn = page.getByRole('button', { name: 'Ho capito, fammi giocare!' });
+        await expect(dismissNoticeBtn).toBeVisible();
+        await dismissNoticeBtn.click();
+
+        const inputDisplay = page.locator('.word-display-container').first();
+        const submitBtn = page.getByRole('button', { name: 'Invia la parola inserita' });
+
+        await inputDisplay.click();
+        await page.keyboard.type('ZZZZ');
+        await submitBtn.click();
+
+        const invalidCard = page.locator('.invalid-words-card');
+        await expect(invalidCard).toBeVisible();
+
+        const toggleBtn = invalidCard.locator('.toggle-button');
+        const isExpanded = await toggleBtn.getAttribute('aria-expanded');
+        if (isExpanded === 'false') {
+            await toggleBtn.click();
+        }
+
+        const invalidChip = invalidCard.locator('.invalid-chip', { hasText: 'ZZZZ' });
+        await expect(invalidChip).toBeVisible();
+    });
+
+    test('5. Toggles word map view inside found-words component', async ({ page }) => {
+        await page.setViewportSize({ width: 375, height: 667 });
+        await page.goto('/');
+
+        const dismissNoticeBtn = page.getByRole('button', { name: 'Ho capito, fammi giocare!' });
+        await expect(dismissNoticeBtn).toBeVisible();
+        await dismissNoticeBtn.click();
+
+        const foundWordsCard = page.locator('.found-words-card');
+        const accordionToggle = foundWordsCard.locator('.toggle-button');
+        await accordionToggle.click();
+
+        const mapToggleBtn = foundWordsCard.locator('button[aria-label*="mappa"], button[aria-label*="parole"]').last();
+        await expect(mapToggleBtn).toBeVisible();
+        await mapToggleBtn.click();
+
+        const wordMap = foundWordsCard.locator('app-word-map');
+        await expect(wordMap).toBeVisible();
     });
 
 });

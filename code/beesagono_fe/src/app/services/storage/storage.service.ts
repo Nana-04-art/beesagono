@@ -1,13 +1,18 @@
-import { Injectable } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
+import { Injectable, PLATFORM_ID, inject } from '@angular/core';
 
 @Injectable({ providedIn: 'root' })
 export class StorageService {
+  private readonly platformId = inject(PLATFORM_ID);
+  private readonly isBrowser = isPlatformBrowser(this.platformId);
+
   private readonly DEFAULT_PREFIX = 'beesagono:';
   // In-memory fallback store for cases where localStorage is blocked or full
   private readonly inMemoryFallback = new Map<string, string>();
-  private usingFallback = false;
+  private usingFallback = !this.isBrowser;
 
-  // Persists generic data to localStorage or falls back to in-memory store.
+  // Persists generic data to localStorage or falls back to in-memory store
+
   save<T>(key: string, data: T): boolean {
     if (!key || data === undefined || data === null) {
       console.warn('[StorageService] Attempted to save invalid key or data.');
@@ -66,26 +71,27 @@ export class StorageService {
   }
 
   /**
-   * Retrieves all keys starting with a given prefix,
-   * unifying localStorage and in-memory fallback sources.
-   */
+ * Retrieves all keys starting with a given prefix,
+ * unifying localStorage and in-memory fallback sources.
+ */
   getKeysByPrefix(prefix: string): string[] {
     const fullPrefix = this.getFullKey(prefix);
     const keys = new Set<string>();
 
-    // Search in localStorage if available
-    try {
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key && key.startsWith(fullPrefix)) {
-          keys.add(key);
+    if (this.isBrowser) {
+      try {
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && key.startsWith(fullPrefix)) {
+            keys.add(key);
+          }
         }
+      } catch (e) {
+        console.warn('[StorageService] localStorage enumeration failed or unavailable:', e);
       }
-    } catch (e) {
-      console.warn('[StorageService] localStorage enumeration failed or unavailable:', e);
     }
 
-    // Merge keys saved in the in-memory fallback
+    // Unisce le chiavi salvate nel fallback in memoria
     for (const key of this.inMemoryFallback.keys()) {
       if (key.startsWith(fullPrefix)) {
         keys.add(key);

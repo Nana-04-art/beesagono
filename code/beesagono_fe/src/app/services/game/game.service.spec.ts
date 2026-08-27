@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { vi, describe, beforeEach, afterEach, it, expect } from 'vitest';
-import { GameService } from './game.service';
+import { GameService, getTodayIsoString } from './game.service';
 import { StorageService } from '../storage/storage.service';
 import { PuzzleGeneratorService } from '../puzzle-generator/puzzle-generator.service';
 import { DictionaryService } from '../dictionary/dictionary.service';
@@ -8,9 +8,12 @@ import { ScoreService } from '../score/score.service';
 import { StatsService } from '../stats/stats.service';
 import { GameBoard } from '../../models/game-board.model';
 import { GameState } from '../../models/game-state.model';
+import { RANK_TIERS } from '../../config/rank-tiers.config';
 
 describe('GameService', () => {
   let service: GameService;
+
+  const todayStr = getTodayIsoString();
 
   let mockPuzzleGenerator: {
     generateDailyPuzzle: ReturnType<typeof vi.fn>;
@@ -28,6 +31,7 @@ describe('GameService', () => {
   let mockScoreService: {
     calculateWordPoints: ReturnType<typeof vi.fn>;
     calculateTotalScore: ReturnType<typeof vi.fn>;
+    getCurrentRank: ReturnType<typeof vi.fn>;
   };
   let mockStatsService: {
     recordGameStarted: ReturnType<typeof vi.fn>;
@@ -35,7 +39,7 @@ describe('GameService', () => {
   };
 
   const mockBoard: GameBoard = {
-    date: '2026-07-31',
+    date: todayStr,
     seed: '123_0',
     cells: [
       { id: '0', letter: 'E', position: 0, isCenter: true },
@@ -48,7 +52,7 @@ describe('GameService', () => {
     ],
     possibleWords: ['MIELE', 'MELE', 'MIELEGRAMMA'],
     mielegrammi: ['MIELEGRAMMA'],
-    maxScore: 25,
+    maxScore: 24,
   };
 
   beforeEach(async () => {
@@ -69,16 +73,24 @@ describe('GameService', () => {
     };
 
     mockScoreService = {
-      calculateWordPoints: vi.fn((word: string, isMielegramma: boolean) => {
-        if (isMielegramma) return word.length + 7;
-        return word.length === 4 ? 1 : word.length;
-      }),
       calculateTotalScore: vi.fn((words: string[], mieleSet: Set<string>) => {
-        return words.reduce((acc, word) => {
-          const isM = mieleSet.has(word);
-          if (isM) return acc + word.length + 7;
-          return acc + (word.length === 4 ? 1 : word.length);
-        }, 0);
+        let score = 0;
+        if (words.includes('MELE')) score += 1;
+        if (words.includes('MIELE')) score += 5;
+        if (words.includes('MIELEGRAMMA')) score += 18; // 11 letters + 7 honeygram bonuses = 18
+        return score;
+      }),
+      calculateWordPoints: vi.fn((word: string, isMielegramma: boolean) => {
+        if (word === 'MELE') return 1;
+        if (word === 'MIELE') return 5;
+        if (isMielegramma) return 18; // 11 letters + 7 honeygram bonuses = 18
+        return 0;
+      }),
+      getCurrentRank: vi.fn((score: number, maxScore: number) => {
+        if (maxScore === 0) return RANK_TIERS[0];
+        const percentage = (score / maxScore) * 100;
+        const reversed = [...RANK_TIERS].reverse();
+        return reversed.find((t) => percentage >= t.threshold) ?? RANK_TIERS[0];
       }),
     };
 
@@ -106,22 +118,22 @@ describe('GameService', () => {
     vi.restoreAllMocks();
   });
 
-  it('should be created in ready state after daily game load', () => {
+  it('should be created and initialized', () => {
     expect(service).toBeTruthy();
     expect(service.loadStatus()).toBe('ready');
   });
 
-  it('should load daily game successfully and restore empty state when no saved state exists', () => {
+  it('should load daily game successfully and notify StatsService when no state exists', () => {
     expect(service.board()).toEqual(mockBoard);
     expect(service.score()).toBe(0);
     expect(service.foundWords()).toEqual([]);
-    expect(mockStatsService.recordGameStarted).toHaveBeenCalled();
+    expect(mockStatsService.recordGameStarted).toHaveBeenCalledWith(todayStr);
   });
 
   it('should restore saved game state from storage if available and valid', async () => {
     const savedState: GameState = {
       version: 1,
-      date: '2026-07-31',
+      date: todayStr,
       foundWords: ['MIELE'],
       invalidWords: [],
       foundMielegrammi: [],
@@ -139,22 +151,18 @@ describe('GameService', () => {
     expect(service.score()).toBe(5);
   });
 
-  it('should clear storage and notify stats service when saved state is invalid or corrupted', async () => {
-    const corruptedState = {
-      version: 1,
-    };
-    mockStorageService.load.mockReturnValue(corruptedState);
-
-    const todayIsoDate = (service as any).getTodayIsoString();
+  it('should clear storage and reset state if saved state is corrupt or incomplete', async () => {
+    mockStorageService.load.mockReturnValue({ version: 1 });
 
     await service.loadDailyGame();
 
-    expect(mockStorageService.clear).toHaveBeenCalledWith(`game:${todayIsoDate}`);
+    expect(mockStorageService.clear).toHaveBeenCalledWith(`game:${todayStr}`);
     expect(service.foundWords()).toEqual([]);
-    expect(mockStatsService.recordGameStarted).toHaveBeenCalledWith(todayIsoDate);
+    expect(service.invalidWords()).toEqual([]);
+    expect(mockStatsService.recordGameStarted).toHaveBeenCalledWith(todayStr);
   });
 
-  it('should handle input characters, backspace, and clear via handleInput', () => {
+  it('should handle input characters, backspace, and ENTER via handleInput', () => {
     service.handleInput('M');
     service.handleInput('I');
     expect(service.currentInput()).toBe('MI');
@@ -166,14 +174,23 @@ describe('GameService', () => {
     expect(service.currentInput()).toBe('');
   });
 
-  it('should process valid word submissions and calculate score', () => {
+  it('should process valid word submissions and record progress in StatsService', () => {
     'MIELE'.split('').forEach((char) => service.handleInput(char));
     const mieleResult = service.submitWord();
 
     expect(mieleResult.isValid).toBe(true);
     expect(mieleResult.pointsAwarded).toBe(5);
     expect(service.score()).toBe(5);
-    expect(mockStatsService.recordProgress).toHaveBeenCalled();
+    expect(mockStatsService.recordProgress).toHaveBeenCalledWith(todayStr, 5, false, expect.any(String));
+  });
+
+  it('should not add empty strings to invalidWords when submitting empty input', () => {
+    service.clearInput();
+    const result = service.submitWord();
+
+    expect(result.isValid).toBe(false);
+    expect(result.errorType).toBe('TOO_SHORT');
+    expect(service.invalidWords()).toEqual([]);
   });
 
   it('should return error when word is too short', () => {
@@ -182,6 +199,7 @@ describe('GameService', () => {
 
     expect(result.isValid).toBe(false);
     expect(result.errorType).toBe('TOO_SHORT');
+    expect(service.invalidWords()).toContain('MIE');
   });
 
   it('should track invalid words and return error when missing center letter', () => {
@@ -229,9 +247,11 @@ describe('GameService', () => {
     expect(result.isValid).toBe(true);
     expect(result.isMielegramma).toBe(true);
     expect(result.pointsAwarded).toBe(18);
+    expect(service.score()).toBe(18);
+    expect(service.foundMielegrammi()).toContain('MIELEGRAMMA');
   });
 
-  it('should compute rank progress and completion correctly', () => {
+  it('should compute completion correctly when all words are found', () => {
     mockBoard.possibleWords.forEach((word) => {
       service.clearInput();
       word.split('').forEach((char) => service.handleInput(char));
@@ -251,6 +271,25 @@ describe('GameService', () => {
     expect(newCenter.isCenter).toBe(true);
   });
 
+  it('should generate wordMap ordered by length and alphabet', () => {
+    'MELE'.split('').forEach((char) => service.handleInput(char));
+    service.submitWord();
+
+    const map = service.wordMap();
+    expect(map.length).toBe(3);
+    expect(map[0].word).toBe('MELE');
+    expect(map[0].isFound).toBe(true);
+    expect(map[2].word).toBe('MIELEGRAMMA');
+    expect(map[2].isPangram).toBe(true);
+  });
+
+  it('should map letterColors correctly based on board cells', () => {
+    const colors = service.letterColors();
+    expect(colors.size).toBe(7);
+    expect(colors.has('E')).toBe(true);
+    expect(colors.has('M')).toBe(true);
+  });
+
   it('should generate share score payload correctly', () => {
     'MIELE'.split('').forEach((char) => service.handleInput(char));
     service.submitWord();
@@ -258,7 +297,7 @@ describe('GameService', () => {
     const payload = service.getShareScorePayload();
 
     expect(payload.score).toBe(5);
-    expect(payload.maxScore).toBe(25);
+    expect(payload.maxScore).toBe(24);
     expect(payload.wordsFound).toBe(1);
     expect(payload.totalWords).toBe(3);
     expect(payload.mielegrammiFound).toBe(0);
@@ -269,8 +308,14 @@ describe('GameService', () => {
     const spy = vi.spyOn(service, 'loadDailyGame');
     vi.spyOn(service as any, 'getTodayIsoString').mockReturnValue('2026-08-01');
 
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    vi.setSystemTime(tomorrow);
+
     service.checkDateRollover();
 
-    expect(spy).toHaveBeenCalled();
+    expect(spy).toHaveBeenCalledTimes(1);
+
+    vi.useRealTimers();
   });
 });

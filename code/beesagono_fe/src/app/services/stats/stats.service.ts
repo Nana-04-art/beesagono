@@ -49,7 +49,14 @@ export class StatsService {
                     claimedStreakMilestones: [...currentStats.currentSeason.claimedStreakMilestones]
                 },
                 dailyRankDistribution: { ...currentStats.dailyRankDistribution },
-                seasonHistory: { ...currentStats.seasonHistory }
+                seasonHistory: Object.keys(currentStats.seasonHistory || {}).reduce((acc, year) => {
+                    const yr = Number(year);
+                    acc[yr] = {
+                        ...currentStats.seasonHistory[yr],
+                        claimedStreakMilestones: [...currentStats.seasonHistory[yr].claimedStreakMilestones]
+                    };
+                    return acc;
+                }, {} as Record<number, SeasonStats>)
             };
 
             const todayYear = parseInt(currentDate.split('-')[0], 10);
@@ -127,8 +134,7 @@ export class StatsService {
             }
 
             // Update highest tier achieved in the current season
-            const calculatedTier = this.calculateTier(stats);
-            stats.currentSeason.highestTierAchieved = calculatedTier;
+            stats.currentSeason.highestTierAchieved = this.calculateTier(stats);
 
             return stats;
         });
@@ -239,86 +245,125 @@ export class StatsService {
             dailyRankDistribution: {}
         };
 
-        // Use the new StorageService method instead of raw localStorage
         const gameKeys = this.storage.getKeysByPrefix(this.GAME_KEY_PREFIX);
-        const playedDates: string[] = [];
+        const gameEntries: { date: string; score: number; isCompleted: boolean; rankLabel: string | null; year: number }[] = [];
 
         for (const key of gameKeys) {
-            const gameData = this.storage.load<unknown>(key);
+            const rawGameData = this.storage.load<unknown>(key);
+            if (!rawGameData || typeof rawGameData !== 'object') continue;
 
-            // Strict validation of the loaded GameState
-            if (!isValidGameState(gameData)) continue;
+            const rawGame = rawGameData as Record<string, unknown>;
+
+            // Pre-normalization of legacy rank/rankLabel structures
+            const extractedRankLabel =
+                typeof rawGame['rankLabel'] === 'string'
+                    ? rawGame['rankLabel']
+                    : typeof rawGame['rank'] === 'string'
+                        ? rawGame['rank']
+                        : typeof rawGame['rank'] === 'object' && rawGame['rank'] !== null
+                            ? ((rawGame['rank'] as { label?: string }).label ?? null)
+                            : null;
+
+            // Pre-normalization of optional invalidWords for legacy GameStates
+            const rawInvalidWords = rawGame['invalidWords'];
+            const normalizedInvalidWords = (rawInvalidWords === undefined || rawInvalidWords === null)
+                ? []
+                : rawInvalidWords;
+
+            const normalizedGameData = {
+                ...rawGame,
+                rankLabel: extractedRankLabel,
+                invalidWords: normalizedInvalidWords
+            };
+
+            // Perform validation on the normalized object
+            if (!isValidGameState(normalizedGameData)) continue;
 
             const date = key.replace(this.GAME_KEY_PREFIX, '');
-            // Strict format and calendar validation for the date
             if (!isValidIsoDate(date)) continue;
 
             const year = parseInt(date.split('-')[0], 10);
-            const score = gameData.score;
-            const isCompleted = gameData.isCompleted;
-            const rankLabel = gameData.rankLabel;
+            if (isNaN(year)) continue;
 
-            playedDates.push(date);
-            newStats.gamesPlayed++;
+            const score = typeof normalizedGameData.score === 'number' ? normalizedGameData.score : 0;
+            const isCompleted = !!normalizedGameData.isCompleted;
 
-            if (isCompleted) {
-                newStats.gamesCompleted++;
-            }
-
-            if (rankLabel) {
-                newStats.dailyRankDistribution[rankLabel] = (newStats.dailyRankDistribution[rankLabel] || 0) + 1;
-            }
-
-            // Distribute points to appropriate season
-            if (year === currentYear) {
-                newStats.currentSeason.basePointsEarned += score;
-
-                // If game belongs to today, properly initialize daily state tracking
-                if (date === todayStr) {
-                    newStats.currentSeason._lastRecordedDailyScore = score;
-                    newStats.currentSeason._isCompletedToday = isCompleted;
-                    newStats.currentSeason._lastRecordedRankToday = rankLabel;
-                }
-            } else {
-                if (!newStats.seasonHistory[year]) {
-                    newStats.seasonHistory[year] = this.createEmptySeason(year);
-                }
-                newStats.seasonHistory[year].basePointsEarned += score;
-                newStats.seasonHistory[year].totalSeasonPoints = newStats.seasonHistory[year].basePointsEarned;
-            }
+            gameEntries.push({ date, score, isCompleted, rankLabel: extractedRankLabel, year });
         }
 
-        // Safely sort dates after calendar validation succeeds
-        playedDates.sort((a, b) => {
-            const [y1, m1, d1] = a.split('-').map(Number);
-            const [y2, m2, d2] = b.split('-').map(Number);
+        // Sort the games by date chronologically
+        gameEntries.sort((a, b) => {
+            const [y1, m1, d1] = a.date.split('-').map(Number);
+            const [y2, m2, d2] = b.date.split('-').map(Number);
             return Date.UTC(y1, m1 - 1, d1) - Date.UTC(y2, m2 - 1, d2);
         });
 
-        if (playedDates.length > 0) {
-            newStats.lastPlayedDate = playedDates[playedDates.length - 1];
-            let streak = 0;
+        let runningStreak = 0;
+        let lastProcessedDate: string | null = null;
+        const seasonsMap = new Map<number, SeasonStats>();
 
-            for (let i = 0; i < playedDates.length; i++) {
-                if (i === 0) {
-                    streak = 1;
-                } else {
-                    if (this.isConsecutiveDay(playedDates[i - 1], playedDates[i])) {
-                        streak++;
-                    } else if (playedDates[i - 1] !== playedDates[i]) {
-                        streak = 1;
-                    }
-                }
+        const getSeasonForYear = (y: number): SeasonStats => {
+            if (!seasonsMap.has(y)) {
+                seasonsMap.set(y, this.createEmptySeason(y));
+            }
+            return seasonsMap.get(y)!;
+        };
 
-                if (streak > newStats.maxStreak) {
-                    newStats.maxStreak = streak;
-                }
+        for (const entry of gameEntries) {
+            newStats.gamesPlayed++;
+            if (entry.isCompleted) {
+                newStats.gamesCompleted++;
             }
 
-            newStats.currentStreak = streak;
+            if (entry.rankLabel) {
+                newStats.dailyRankDistribution[entry.rankLabel] = (newStats.dailyRankDistribution[entry.rankLabel] || 0) + 1;
+            }
+
+            // Streak Management
+            if (!lastProcessedDate) {
+                runningStreak = 1;
+            } else if (this.isConsecutiveDay(lastProcessedDate, entry.date)) {
+                runningStreak++;
+            } else if (lastProcessedDate !== entry.date) {
+                runningStreak = 1;
+            }
+
+            newStats.maxStreak = Math.max(newStats.maxStreak, runningStreak);
+            lastProcessedDate = entry.date;
+
+            const season = getSeasonForYear(entry.year);
+
+            // Check and apply streak milestones for the current season
+            this.checkStreakMilestones(runningStreak, season);
+
+            season.basePointsEarned += entry.score;
+            season.totalSeasonPoints = season.basePointsEarned + season.bonusStreakPoints;
+
+            // If the date matches today, initialize the daily state
+            if (entry.date === todayStr && entry.year === currentYear) {
+                season._lastRecordedDailyScore = entry.score;
+                season._isCompletedToday = entry.isCompleted;
+                season._lastRecordedRankToday = entry.rankLabel;
+            }
         }
 
-        newStats.currentSeason.totalSeasonPoints = newStats.currentSeason.basePointsEarned;
+        if (gameEntries.length > 0) {
+            newStats.lastPlayedDate = gameEntries[gameEntries.length - 1].date;
+            newStats.currentStreak = runningStreak;
+        }
+
+        // Assign the current season and the history
+        if (seasonsMap.has(currentYear)) {
+            newStats.currentSeason = seasonsMap.get(currentYear)!;
+            seasonsMap.delete(currentYear);
+        } else {
+            newStats.currentSeason = this.createEmptySeason(currentYear);
+        }
+
+        seasonsMap.forEach((season, yr) => {
+            newStats.seasonHistory[yr] = season;
+        });
+
         newStats.currentSeason.highestTierAchieved = this.calculateTier(newStats);
 
         return newStats;

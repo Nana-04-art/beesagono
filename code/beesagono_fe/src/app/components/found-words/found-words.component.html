@@ -1,52 +1,89 @@
-<div class="card shadow-xs border rounded-3 overflow-hidden found-words-card" [class.is-expanded]="isExpanded()">
+<div class="found-words-container w-100">
+    <div class="card letter-card found-words-card p-3 d-flex flex-column justify-content-between">
 
-    <button
-        class="btn w-100 d-flex align-items-center justify-content-between p-3 border-0 text-start shadow-none toggle-button"
-        (click)="toggleExpanded()" type="button" aria-label="Apri o chiudi lista parole trovate">
+        <!-- Header Card -->
+        <div class="d-flex align-items-center justify-content-between w-100 gap-2">
 
-        <!-- Title and Icon -->
-        <div class="d-flex align-items-center gap-2">
-            <span class="fw-bold fs-6 text-dark m-0">Parole</span>
-            <svg class="chevron text-secondary flex-shrink-0 ms-1" [class.open]="isExpanded()" fill="none"
-                stroke="currentColor" viewBox="0 0 24 24" style="width: 14px; height: 14px;">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-            </svg>
+            <!-- Primary Accordion Toggle Button -->
+            <button type="button"
+                class="btn toggle-button w-100 border-0 p-0 text-start bg-transparent shadow-none d-flex align-items-center justify-content-between flex-grow-1"
+                [attr.aria-expanded]="isExpanded()" aria-controls="found-words-content"
+                aria-label="Elenco parole trovate" (click)="toggleExpanded()">
+
+                <!-- Left Side: Chevron + Title -->
+                <div class="d-flex align-items-center gap-2">
+                    <!-- Chevron Icon -->
+                    <svg class="chevron-icon text-muted flex-shrink-0" [class.rotate-180]="isExpanded()" fill="none"
+                        stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"
+                        style="width: 0.875rem; height: 0.875rem;">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                    </svg>
+
+                    <span class="found-words-title">Parole Trovate</span>
+                </div>
+
+                <!-- Right Side: Counters -->
+                <div class="d-flex flex-column align-items-end text-end me-2">
+                    <!-- Words (Top) -->
+                    <span class="extra-small-text text-muted fw-semibold">
+                        {{ foundWords().length }}/{{ totalPossibleWords() }} parole
+                    </span>
+
+                    <!-- Mielegrammi (Bottom) -->
+                    @if (totalPossibleMielegrammi() > 0) {
+                    <span class="extra-small-text text-warning-emphasis fw-bold">
+                        mielegrammi {{ foundMielegrammi().length }}/{{ totalPossibleMielegrammi() }}
+                    </span>
+                    }
+                </div>
+            </button>
+
+            <!-- Sibling Map Toggle Button (Outside the accordion button) -->
+            <button type="button"
+                class="btn btn-sm btn-outline-secondary p-1 d-flex align-items-center justify-content-center flex-shrink-0"
+                (click)="toggleMapView($event)" [title]="showMap() ? 'Mostra parole' : 'Mostra mappa'"
+                [attr.aria-label]="showMap() ? 'Mostra parole' : 'Mostra mappa'">
+                @if (showMap()) {
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width: 1rem; height: 1rem;">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" />
+                </svg>
+                } @else {
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" style="width: 1rem; height: 1rem;">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+                </svg>
+                }
+            </button>
         </div>
 
-        <!-- Counter Badges -->
-        <div class="d-flex align-items-center gap-2">
-            <!-- Total Words Found (Solamente foundWords) -->
-            <span class="badge bg-light text-dark border px-2.5 py-1.5 fw-bold">
-                {{ foundWords().length }}/{{ totalPossibleWords() }}
-            </span>
+        <!-- Expanded Content: Toggle between Word List and Map -->
+        @if (isExpanded()) {
+        <div id="found-words-content" class="mt-2 pt-2 border-top" role="region" aria-label="Elenco parole trovate">
 
-            <!-- Total Mielegrammi Found -->
-            @if (totalPossibleMielegrammi() > 0) {
-            <span class="badge bg-warning text-dark px-2.5 py-1.5 fw-black shadow-xs">
-                {{ foundMielegrammi().length }}/{{ totalPossibleMielegrammi() }} MIELEGRAMMI
-            </span>
-            }
-        </div>
-    </button>
-
-    <!-- Expanded Content -->
-    @if (isExpanded()) {
-    <div class="card-body border-top p-3 pt-2 animate-fade-in">
-        @if (foundWords().length === 0) {
-        <p class="text-muted text-center fst-italic small mb-0 py-2">
-            Ancora nessuna parola trovata. Inizia a digitare!
-        </p>
-        } @else {
-        <ul class="list-unstyled d-flex flex-wrap gap-2 mb-0 words-grid">
-            @for (word of foundWords(); track word) {
-            <li>
-                <span class="badge word-chip font-monospace" [class.mielegramma]="isMielegramma(word)">
+            @if (showMap()) {
+            <div class="py-1">
+                <app-word-map [items]="gameService.wordMap()" [letterColors]="gameService.letterColors()">
+                </app-word-map>
+            </div>
+            } @else {
+            @if (foundWords().length > 0) {
+            <div class="d-flex flex-wrap gap-1">
+                @for (word of foundWords(); track word) {
+                <span class="badge border font-monospace word-badge" [class.is-mielegramma]="isMielegramma(word)"
+                    [class.bg-light]="!isMielegramma(word)" [class.text-dark]="!isMielegramma(word)">
                     {{ word }}
                 </span>
-            </li>
+                }
+            </div>
+            } @else {
+            <p class="extra-small-text text-muted italic mb-0 text-center py-1">
+                Ancora nessuna parola trovata
+            </p>
             }
-        </ul>
+            }
+        </div>
         }
+
     </div>
-    }
 </div>
