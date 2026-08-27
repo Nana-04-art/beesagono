@@ -45,9 +45,9 @@ jobs:
       - name: Run E2E Tests (Playwright)
         run: npx playwright test
 
-      # 6. Runs the production build (compiles Angular)
+      # 6. Runs the production build with repo base href
       - name: Build Angular App
-        run: npm run build -- --configuration production
+        run: npm run build -- --configuration production --base-href /beesagono/
 
       # 7. Upload the deployment artifact (dist folder)
       - name: Upload artifact for deployment
@@ -58,9 +58,14 @@ jobs:
 
   deploy:
     name: Deploy to GitHub Pages
-    needs: build-and-test # Executed only if the previous job succeeds
+    needs: build-and-test
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
+
+    concurrency:
+      group: pages
+      cancel-in-progress: false
+
     permissions:
       pages: write
       id-token: write
