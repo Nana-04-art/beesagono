@@ -1,0 +1,74 @@
+name: CI/CD Pipeline - Beesagono
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+defaults:
+  run:
+    working-directory: code/beesagono_fe
+
+jobs:
+  build-and-test:
+    name: Test & Build
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Download the repository code
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # 2. Configure Node.js
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: "npm"
+          cache-dependency-path: code/beesagono_fe/package-lock.json
+
+      # 3. Install dependencies
+      - name: Install dependencies
+        run: npm ci
+
+      # 4. Runs Unit Tests (Angular)
+      - name: Run Unit Tests
+        run: npm test -- --watch=false
+
+      # 5. Install Playwright browsers and run E2E tests
+      - name: Install Playwright Browsers
+        run: npx playwright install --with-deps
+
+      - name: Run E2E Tests (Playwright)
+        run: npx playwright test
+
+      # 6. Runs the production build (compiles Angular)
+      - name: Build Angular App
+        run: npm run build -- --configuration production
+
+      # 7. Upload the deployment artifact (dist folder)
+      - name: Upload artifact for deployment
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: code/beesagono_fe/dist/beesagono/browser
+
+  deploy:
+    name: Deploy to GitHub Pages
+    needs: build-and-test # Executed only if the previous job succeeds
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
