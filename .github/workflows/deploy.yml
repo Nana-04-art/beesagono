@@ -20,11 +20,11 @@ jobs:
     steps:
       # 1. Download the repository code
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7.0.1
 
       # 2. Configure Node.js
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7.0.0
         with:
           node-version: 22
           cache: "npm"
@@ -52,7 +52,7 @@ jobs:
       # 7. Upload the deployment artifact (dist folder)
       - name: Upload artifact for deployment
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v5.0.0
         with:
           path: code/beesagono_fe/dist/beesagono/browser
 
@@ -61,7 +61,7 @@ jobs:
     needs: build-and-test
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
-
+    
     concurrency:
       group: pages
       cancel-in-progress: false
@@ -76,4 +76,4 @@ jobs:
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5.0.0
