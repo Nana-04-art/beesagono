@@ -8,7 +8,7 @@ const GAME_RULES = {
 test.describe('Daily Game - Complete Player Journey & Application Coverage', () => {
 
     test('1. Covers onboarding, error handling, mielegramma submission, stats, scoreboard, and persistence', async ({ page }) => {
-        
+
         // 1. FIRST ACCESS (Mobile Viewport & Onboarding Modal)
         await page.setViewportSize({ width: 375, height: 667 });
         await page.goto('/');
@@ -326,7 +326,10 @@ test.describe('Daily Game - Complete Player Journey & Application Coverage', () 
         await expect(invalidCard).toBeVisible();
 
         const toggleBtn = invalidCard.locator('.toggle-button');
-        await toggleBtn.click();
+        const isExpanded = await toggleBtn.getAttribute('aria-expanded');
+        if (isExpanded === 'false') {
+            await toggleBtn.click();
+        }
 
         const invalidChip = invalidCard.locator('.invalid-chip', { hasText: 'ZZZZ' });
         await expect(invalidChip).toBeVisible();

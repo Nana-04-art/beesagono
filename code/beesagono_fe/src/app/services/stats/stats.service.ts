@@ -264,9 +264,16 @@ export class StatsService {
                             ? ((rawGame['rank'] as { label?: string }).label ?? null)
                             : null;
 
+            // Pre-normalization of optional invalidWords for legacy GameStates
+            const rawInvalidWords = rawGame['invalidWords'];
+            const normalizedInvalidWords = (rawInvalidWords === undefined || rawInvalidWords === null)
+                ? []
+                : rawInvalidWords;
+
             const normalizedGameData = {
                 ...rawGame,
-                rankLabel: extractedRankLabel
+                rankLabel: extractedRankLabel,
+                invalidWords: normalizedInvalidWords
             };
 
             // Perform validation on the normalized object
