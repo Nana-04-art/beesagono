@@ -1,0 +1,46 @@
+<div class="card shadow-xs border border-danger-subtle rounded-3 overflow-hidden invalid-words-card"
+    [class.is-expanded]="isExpanded()">
+
+    <button
+        class="btn w-100 d-flex align-items-center justify-content-between p-3 border-0 text-start shadow-none toggle-button"
+        (click)="toggleExpand()" type="button" aria-label="Apri o chiudi lista parole errate">
+
+        <!-- Title and Icon -->
+        <div class="d-flex align-items-center gap-2">
+            <span class="fw-bold fs-6 text-dark m-0">Parole Errate</span>
+            <svg class="chevron text-secondary flex-shrink-0 ms-1" [class.open]="isExpanded()" fill="none"
+                stroke="currentColor" viewBox="0 0 24 24" style="width: 0.875rem; height: 0.875rem;">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+            </svg>
+        </div>
+
+        <!-- Counter Badge -->
+        <div class="d-flex align-items-center gap-2">
+            <!-- Total Invalid Words -->
+            <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-2.5 py-1.5 fw-bold">
+                {{ invalidWords().length }}
+            </span>
+        </div>
+    </button>
+
+    <!-- Expanded Content -->
+    @if (isExpanded()) {
+    <div class="card-body border-top border-danger-subtle p-3 pt-2 animate-fade-in">
+        @if (invalidWords().length === 0) {
+        <p class="text-muted text-center fst-italic small mb-0 py-2">
+            Nessuna parola errata inserita.
+        </p>
+        } @else {
+        <ul class="list-unstyled d-flex flex-wrap gap-2 mb-0 words-grid">
+            @for (word of invalidWords(); track word) {
+            <li>
+                <span class="badge word-chip invalid-chip font-monospace">
+                    {{ word }}
+                </span>
+            </li>
+            }
+        </ul>
+        }
+    </div>
+    }
+</div>

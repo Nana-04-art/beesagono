@@ -1,0 +1,204 @@
+.backdrop-blur {
+    backdrop-filter: blur(0.5rem);
+    -webkit-backdrop-filter: blur(0.5rem);
+}
+
+.max-w-7xl {
+    max-width: 80rem;
+}
+
+.tracking-wider {
+    letter-spacing: 0.05em;
+}
+
+.tracking-widest {
+    letter-spacing: 0.1em;
+}
+
+.extra-small {
+    font-size: 0.75rem;
+}
+
+.date-subtitle {
+    font-size: 0.625rem;
+    color: rgba(180, 83, 9, 0.7);
+}
+
+.btn-icon {
+    width: 1rem;
+    height: 1rem;
+}
+
+.header-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.4rem 0.75rem;
+    border-radius: 50rem;
+    font-size: 0.8125rem;
+    line-height: 1rem;
+    transition: all 0.2s ease-in-out;
+    border: 1px solid rgba(217, 119, 6, 0.25);
+    background-color: rgba(255, 255, 255, 0.7);
+    color: #78350f;
+    cursor: pointer;
+
+    &:hover {
+        background-color: rgba(254, 243, 199, 0.9);
+        transform: translateY(-0.0625rem);
+    }
+
+    &:active {
+        transform: translateY(0);
+    }
+}
+
+.header-btn-primary {
+    background-color: #f59e0b;
+    color: #020617;
+    font-weight: 700;
+    border-color: rgba(217, 119, 6, 0.3);
+
+    &:hover {
+        background-color: #d97706;
+    }
+}
+
+.theme-toggle-btn {
+    width: 2.125rem;
+    height: 2.125rem;
+    padding: 0;
+    border-radius: 50%;
+    overflow: hidden;
+    position: relative;
+    border: 1px solid rgba(217, 119, 6, 0.25);
+    background-color: rgba(255, 255, 255, 0.7);
+    color: #78350f;
+    transition: all 0.2s ease-in-out;
+    flex-shrink: 0;
+
+    &:hover {
+        background-color: rgba(254, 243, 199, 0.9);
+        transform: translateY(-0.0625rem);
+    }
+
+    &:active {
+        transform: translateY(0);
+    }
+
+    .theme-icon-wrapper {
+        position: relative;
+        width: 1.125rem;
+        height: 1.125rem;
+        transition: transform 0.5s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+
+        .theme-icon {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            transition: opacity 0.4s ease, transform 0.5s ease;
+        }
+
+        .sun-icon {
+            opacity: 1;
+            transform: scale(1) rotate(0deg);
+        }
+
+        .moon-icon {
+            opacity: 0;
+            transform: scale(0.5) rotate(-90deg);
+        }
+
+        &.is-dark {
+            transform: rotate(360deg);
+
+            .sun-icon {
+                opacity: 0;
+                transform: scale(0.5) rotate(90deg);
+            }
+
+            .moon-icon {
+                opacity: 1;
+                transform: scale(1) rotate(0deg);
+            }
+        }
+    }
+}
+
+@keyframes bounce-subtle {
+
+    0%,
+    100% {
+        transform: translateY(0);
+    }
+
+    50% {
+        transform: translateY(-0.125rem);
+    }
+}
+
+.animate-bounce-subtle {
+    animation: bounce-subtle 2.5s ease-in-out infinite;
+}
+
+.rules-popover-wrapper,
+.stats-popover-wrapper,
+.rank-popover-wrapper {
+    position: relative;
+    z-index: 1050;
+}
+
+.rank-popover-wrapper {
+    .scoreboard-popover {
+        width: 17.5rem;
+        visibility: visible;
+        opacity: 1;
+        pointer-events: auto;
+        view-transition-name: rank-card-popover;
+    }
+}
+
+.extra-small-text {
+    font-size: 0.75rem;
+    line-height: 1.25;
+}
+
+::view-transition-old(rank-card-popover),
+::view-transition-new(rank-card-popover) {
+    animation-duration: 0.25s;
+}
+
+@media (max-width: 48rem) {
+
+    .rules-popover-wrapper,
+    .stats-popover-wrapper,
+    .rank-popover-wrapper {
+        position: static !important;
+    }
+
+    .rules-popover-wrapper>div,
+    .stats-popover-wrapper>div,
+    .rank-popover-wrapper .scoreboard-popover {
+        position: fixed !important;
+        top: 4.5rem !important;
+        left: 50% !important;
+        right: auto !important;
+        transform: translateX(-50%) !important;
+        width: min(calc(100vw - 1.5rem), 22.5rem) !important;
+        z-index: 1060 !important;
+        box-shadow: 0 0.625rem 1.5625rem -0.3125rem rgba(0, 0, 0, 0.3) !important;
+    }
+
+    .popover-backdrop {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100dvh;
+        background-color: rgba(15, 23, 42, 0.5);
+        z-index: 1040;
+        touch-action: none;
+    }
+}

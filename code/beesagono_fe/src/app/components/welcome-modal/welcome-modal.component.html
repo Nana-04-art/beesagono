@@ -1,0 +1,49 @@
+@if (noticeService.isNoticeOpen()) {
+<div class="modal-backdrop-custom" (click)="$event.stopPropagation()"></div>
+
+<!-- Central wrapper with native scroll -->
+<div class="modal-wrapper-custom d-flex align-items-center justify-content-center p-3" role="dialog" aria-modal="true"
+    aria-labelledby="welcomeTitle" (click)="$event.stopPropagation()">
+
+     <!-- Modal Card with maximum height relative to the viewport and internal scrolling -->
+    <div class="modal-card bg-white rounded-4 shadow-lg border-0 d-flex flex-column w-100"
+        style="max-width: 31.25rem; max-height: calc(100dvh - 2rem); overflow-y: auto;">
+
+        <!-- Header -->
+        <div class="bg-warning bg-opacity-10 border-bottom-0 pb-0 pt-4 px-4 flex-shrink-0">
+            <h5 class="modal-title fw-bold text-warning-emphasis d-flex align-items-center gap-2" id="welcomeTitle">
+                <span class="fs-3">🐝</span> Benvenuto su Mielegrammi!
+            </h5>
+        </div>
+
+        <!-- Body -->
+        <div class="px-4 py-3 overflow-y-auto">
+            <p class="text-secondary mb-3">
+                Puoi iniziare a giocare subito senza creare un account! I tuoi progressi verranno salvati direttamente
+                in questo browser.
+            </p>
+
+            <div
+                class="alert alert-warning border-warning border-opacity-25 bg-warning bg-opacity-10 rounded-3 p-3 mb-0">
+                <div class="d-flex gap-2">
+                    <span class="fs-5">⚠️</span>
+                    <div class="small text-dark">
+                        <strong>Nota sul salvataggio dati:</strong><br />
+                        Poiché i dati sono memorizzati solo sul tuo dispositivo attuale, cancellare la cronologia/cache
+                        del browser o cambiare dispositivo comporterà la perdita delle statistiche e delle partite
+                        salvate.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="border-top-0 pt-0 pb-4 px-4 flex-shrink-0">
+            <button #confirmBtn type="button"
+                class="btn btn-warning text-dark fw-bold w-100 py-2.5 rounded-pill shadow-sm" (click)="dismissNotice()">
+                Ho capito, fammi giocare!
+            </button>
+        </div>
+    </div>
+</div>
+}

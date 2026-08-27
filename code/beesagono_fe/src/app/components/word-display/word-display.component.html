@@ -1,0 +1,33 @@
+<div class="word-display-container d-flex flex-column align-items-center justify-content-center user-select-none mb-0">
+
+  <!-- Temporary feedback message (es. Errore o Successo) -->
+  @if (feedbackMessage()) {
+  <div class="feedback-badge fw-semibold" [class.text-danger]="feedbackType() === 'error'"
+    [class.text-success]="feedbackType() === 'success'" [class.text-primary]="feedbackType() === 'info'">
+    {{ feedbackMessage() }}
+  </div>
+  }
+
+  <!-- Main live input area -->
+  <div class="input-box d-flex align-items-center justify-content-center px-3 border-bottom border-2"
+    [class.has-content]="currentInput().length > 0">
+
+    @if (currentInput().length === 0 && !feedbackMessage()) {
+    <span class="placeholder-text fst-italic">Digita o clicca le lettere...</span>
+    } @else {
+    <!-- Rendering of every single typed letter -->
+    <span class="letters-wrapper d-flex">
+      @for (char of currentInput().split(''); track $index) {
+      <span class="letter text-uppercase fw-bold"
+        [class.is-center]="char.toUpperCase() === centerLetter().toUpperCase()">
+        {{ char }}
+      </span>
+      }
+    </span>
+
+    <!-- Blinking cursor -->
+    <span class="cursor fw-light">|</span>
+    }
+  </div>
+
+</div>

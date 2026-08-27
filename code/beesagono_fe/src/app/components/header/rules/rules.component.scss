@@ -1,0 +1,30 @@
+:host {
+    display: block;
+    width: min(calc(100vw - 2rem), 22.5rem);
+}
+
+.rules-popover {
+    width: 100%;
+    max-height: 80dvh;
+    background-color: #ffffff;
+    border: 0.0625rem solid rgba(245, 158, 11, 0.3);
+    border-radius: 0.5rem;
+    padding: 1rem;
+    box-sizing: border-box;
+}
+
+.rules-popover-body {
+    max-height: calc(80dvh - 3rem);
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding-right: 0.25rem;
+
+    &::-webkit-scrollbar {
+        width: 0.25rem;
+    }
+
+    &::-webkit-scrollbar-thumb {
+        background-color: rgba(245, 158, 11, 0.4);
+        border-radius: 0.25rem;
+    }
+}

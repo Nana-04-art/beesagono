@@ -1,0 +1,86 @@
+:host {
+  display: block;
+  width: 100%;
+  max-width: 64rem;
+  margin: 0 auto;
+}
+
+.words-by-letter-container {
+  width: 100%;
+}
+
+.letter-card {
+  width: 100%;
+  max-width: 31.5rem;
+  min-height: 6.875rem;
+  height: auto;
+  margin: 0 auto;
+  border-radius: 0.875rem;
+  background-color: #ffffff;
+  border-color: #e2e8f0 !important;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  box-sizing: border-box;
+
+  &:hover {
+    border-color: rgba(245, 158, 11, 0.4) !important;
+    box-shadow: 0 0.125rem 0.5rem rgba(0, 0, 0, 0.04);
+  }
+}
+
+.letter-circle {
+  width: 2.625rem;
+  height: 2.625rem;
+  border-radius: 50%;
+  font-size: 1.15rem;
+
+  &.ring-warning {
+    box-shadow: 0 0 0 0.125rem rgba(245, 158, 11, 0.3);
+  }
+}
+
+.chevron-icon {
+  width: 1.125rem;
+  height: 1.125rem;
+  transition: transform 0.2s ease-in-out;
+
+  &.rotate-180 {
+    transform: rotate(180deg);
+  }
+}
+
+.extra-small-text {
+  font-size: 0.75rem;
+}
+
+.cursor-pointer {
+  cursor: pointer;
+}
+
+.word-badge {
+  font-size: 0.8125rem;
+  padding: 0.35em 0.65em;
+  font-weight: 500;
+
+  // Stile per Mielegramma (supera lo stile standard)
+  &.is-mielegramma {
+    background-color: #ffc107 !important;
+    color: #000000 !important;
+    border-color: #ffc107 !important;
+    font-weight: 700;
+  }
+}
+
+// Compatibilità con il Dark Theme di Bootstrap
+[data-bs-theme="dark"] {
+  .word-badge:not(.is-mielegramma) {
+    background-color: var(--bs-tertiary-bg) !important;
+    color: var(--bs-body-color) !important;
+    border-color: var(--bs-border-color) !important;
+  }
+}
+
+button.btn:focus-visible {
+  outline: 0.125rem solid #ffc107 !important;
+  outline-offset: 0.125rem !important;
+  border-radius: 0.5rem !important;
+}

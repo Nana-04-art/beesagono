@@ -1,0 +1,247 @@
+import { Component, OnInit, inject, HostListener, signal, computed } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { GameService } from '../../services/game/game.service';
+import { HoneycombGridComponent } from '../../components/honeycomb-grid/honeycomb-grid.component';
+import { WordDisplayComponent } from '../../components/word-display/word-display.component';
+import { HiveControlsComponent } from '../../components/hive-controls/hive-controls.component';
+import { FoundWordsComponent } from '../../components/found-words/found-words.component';
+import { EndGameModalComponent } from '../../components/end-game-modal/end-game-modal.component';
+import { ShareScorePayload } from '../../models/share-score.model';
+import { HeaderComponent } from '../../components/header/header.component';
+import { WordsByLetterComponent } from '../../components/words-by-letter/words-by-letter.component';
+import { InvalidWordsComponent } from '../../components/invalid-words/invalid-words.component';
+import { WelcomeNoticeService } from '../../services/welcome-notice/welcome-notice.service';
+import { WelcomeModalComponent } from '../../components/welcome-modal/welcome-modal.component';
+
+@Component({
+  selector: 'app-hive-view',
+  standalone: true,
+  imports: [
+    CommonModule,
+    HoneycombGridComponent,
+    WordDisplayComponent,
+    HiveControlsComponent,
+    FoundWordsComponent,
+    EndGameModalComponent,
+    HeaderComponent,
+    WordsByLetterComponent,
+    InvalidWordsComponent,
+    WelcomeModalComponent
+  ],
+  templateUrl: './hive-view.component.html',
+  styleUrl: './hive-view.component.scss',
+})
+export class HiveViewComponent implements OnInit {
+  protected readonly gameService = inject(GameService);
+  private readonly welcomeService = inject(WelcomeNoticeService);
+
+  // Signal controlling end game modal visibility 
+  protected readonly isEndGameModalOpen = signal<boolean>(false);
+  protected readonly isHelpModalOpen = signal<boolean>(false);
+  protected readonly isStatsModalOpen = signal<boolean>(false);
+
+  // Computed payload for EndGameModal delegated to GameService
+  protected readonly endGamePayload = computed<ShareScorePayload>(() => {
+    return this.gameService.getShareScorePayload();
+  });
+
+  protected readonly feedbackMessage = signal<string>('');
+  protected readonly feedbackType = signal<'error' | 'success' | null>(null);
+
+  // Computed signal to extract the center letter from the active board
+  protected readonly centerLetter = computed(() => {
+    const board = this.gameService.board();
+    if (!board) return '';
+    const centerCell = board.cells.find((c) => c.isCenter);
+    return centerCell ? centerCell.letter : '';
+  });
+
+  readonly formattedDate = computed(() => {
+    const board = this.gameService.board();
+    if (!board) return '';
+
+    const [year, month, day] = board.date.split('-');
+    const dateObj = new Date(Number(year), Number(month) - 1, Number(day));
+
+    return dateObj.toLocaleDateString('it-IT', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric'
+    });
+  });
+
+  private feedbackTimeout?: ReturnType<typeof setTimeout>;
+
+  ngOnInit(): void {
+    this.welcomeService.checkAndShowNotice();
+
+    if (this.gameService.loadStatus() === 'idle') {
+      this.gameService.loadDailyGame();
+    } else {
+      this.gameService.checkDateRollover();
+    }
+  }
+
+  // Checks for date rollover whenever the window regains focus or becomes visible.
+
+  @HostListener('window:focus')
+  @HostListener('document:visibilitychange')
+  onWindowFocusOrVisibilityChange(): void {
+    if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
+      this.gameService.checkDateRollover();
+    }
+  }
+
+  // Opens the instructions/help modal dialog
+  openHelpModal(): void {
+    this.isHelpModalOpen.set(true);
+  }
+
+  // Opens the player statistics modal dialog
+  openStatsModal(): void {
+    this.isStatsModalOpen.set(true);
+  }
+
+  // Opens the end game victory modal
+  openEndGame(): void {
+    this.isEndGameModalOpen.set(true);
+  }
+
+  // Closes the end game victory modal
+  closeEndGame(): void {
+    this.isEndGameModalOpen.set(false);
+  }
+
+  // Copies formatted game results to the user clipboard
+  async shareResults(): Promise<void> {
+    const payload = this.endGamePayload();
+    const text = `🐝 Beesagono (${payload.date})\nPunti: ${payload.score}/${payload.maxScore}\nParole: ${payload.wordsFound}/${payload.totalWords}\nMielegrammi: ${payload.mielegrammiFound}/${payload.totalMielegrammi}`;
+
+    if (this.feedbackTimeout) {
+      clearTimeout(this.feedbackTimeout);
+    }
+
+    // Attempt 1: Standard Clipboard API (writeText)
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      try {
+        await navigator.clipboard.writeText(text);
+        this.feedbackType.set('success');
+        this.feedbackMessage.set('Risultati copiati negli appunti!');
+        this.feedbackTimeout = setTimeout(() => this.clearFeedback(), 2000);
+        return;
+      } catch (err) {
+        // Permission denied or write rejected, fallback to Share API or ExecCommand below
+      }
+    }
+
+    // Attempt 2: Web Share API (Mobile / Supporting browsers)
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: 'Beesagono Risultati',
+          text: text
+        });
+        this.feedbackType.set('success');
+        this.feedbackMessage.set('Risultati condivisi con successo!');
+        this.feedbackTimeout = setTimeout(() => this.clearFeedback(), 2000);
+        return;
+      } catch (err) {
+        // User cancelled sharing or share failed
+        if ((err as DOMException)?.name === 'AbortError') {
+          return; // Ignore manual user cancellation
+        }
+      }
+    }
+
+    // Attempt 3: Legacy execCommand Fallback
+    try {
+      const textArea = document.createElement('textarea');
+      textArea.value = text;
+      textArea.style.position = 'fixed';
+      textArea.style.opacity = '0';
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+
+      const successful = document.execCommand('copy');
+      document.body.removeChild(textArea);
+
+      if (successful) {
+        this.feedbackType.set('success');
+        this.feedbackMessage.set('Risultati copiati negli appunti!');
+      } else {
+        throw new Error('Copy command failed');
+      }
+    } catch {
+      this.feedbackType.set('error');
+      this.feedbackMessage.set('Impossibile copiare i risultati');
+    }
+
+    this.feedbackTimeout = setTimeout(() => this.clearFeedback(), 2000);
+  }
+
+  submit(): void {
+    const result = this.gameService.submitWord();
+
+    if (this.feedbackTimeout) {
+      clearTimeout(this.feedbackTimeout);
+    }
+
+    if (!result.isValid) {
+      this.feedbackType.set('error');
+      this.feedbackMessage.set(result.message || 'Parola non valida');
+
+      this.feedbackTimeout = setTimeout(() => {
+        this.clearFeedback();
+      }, 2000);
+    } else {
+      this.feedbackType.set('success');
+      this.feedbackMessage.set(
+        result.isMielegramma ? '🎉 MIELEGRAMMA!' : 'Ottimo!'
+      );
+
+      // Auto-open modal if all words are found
+      if (this.gameService.isCompleted()) {
+        setTimeout(() => {
+          this.openEndGame();
+        }, 600);
+      }
+
+      this.feedbackTimeout = setTimeout(() => {
+        this.clearFeedback();
+      }, 1500);
+    }
+  }
+
+  @HostListener('window:keydown', ['$event'])
+  handleKeyboardEvent(event: KeyboardEvent): void {
+    if (this.gameService.loadStatus() !== 'ready') return;
+    if (this.welcomeService.isNoticeOpen() || this.isHelpModalOpen() || this.isStatsModalOpen() || this.isEndGameModalOpen()) {
+      return;
+    }
+    if (event.defaultPrevented || event.ctrlKey || event.metaKey || event.altKey) {
+      return;
+    }
+
+    const target = event.target as HTMLElement;
+    if (target && ['INPUT', 'TEXTAREA', 'BUTTON', 'SELECT'].includes(target.tagName)) {
+      return;
+    }
+
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      this.submit();
+    } else if (event.key === 'Backspace') {
+      event.preventDefault();
+      this.gameService.deleteLastChar();
+    } else if (/^[a-zA-Z]$/.test(event.key)) {
+      event.preventDefault();
+      this.gameService.handleInput(event.key);
+    }
+  }
+
+  private clearFeedback(): void {
+    this.feedbackMessage.set('');
+    this.feedbackType.set(null);
+  }
+}

@@ -1,0 +1,33 @@
+.modal-backdrop-custom {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100dvh;
+    background-color: rgba(15, 23, 42, 0.75);
+    backdrop-filter: blur(0.25rem);
+    z-index: 10000;
+    pointer-events: auto;
+}
+
+.modal-wrapper-custom {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100dvh;
+    z-index: 10001;
+    pointer-events: auto;
+}
+
+.modal-card {
+    background-color: #ffffff !important;
+    opacity: 1 !important;
+    position: relative;
+    z-index: 10002;
+}
+
+button:focus-visible {
+    outline: 0.1875rem solid #ffc107 !important;
+    outline-offset: 0.125rem;
+}

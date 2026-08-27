@@ -1,1 +1,396 @@
 /* You can add global styles to this file, and also import other style files */
+@use "bootstrap/scss/bootstrap";
+@use "bootstrap-icons/font/bootstrap-icons.css";
+
+:root {
+    --bg-main: #f8f9fa;
+    --text-main: #1e293b;
+    --text-muted: #64748b;
+    --card-bg: #ffffff;
+    --card-border: #e2e8f0;
+    --cell-bg: #e9ecef;
+    --cell-text: #212529;
+}
+
+.rules-popover,
+.stats-popover,
+.popover,
+.modal-content,
+.modal-card {
+    font-size: 0.85rem !important;
+
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6 {
+        font-size: 1rem !important;
+    }
+
+    p,
+    span,
+    div,
+    li,
+    label,
+    .kpi-card,
+    .kpi-value,
+    .kpi-label,
+    .stats-grid,
+    .stat-box,
+    .stat-value,
+    .stat-label {
+        font-size: 0.85rem !important;
+    }
+
+    table,
+    .table {
+        font-size: 0.8rem !important;
+
+        th,
+        td {
+            padding: 0.3rem 0.5rem !important;
+        }
+    }
+
+    .text-muted,
+    .text-secondary,
+    .kpi-label,
+    small {
+        font-size: 0.75rem !important;
+    }
+}
+
+/* ==========================================
+   DARK MODE OVERRIDES
+   ========================================== */
+[data-theme='dark'] {
+    --bg-main: #0f172a;
+    --text-main: #f8fafc;
+    --text-muted: #94a3b8;
+    --card-bg: #1e293b;
+    --card-border: #334155;
+    --cell-bg: #334155;
+    --cell-text: #ffffff;
+
+    html,
+    body,
+    app-root,
+    main,
+    .main-content,
+    div[class*="container"] {
+        background-color: var(--bg-main) !important;
+        color: var(--text-main) !important;
+    }
+
+    .navbar,
+    .navbar.bg-white {
+        background-color: rgba(15, 23, 42, 0.95) !important;
+        border-bottom-color: rgba(245, 158, 11, 0.25) !important;
+    }
+
+    .text-dark,
+    .text-black,
+    .text-body,
+    .text-secondary:not(.text-warning),
+    .found-words-title,
+    .kpi-value,
+    .letter:not(.is-center),
+    .rank-name,
+    .score-value,
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6,
+    p:not(.text-warning),
+    span:not(.text-warning):not(.is-center):not([class*="warning"]),
+    td:not(.table-warning),
+    th,
+    li {
+        color: var(--text-main) !important;
+    }
+
+    .text-muted,
+    .date-subtitle,
+    .kpi-label,
+    .extra-small-text,
+    .placeholder-text,
+    small {
+        color: var(--text-muted) !important;
+    }
+
+    .card,
+    .found-words-card,
+    .scoreboard-card,
+    .rules-popover,
+    .stats-popover,
+    .end-game-dialog,
+    .modal-card,
+    .modal-content,
+    .kpi-card,
+    .words-by-letter-container,
+    .word-map,
+    .word-map-container {
+        color: var(--text-main) !important;
+        border-color: var(--card-border) !important;
+    }
+
+    .word-display-container,
+    .input-box {
+        background-color: var(--bg-main) !important;
+        border-color: transparent !important;
+        box-shadow: none !important;
+
+        &.has-content {
+            border-color: #f59e0b !important;
+        }
+
+        .letter.is-center,
+        .is-center,
+        .text-warning {
+            color: #f59e0b !important;
+            font-weight: bold;
+        }
+    }
+
+    .letter-circle {
+        background-color: #334155 !important;
+        color: #ffffff !important;
+    }
+
+    .letter-card {
+        background-color: var(--card-bg) !important;
+
+        .letter-circle.bg-warning,
+        .letter-circle.is-center,
+        .letter-circle[class*="bg-warning"] {
+            background-color: #ffc107 !important;
+            color: #000000 !important;
+            font-weight: 800;
+        }
+
+        &.border-warning,
+        &:has(.letter-circle.bg-warning) {
+            border-color: rgba(255, 193, 7, 0.5) !important;
+        }
+    }
+
+    .hex-tile:not(.is-center) {
+        fill: #334155 !important;
+    }
+
+    .hex-text:not(.is-center-text) {
+        fill: #ffffff !important;
+    }
+
+    .control-btn:not(.control-btn-primary):not(.btn-warning):not(.bg-warning) {
+        background-color: var(--card-bg) !important;
+        border-color: var(--card-border) !important;
+        color: var(--text-main) !important;
+
+        &:hover {
+            background-color: #334155 !important;
+        }
+    }
+
+    .control-btn-primary,
+    .btn-warning,
+    button.bg-warning {
+        background-color: #ffc107 !important;
+        border-color: #ffc107 !important;
+        color: #000000 !important;
+        font-weight: bold;
+    }
+
+    .header-btn,
+    .theme-toggle-btn {
+        background-color: rgba(255, 255, 255, 0.08) !important;
+        color: #f8fafc !important;
+        border-color: rgba(255, 255, 255, 0.15) !important;
+
+        &:hover {
+            background-color: rgba(255, 255, 255, 0.2) !important;
+        }
+    }
+
+    ::-webkit-scrollbar-track {
+        background: var(--bg-main) !important;
+    }
+
+    ::-webkit-scrollbar-thumb {
+        background: var(--card-border) !important;
+    }
+
+    .word-badge:not(.is-mielegramma) {
+        background-color: var(--cell-bg) !important;
+        color: var(--text-main) !important;
+        border-color: var(--card-border) !important;
+    }
+
+    .words-by-letter-container,
+    .found-words-card,
+    .letter-card {
+
+        div[class*="py-"],
+        .word-map,
+        .word-map-container {
+            background-color: transparent !important;
+            background: transparent !important;
+            box-shadow: none !important;
+        }
+    }
+
+    .hive-cell[style*="rgb(233, 236, 239)"],
+    .hive-cell[style*="#e9ecef"] {
+        background-color: var(--cell-bg) !important;
+    }
+
+    .invalid-words-card {
+        background-color: #1f0a0c !important;
+        border-color: #5c1d24 !important;
+
+        .toggle-button span,
+        .fw-bold {
+            color: #f87171 !important;
+        }
+
+        .word-chip.invalid-chip,
+        .badge.bg-danger-subtle {
+            background-color: #450a0a !important;
+            color: #fca5a5 !important;
+            border-color: #7f1d1d !important;
+        }
+    }
+
+    .scoreboard-card {
+        background-color: var(--card-bg) !important;
+        border-color: var(--card-border) !important;
+        color: var(--text-main) !important;
+
+        .progress-container {
+            background-color: transparent !important;
+            background: transparent !important;
+        }
+
+        .progress,
+        .scoreboard-progress {
+            background-color: rgba(255, 255, 255, 0.08) !important;
+            border: 1px solid var(--card-border) !important;
+        }
+
+        .tier-emoji-marker.current {
+            background: var(--card-bg) !important;
+            box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.5) !important;
+        }
+
+        .text-secondary,
+        .text-muted,
+        .extra-small-text {
+            color: var(--text-muted) !important;
+        }
+
+        .text-dark,
+        .rank-name,
+        .score-value,
+        strong:not(.text-warning) {
+            color: var(--text-main) !important;
+        }
+
+        .border-top {
+            border-top-color: var(--card-border) !important;
+        }
+    }
+
+    .rules-popover,
+    .stats-popover,
+    .popover,
+    .modal-content,
+    .modal-card {
+        background-color: var(--card-bg) !important;
+        color: var(--text-main) !important;
+        border-color: var(--card-border) !important;
+
+        .popover-body,
+        .popover-header {
+            background-color: var(--card-bg) !important;
+            color: var(--text-main) !important;
+        }
+
+        table,
+        .table {
+            color: var(--text-main) !important;
+
+            th,
+            td {
+                border-color: var(--card-border) !important;
+                color: var(--text-main) !important;
+                background-color: transparent !important;
+            }
+        }
+
+        .card,
+        .kpi-card,
+        .bg-light,
+        .bg-white,
+        div[class*="border"]:not(.btn):not(.bg-warning):not(.alert-warning):not(.bg-warning-subtle) {
+            background-color: rgba(255, 255, 255, 0.05) !important;
+            border-color: var(--card-border) !important;
+            color: var(--text-main) !important;
+        }
+
+        .bg-warning,
+        .badge.bg-warning,
+        tr.table-warning,
+        tr.table-warning td {
+            background-color: #ffc107 !important;
+            color: #000000 !important;
+
+            *,
+            span,
+            div,
+            strong,
+            p,
+            td,
+            th {
+                color: #000000 !important;
+            }
+        }
+
+        .bg-warning.bg-opacity-10,
+        .alert-warning,
+        .bg-warning-subtle {
+            background-color: rgba(255, 193, 7, 0.18) !important;
+            border-color: rgba(255, 193, 7, 0.4) !important;
+
+            *,
+            span,
+            div,
+            strong,
+            p {
+                color: #fde047 !important;
+            }
+        }
+    }
+
+    .stats-popover {
+        .text-warning-emphasis {
+            color: #ffda6a !important;
+        }
+    }
+
+    .text-warning-emphasis {
+        color: #f59e0b !important;
+    }
+
+    .found-words-card,
+    .words-by-letter-container {
+
+        .text-warning-emphasis,
+        .text-warning {
+            color: #f59e0b !important;
+            font-weight: 700 !important;
+        }
+    }
+}

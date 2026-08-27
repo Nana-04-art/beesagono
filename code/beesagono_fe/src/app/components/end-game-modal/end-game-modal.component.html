@@ -1,0 +1,79 @@
+@if (isOpen() && payload(); as data) {
+<!-- Modal Backdrop Overlay -->
+<div class="modal-backdrop fade show" style="z-index: 1050; background-color: rgba(0, 0, 0, 0.6);"
+    (click)="closeModal()"></div>
+
+<!-- Modal Dialog Container (Catch click on backdrop/outside space) -->
+<div class="modal d-block fade show" tabindex="-1" role="dialog" aria-labelledby="endGameModalTitle" aria-modal="true"
+    style="z-index: 1055;" (click)="closeModal()">
+    <div #modalContainer class="modal-dialog modal-dialog-centered my-2" (click)="$event.stopPropagation()">
+        <div class="modal-content shadow-lg border-0 rounded-4 overflow-hidden"
+            style="max-width: 25rem; max-height: calc(100dvh - 2rem); overflow-y: auto;">
+
+            <!-- Header -->
+            <div class="modal-header bg-warning bg-gradient text-dark border-0 p-3 p-sm-4 text-center d-block">
+                <div class="display-1 mb-2">🏆</div>
+                <h2 class="modal-title fw-bold h3 m-0" id="endGameModalTitle">
+                    Complimenti!
+                </h2>
+                <p class="text-dark-50 small m-0 mt-1">Hai trovato tutte le parole di oggi!</p>
+            </div>
+
+            <!-- Body with Statistics -->
+            <div class="modal-body p-3 p-sm-4 text-center">
+                <div class="row g-2 g-sm-3 mb-3 mb-sm-4">
+                    <!-- Score Card -->
+                    <div class="col-6">
+                        <div class="p-2 p-sm-3 bg-light rounded-3 border">
+                            <span class="d-block text-uppercase text-muted fw-bold extra-small">Punti</span>
+                            <span class="fs-3 fw-extrabold text-warning-emphasis">
+                                {{ data.score }} / {{ data.maxScore }}
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Words Card -->
+                    <div class="col-6">
+                        <div class="p-2 p-sm-3 bg-light rounded-3 border">
+                            <span class="d-block text-uppercase text-muted fw-bold extra-small">Parole</span>
+                            <span class="fs-3 fw-extrabold text-primary">
+                                {{ data.wordsFound }} / {{ data.totalWords }}
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Mielegrammi Card -->
+                    <div class="col-12">
+                        <div class="p-2 p-sm-3 bg-warning-subtle rounded-3 border border-warning">
+                            <span
+                                class="d-block text-uppercase text-warning-emphasis fw-bold extra-small">Mielegrammi</span>
+                            <span class="fs-4 fw-bold text-dark">
+                                🐝 {{ data.mielegrammiFound }} / {{ data.totalMielegrammi }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer Actions -->
+            <div class="modal-footer border-0 p-3 p-sm-4 pt-0 d-flex gap-2">
+                <button type="button" class="btn btn-outline-secondary flex-grow-1 rounded-pill py-2"
+                    (click)="closeModal()">
+                    Chiudi
+                </button>
+                <button #shareButton type="button"
+                    class="btn btn-warning flex-grow-1 rounded-pill py-2 fw-bold shadow-sm d-inline-flex align-items-center justify-content-center gap-2"
+                    (click)="onShare()">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="btn-icon" width="1.125rem" height="1.125rem"
+                        fill="none" viewBox="0 0 24 24" stroke="currentColor" style="vertical-align: middle;">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+                    </svg>
+                    <span>Condividi</span>
+                </button>
+            </div>
+
+        </div>
+    </div>
+</div>
+}
