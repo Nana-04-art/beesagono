@@ -1,4 +1,4 @@
-# Data Models & Core Algorithm Specification — Beesagono
+# Frontend Data Models & Core Algorithm Specification — Beesagono
 
 This document freezes the TypeScript interfaces, the daily puzzle generation algorithm, and the storage/behavioral rules. It complements `architecture.md`, `requirements.md`, `flowchart.md`, `ui-structure.md`, `use-cases.md`, and `service-component-contracts.md`.
 

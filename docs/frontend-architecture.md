@@ -1,4 +1,4 @@
-# System Architecture & Technical Specifications — Beesagono
+# Frontend System Architecture & Technical Specifications — Beesagono
 
 This document defines the high-level technical architecture, framework choices, core service logic, and persistence strategy for **Beesagono**. See `service-component-contracts.md` for exact method/signal signatures.
 
