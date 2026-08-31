@@ -1,22 +1,25 @@
 # Backend Data Model — Beesagono API
 
-This document freezes the database schema, entity-to-frontend-model mapping, and the ported puzzle-generation algorithm.
+This document freezes the database schema (**MySQL 8.0+ / InnoDB**), entity-to-frontend-model mapping, and the ported puzzle-generation algorithm.
 
 ---
 
 ## 1. Enums & Domain Constants
 
-In the database, these are stored as portable `VARCHAR` columns with `CHECK` constraints (supported natively in MySQL 8+ and Oracle) or mapped via Java `@Enumerated(EnumType.STRING)`. In code, they are implemented as static domain Enums.
+Enforced via lookup tables or application-level Enums.
 
 ```sql
 -- --------------------------------------------------------
--- DOMAIN ENUMS & CHECK CONSTRAINTS
+-- DOMAIN ENUMS & LOOKUPS
 -- --------------------------------------------------------
 
 -- 1. Security Roles
 -- role_name: 'ROLE_USER' | 'ROLE_ADMIN'
 
--- 2. Daily Rank Tiers (RankTier)
+-- 2. Error Types Lookup (error_types.code)
+-- 'TOO_SHORT' | 'MISSING_CENTER' | 'INVALID_LETTERS' | 'ALREADY_FOUND' | 'NOT_IN_DICTIONARY'
+
+-- 3. Daily Rank Tiers (RankTier)
 -- threshold_percent | label             | icon
 -- ----------------------------------------------
 -- 0.0               | 'Iniziato'        | '🌱'
@@ -29,7 +32,7 @@ In the database, these are stored as portable `VARCHAR` columns with `CHECK` con
 -- 70.0              | 'Maestro'         | '👑'
 -- 100.0             | 'Ape Regina'      | '🐝'
 
--- 3. Streak Milestones & Bonus Points (StreakMilestone)
+-- 4. Streak Milestones & Bonus Points (StreakMilestone)
 -- streak_days | bonus_points
 -- --------------------------
 -- 3           | 50
@@ -41,7 +44,7 @@ In the database, these are stored as portable `VARCHAR` columns with `CHECK` con
 -- 200         | 8000
 -- 365         | 20000
 
--- 4. Career Tiers (CareerTier)
+-- 5. Career Tiers (CareerTier)
 -- min_percentage | title                        | icon
 -- --------------------------------------------------
 -- 0              | 'Uovo d'Ape'                 | '🥚'
@@ -54,202 +57,269 @@ In the database, these are stored as portable `VARCHAR` columns with `CHECK` con
 -- 95             | 'Ape Architetto'             | '📐'
 -- 100            | 'Ape Regina della Stagione'  | '👑'
 
+```
+
+---
+
 ## 2. Core Tables (DBML)
 
 ```dbml
-// --------------------------------------------------------
-// DICTIONARY
-// --------------------------------------------------------
-Table dictionary_words {
-  id                    varchar(36)  [pk]                 // UUID, app-generated
-  word                  varchar(100) [not null, unique]   // always stored UPPERCASE
-  length                int          [not null]
-  unique_letters_count  int          [not null]
-  is_candidate_pangram  boolean      [not null, default: false] // true if unique_letters_count = 7
-  added_by_admin        boolean      [not null, default: false]
-  created_at            timestamp    [not null]
+Project beesagono_db {
+  database_type: 'MySQL 8.0+'
+  note: '''
+    ENGINE: InnoDB for all tables (required for foreign keys and row-level
+    locking under concurrent word submissions).
+
+    CHARSET: the whole database, and every table/column that can contain an
+    emoji (dictionary/rank labels, error descriptions), MUST use
+    utf8mb4 / utf8mb4_0900_ai_ci (or utf8mb4_unicode_ci on older MySQL).
+    Plain "utf8" in MySQL is actually utf8mb3 and cannot store 4-byte
+    characters such as emoji — inserts will either fail or silently
+    truncate/corrupt the rank label. Set this at the database level
+    (CREATE DATABASE ... CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci)
+    so every table inherits it by default.
+
+    All surrogate primary keys are VARCHAR(36) UUID strings, generated
+    application-side (UUID.randomUUID().toString()).
+    All timestamps are stored in UTC.
+  '''
 }
 
-// --------------------------------------------------------
-// DAILY PUZZLE
-// --------------------------------------------------------
-Table daily_puzzles {
-  id            varchar(36) [pk]                     // UUID, app-generated
-  puzzle_date   date        [not null, unique]       // YYYY-MM-DD, local server date
-  seed          varchar(50) [not null]               // "${baseSeed}_${attempt}", for debuggability
-  center_letter char(1)     [not null]
-  max_score     int         [not null]
-  created_at    timestamp   [not null]
+// ==========================================
+// ENUMS & LOOKUPS
+// ==========================================
+
+Enum role_name {
+  ROLE_USER
+  ROLE_ADMIN
 }
 
-Table puzzle_outer_letters {
-  puzzle_id varchar(36) [not null, ref: > daily_puzzles.id]
-  letter    char(1)     [not null]
-
-  indexes {
-    (puzzle_id, letter) [pk]   // composite PK — prevents the same letter twice for one puzzle
-  }
-}
-
-Table puzzle_possible_words {
-  puzzle_id varchar(36)  [not null, ref: > daily_puzzles.id]
-  word      varchar(100) [not null]
-
-  indexes {
-    (puzzle_id, word) [pk]
-  }
-}
-
-Table puzzle_mielegrammi {
-  puzzle_id varchar(36)  [not null, ref: > daily_puzzles.id]
-  word      varchar(100) [not null]
-
-  indexes {
-    (puzzle_id, word) [pk]
-  }
-}
-
-// --------------------------------------------------------
-// USERS & AUTH
-// --------------------------------------------------------
-Table users {
-  id            varchar(36)  [pk]
-  username      varchar(50)  [not null, unique]
-  email         varchar(150) [not null, unique]
-  password_hash varchar(255) [not null]   // BCrypt hash, never plaintext
-  created_at    timestamp    [not null]
+Table error_types {
+  code varchar(20) [pk, note: 'TOO_SHORT | MISSING_CENTER | INVALID_LETTERS | ALREADY_FOUND | NOT_IN_DICTIONARY']
+  description varchar(255) [not null]
 }
 
 Table roles {
-  id   varchar(36) [pk]
-  name varchar(20) [not null, unique]     // 'ROLE_USER' | 'ROLE_ADMIN'
+  id varchar(36) [pk]
+  name role_name [not null, unique]
+}
+
+// ==========================================
+// USERS & AUTHENTICATION
+// ==========================================
+
+Table users {
+  id varchar(36) [pk]
+  username varchar(50) [not null, unique]
+  email varchar(150) [not null, unique]
+  password_hash varchar(255) [not null]
+  registered_at timestamp [not null]
 }
 
 Table user_roles {
-  user_id varchar(36) [not null, ref: > users.id]
-  role_id varchar(36) [not null, ref: > roles.id]
+  user_id varchar(36) [not null]
+  role_id varchar(36) [not null]
 
-  indexes {
+  Indexes {
     (user_id, role_id) [pk]
   }
 }
 
-// --------------------------------------------------------
-// REFRESH TOKENS (enables real logout / revocation)
-// --------------------------------------------------------
 Table refresh_tokens {
-  id          varchar(36)  [pk]
-  user_id     varchar(36)  [not null, ref: > users.id]
-  token_hash  varchar(255) [not null, unique]   // SHA-256 hash of the opaque refresh token; raw value never stored
-  expires_at  timestamp    [not null]
-  revoked     boolean      [not null, default: false]
-  created_at  timestamp    [not null]
+  id varchar(36) [pk]
+  user_id varchar(36) [not null]
+  token_hash varchar(255) [not null, unique]
+  expires_at timestamp [not null]
+  revoked boolean [not null, default: false]
+  created_at timestamp [not null]
 
-  indexes {
-    (user_id)
+  Indexes {
+    user_id
   }
 }
 
-// --------------------------------------------------------
-// GAME STATE (per user, per day)
-// --------------------------------------------------------
-Table game_states {
-  id             varchar(36) [pk]
-  puzzle_id      varchar(36) [not null, ref: > daily_puzzles.id]
-  user_id        varchar(36) [not null, ref: > users.id]
-  current_score  int         [not null, default: 0]
-  is_completed   boolean     [not null, default: false]
-  start_time     timestamp   [not null]
-  last_updated   timestamp   [not null]
+// ==========================================
+// DICTIONARY
+// ==========================================
 
-  indexes {
-    (user_id, puzzle_id) [unique]  // one game state per user per puzzle/day
+Table dictionary_words {
+  word varchar(100) [pk, note: 'Always stored UPPERCASE']
+  word_length int [not null, note: 'Could be a MySQL virtual/generated column (CHAR_LENGTH(word)) instead of an app-computed one — optional optimization']
+  unique_letters_count int [not null]
+  is_candidate_pangram boolean [not null, default: false]
+  added_by_user_id varchar(36) [note: 'NULL = seeded at launch / not attributable to a specific admin. Replaces the old added_by_admin boolean for real traceability.']
+  added_at timestamp [not null]
+
+  Indexes {
+    is_candidate_pangram
   }
 }
 
-Table game_state_found_words {
-  game_state_id varchar(36)  [not null, ref: > game_states.id]
-  word          varchar(100) [not null]
+// ==========================================
+// DAILY PUZZLE
+// ==========================================
 
-  indexes {
-    (game_state_id, word) [pk]
+Table daily_puzzles {
+  id varchar(36) [pk]
+  puzzle_date date [not null, unique]
+  center_letter char(1) [not null]
+  max_score int [not null]
+  seed varchar(50)
+  created_at timestamp [not null]
+}
+
+Table puzzle_outer_letters {
+  puzzle_id varchar(36) [not null]
+  letter char(1) [not null]
+
+  Indexes {
+    (puzzle_id, letter) [pk]
   }
 }
 
-Table game_state_invalid_words {
-  game_state_id varchar(36)  [not null, ref: > game_states.id]
-  word          varchar(100) [not null]
+Table puzzle_words {
+  puzzle_id varchar(36) [not null]
+  word varchar(100) [not null]
+  is_mielegramma boolean [not null, default: false]
 
-  indexes {
-    (game_state_id, word) [pk]
+  Indexes {
+    (puzzle_id, word) [pk]
   }
 }
 
-// --------------------------------------------------------
-// PLAYER STATS (cross-day, one row per user)
-// --------------------------------------------------------
+// ==========================================
+// GAME SESSIONS
+// ==========================================
+
+Table game_sessions {
+  id varchar(36) [pk]
+  puzzle_id varchar(36) [not null]
+  user_id varchar(36) [not null]
+  current_score int [not null, default: 0]
+  current_rank_label varchar(50) [not null, note: 'Denormalized cache of score/max_score resolved against RANK_TIERS — must be written in the same transaction as current_score, never independently']
+  is_completed boolean [not null, default: false]
+  start_time timestamp [not null]
+  last_updated timestamp [not null]
+
+  Indexes {
+    (user_id, puzzle_id) [unique]
+    puzzle_id [note: 'Added for daily-leaderboard queries ("all sessions for today\'s puzzle") — the unique index above has user_id as its leading column, so it does not efficiently serve a puzzle_id-only lookup']
+  }
+}
+
+Table found_words {
+  session_id varchar(36) [not null]
+  word varchar(100) [not null]
+  found_at timestamp [not null]
+
+  Indexes {
+    (session_id, word) [pk]
+  }
+}
+
+Table invalid_word_attempts {
+  id varchar(36) [pk]
+  session_id varchar(36) [not null]
+  attempted_word varchar(100) [not null]
+  error_reason varchar(20) [not null]
+  attempted_at timestamp [not null]
+
+  Indexes {
+    session_id
+  }
+}
+
+// ==========================================
+// PLAYER STATISTICS & SEASONS
+// ==========================================
+
 Table player_stats {
-  user_id           varchar(36) [pk, ref: - users.id]
-  current_streak    int         [not null, default: 0]
-  max_streak        int         [not null, default: 0]
-  total_points      int         [not null, default: 0]  // = current season's totalSeasonPoints
-  games_played      int         [not null, default: 0]
-  games_completed   int         [not null, default: 0]
-  last_played_date  date
+  user_id varchar(36) [pk]
+  current_streak int [not null, default: 0]
+  max_streak int [not null, default: 0]
+  total_points int [not null, default: 0, note: 'Denormalized cache of the CURRENT season row in player_seasons.total_points — must be updated in the same transaction whenever that row changes']
+  games_played int [not null, default: 0]
+  games_completed int [not null, default: 0]
+  last_played_date date
 }
 
-// --------------------------------------------------------
-// SEASON HISTORY (one row per user per calendar year)
-// --------------------------------------------------------
 Table player_seasons {
-  user_id                 varchar(36) [not null, ref: > users.id]
-  year                    int         [not null]
-  base_points_earned      int         [not null, default: 0]
-  bonus_streak_points     int         [not null, default: 0]
-  total_season_points     int         [not null, default: 0]
-  highest_tier_achieved   varchar(50) [not null]
+  user_id varchar(36) [not null]
+  year int [not null]
+  base_points int [not null, default: 0]
+  bonus_points int [not null, default: 0]
+  total_points int [not null, default: 0, note: 'Denormalized base_points + bonus_points — see player_stats.total_points note above for the second sync obligation this creates']
+  highest_tier_achieved varchar(50)
 
-  indexes {
+  Indexes {
     (user_id, year) [pk]
   }
 }
 
-Table player_season_milestones {
-  user_id       varchar(36) [not null]
-  year          int         [not null]
-  streak_length int         [not null]   // one of the STREAK_MILESTONES keys (3, 7, 15, 30, 50, 100, 200, 365)
+Table milestone_redemptions {
+  user_id varchar(36) [not null]
+  year int [not null]
+  streak_length int [not null]
+  redeemed_at timestamp [not null]
 
-  indexes {
+  Indexes {
     (user_id, year, streak_length) [pk]
   }
 }
 
-// --------------------------------------------------------
-// DAILY RANK DISTRIBUTION (histogram of ranks achieved per day)
-// --------------------------------------------------------
-Table player_daily_rank_distribution {
-  user_id    varchar(36) [not null, ref: > users.id]
-  rank_label varchar(50) [not null]  // e.g. "🐝 Ape Regina" — matches frontend RANK_TIERS.label verbatim
-  count      int         [not null, default: 0]
+Table rank_histogram {
+  user_id varchar(36) [not null]
+  rank_label varchar(50) [not null]
+  count int [not null, default: 0]
 
-  indexes {
+  Indexes {
     (user_id, rank_label) [pk]
   }
 }
+
+// ==========================================
+// EXPLICIT FOREIGN KEYS (with ON DELETE / ON UPDATE actions)
+// ==========================================
+
+// Authentication & Roles
+Ref: user_roles.user_id > users.id [delete: cascade, update: cascade]
+Ref: user_roles.role_id > roles.id [delete: restrict, update: cascade]
+Ref: refresh_tokens.user_id > users.id [delete: cascade, update: cascade]
+
+// Dictionary attribution
+Ref: dictionary_words.added_by_user_id > users.id [delete: set null, update: cascade]
+
+// Puzzle & Dictionary
+Ref: puzzle_outer_letters.puzzle_id > daily_puzzles.id [delete: cascade, update: cascade]
+Ref: puzzle_words.puzzle_id > daily_puzzles.id [delete: cascade, update: cascade]
+Ref: puzzle_words.word > dictionary_words.word [delete: restrict, update: cascade]
+
+// Game Sessions & Logs
+Ref: game_sessions.user_id > users.id [delete: cascade, update: cascade]
+Ref: game_sessions.puzzle_id > daily_puzzles.id [delete: restrict, update: cascade]
+Ref: found_words.session_id > game_sessions.id [delete: cascade, update: cascade]
+Ref: invalid_word_attempts.session_id > game_sessions.id [delete: cascade, update: cascade]
+Ref: invalid_word_attempts.error_reason > error_types.code [delete: restrict, update: cascade]
+
+// Player Stats & Seasons
+Ref: player_stats.user_id - users.id [delete: cascade, update: cascade]
+Ref: player_seasons.user_id > users.id [delete: cascade, update: cascade]
+Ref: rank_histogram.user_id > users.id [delete: cascade, update: cascade]
+Ref: milestone_redemptions.(user_id, year) > player_seasons.(user_id, year) [delete: cascade, update: cascade]
+
 ```
 
 ---
 
 ## 3. Ported Puzzle Generation Algorithm (Java)
 
-`PuzzleGeneratorService.java` reproduces the frontend's `puzzle-generator.service.ts` **bit-for-bit**:
+`PuzzleGeneratorService.java` reproduces the frontend's generator **bit-for-bit**:
 
 ```java
-// djb2-style date hash — matches hashDateString() in the frontend exactly
 private long hashDateString(String date) {
     long hash = 5381L;
     for (int i = 0; i < date.length(); i++) {
-        hash = ((hash * 33) ^ date.charAt(i)) & 0xFFFFFFFFL; // emulate JS `>>> 0`
+        hash = ((hash * 33) ^ date.charAt(i)) & 0xFFFFFFFFL;
     }
     return hash;
 }
@@ -269,34 +339,18 @@ private double nextRandom() {
     t = (t + (((t ^ (t >>> 7)) * ((t | 61L) & 0xFFFFFFFFL)) & 0xFFFFFFFFL)) & 0xFFFFFFFFL;
     return ((t ^ (t >>> 14)) & 0xFFFFFFFFL) / 4294967296.0;
 }
+
 ```
 
-> **Verification requirement:** before this port is trusted in production, it must reproduce the frontend's own frozen test vector exactly:
->
-> | Input | Expected Value |
-> | :--- | :--- |
-> | `date` | `"2026-07-27"` |
-> | `hashDateString` | `1385072001` |
-> | resulting letters | `C, E, G, N, O, R, S` |
-> | center letter | `R` |
-> | mielegrammi | `["CONGRESSO"]` |
->
-> This should be encoded as a JUnit test (`PuzzleGeneratorServiceTest`) mirroring the frontend's own `puzzle-generator.service.spec.ts`, run against the exact same `dictionary_words` snapshot the frontend's `dictionary.json` was seeded from.
-
-### Generation flow (server-side)
-1. On `GET /api/v1/puzzle/today`, look up `daily_puzzles` by `puzzle_date = today`.
-2. If found, return it (and its child rows) directly — **never regenerate an existing date**.
-3. If not found:
-   a. `SELECT word FROM dictionary_words WHERE is_candidate_pangram = true` → candidate pool (fallback to the literal `"ALBERGO"` if empty, matching the frontend's safety net).
-   b. Run the PRNG loop exactly as in `data-models.md §8` of the frontend docs (pick a candidate, derive 7 sorted unique letters, pick a center letter, compute `possibleWords`/`mielegrammi` against the full `dictionary_words` table, check the Quality Gate: ≥15 words, ≥1 mielegramma), up to `MAX_GENERATION_ATTEMPTS` (500).
-   c. Persist the accepted (or last-attempt fallback) board into `daily_puzzles` + `puzzle_outer_letters` + `puzzle_possible_words` + `puzzle_mielegrammi` in a single transaction.
-   d. Return the newly created puzzle.
+> **Test Vector Check:** `date = "2026-07-27"` → `hash = 1385072001` → Letters: `C, E, G, N, O, R, S` (Center: `R`).
+> 
+> 
 
 ---
 
 ## 4. Rank & Career Tier Configuration
 
-`RANK_TIERS`, `CAREER_TIERS`, and `STREAK_MILESTONES` are **not** modeled as database tables — they are small, rarely-changing configuration sets, kept as static Java classes (`RankTiers.java`, `CareerTiers.java`) that mirror the frontend's `rank-tiers.config.ts` / `career-tiers.constant.ts` **verbatim**, including the emoji-prefixed labels, so a `rankLabel` string computed on the backend is byte-for-byte identical to one a legacy guest-mode frontend session would have computed:
+`RANK_TIERS`, `CAREER_TIERS`, and `STREAK_MILESTONES` are kept as static Java classes (`RankTiers.java`, `CareerTiers.java`) mirroring the frontend's configuration **verbatim**:
 
 | Threshold (%) | Rank Label |
 | :--- | :--- |
@@ -321,7 +375,7 @@ private double nextRandom() {
 | 200 | 8000 |
 | 365 | 20000 |
 
-Career tiers (`highest_tier_achieved`, `player_seasons.highest_tier_achieved`):
+Career tiers (`highest_tier_achieved`):
 
 | minPercentage (%) | Career Tier |
 | :--- | :--- |
@@ -335,34 +389,32 @@ Career tiers (`highest_tier_achieved`, `player_seasons.highest_tier_achieved`):
 | 95 | Ape Architetto |
 | 100 | Ape Regina della Stagione |
 
-If a future requirement needs admin-editable ranks/tiers, these tables would be promoted to real DB tables (`rank_tiers`, `career_tiers`, `streak_milestones`) at that point — out of scope for the current spec.
-
 ---
 
 ## 5. Frontend Model ↔ Backend Schema Mapping
 
-| Frontend concept | Backend representation | Notes |
-| :--- | :--- | :--- |
-| `GameBoard.cells` (center + 6 outer) | `daily_puzzles.center_letter` + `puzzle_outer_letters` | Position/order is not persisted (client-only concern, see §1). |
-| `GameBoard.possibleWords` | `puzzle_possible_words` | |
-| `GameBoard.mielegrammi` | `puzzle_mielegrammi` | |
-| `GameBoard.maxScore` | `daily_puzzles.max_score` | |
-| `GameState.score` | `game_states.current_score` | Renamed `score` → `current_score` in the DB/API to avoid ambiguity with `player_stats.total_points`. |
-| `GameState.foundWords` | `game_state_found_words` | |
-| `GameState.invalidWords` | `game_state_invalid_words` | |
-| `GameState.foundMielegrammi` | *(not persisted — derived)* | Same as the frontend: computed as `foundWords ∩ puzzle_mielegrammi`, never stored as its own column/table. |
-| `GameState.isCompleted` | `game_states.is_completed` | |
-| `GameState.rankLabel` | *(not persisted — derived)* | Recomputed on every read from `current_score / max_score`, exactly like the frontend never trusts a stored rank. |
-| `PlayerStats` (all fields) | `player_stats` | |
-| `PlayerStats.currentSeason` | `player_seasons` (row where `year` = current year) | |
-| `PlayerStats.currentSeason.claimedStreakMilestones` | `player_season_milestones` | |
-| `PlayerStats.seasonHistory` | `player_seasons` (all rows where `year` < current year) | Same table serves both current and historical seasons — "current" is just "the row for this year." |
-| `PlayerStats.dailyRankDistribution` | `player_daily_rank_distribution` | |
+| Frontend concept | Backend representation (MySQL) | Notes |
+| --- | --- | --- |
+| `GameBoard.cells` | `daily_puzzles.center_letter` + `puzzle_outer_letters` | Order is client-only. |
+| `GameBoard.possibleWords` | `puzzle_words` | Filtered where `is_mielegramma = false`. |
+| `GameBoard.mielegrammi` | `puzzle_words` | Filtered where `is_mielegramma = true`. |
+| `GameState.score` | `game_sessions.current_score` | Updated atomically. |
+| `GameState.foundWords` | `found_words` | Append-only per session. |
+| `GameState.invalidWords` | `invalid_word_attempts` | Full audit log. |
+| `PlayerStats` | `player_stats` | Primary key: `user_id`. |
+| `PlayerStats.currentSeason` | `player_seasons` | Filtered by current `year`. |
 
 ---
 
-## 6. Portability Notes (MySQL / Oracle)
+## 5. MySQL Best Practices & Optimization Notes
 
-- `boolean` → MySQL native `BOOLEAN` (alias for `TINYINT(1)`); Oracle has no native boolean prior to 23c, so map to `NUMBER(1)` via Hibernate's boolean-to-numeric converter — handled transparently by JPA's `@Convert` or the platform dialect, no schema-level branching needed in application code.
-- `varchar(36)` UUIDs avoid any dependency on auto-increment/sequence semantics, which differ meaningfully between MySQL (`AUTO_INCREMENT`) and Oracle (`SEQUENCE` + trigger, or `GENERATED AS IDENTITY` from 12c+).
-- `timestamp` columns should be stored in UTC at the application layer regardless of engine, to avoid session-timezone drift between MySQL and Oracle connections.
+* **Engine:** Strict `InnoDB` on all tables for ACID compliance and row-level locking during word submissions.
+
+
+* **Charset/Collation:** Database-wide `utf8mb4` / `utf8mb4_0900_ai_ci` to natively support emojis in rank titles and dictionary labels.
+
+
+* **Keys:** Application-generated `VARCHAR(36)` UUID strings.
+
+
+* **Timezones:** All `timestamp` columns strictly store UTC.
