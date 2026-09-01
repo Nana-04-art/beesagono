@@ -2,17 +2,22 @@ package com.beesagono.backend.service;
 
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.Set;
-import java.util.stream.Collectors;
 
 import org.springframework.http.HttpStatus;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
-import com.beesagono.backend.dto.auth.AuthResponse;
+import com.beesagono.backend.dto.auth.LoginRequest;
+import com.beesagono.backend.dto.auth.LoginResponse;
 import com.beesagono.backend.dto.auth.RegisterRequest;
+import com.beesagono.backend.dto.auth.RegisterResponse;
 import com.beesagono.backend.entity.Role;
 import com.beesagono.backend.entity.User;
 import com.beesagono.backend.entity.UserRole;
@@ -37,10 +42,11 @@ public class AuthServiceImpl implements AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtUtils jwtUtils;
     private final TokenBlacklist tokenBlacklist;
+    private final AuthenticationManager authenticationManager;
 
     @Override
     @Transactional
-    public AuthResponse register(RegisterRequest request) {
+    public RegisterResponse register(RegisterRequest request) {
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Email già in uso");
         }
@@ -73,20 +79,42 @@ public class AuthServiceImpl implements AuthService {
         userRoleRepository.save(userRoleAssociation);
         savedUser.getUserRoles().add(userRoleAssociation);
 
-        UserDetailsImpl userDetails = UserDetailsImpl.build(savedUser);
-        String token = jwtUtils.generateJwtToken(userDetails);
-
-        Set<String> roles = userDetails.getAuthorities().stream()
-                .map(authority -> authority.getAuthority())
-                .collect(Collectors.toSet());
-
-        return AuthResponse.builder()
-                .accessToken(token)
-                .tokenType("Bearer")
-                .userId(savedUser.getId())
+        return RegisterResponse.builder()
+                .id(savedUser.getId())
                 .username(savedUser.getUsername())
                 .email(savedUser.getEmail())
-                .role(roles)
+                .role(userRole.getName().name())
+                .message("Utente registrato con successo")
+                .build();
+    }
+
+    @Override
+    public LoginResponse login(LoginRequest request) {
+        // Performs authentication using usernameOrEmail and password
+        Authentication authentication = authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(
+                        request.getUsernameOrEmail(),
+                        request.getPassword()));
+
+        // Set the authentication in the Spring Security context
+        SecurityContextHolder.getContext().setAuthentication(authentication);
+
+        UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
+
+        String token = jwtUtils.generateJwtToken(userDetails);
+
+        String role = userDetails.getAuthorities().stream()
+                .findFirst()
+                .map(GrantedAuthority::getAuthority)
+                .orElse("ROLE_USER");
+
+        return LoginResponse.builder()
+                .accessToken(token)
+                .tokenType("Bearer")
+                .id(userDetails.getId())
+                .username(userDetails.getUsername())
+                .email(userDetails.getEmail())
+                .role(role)
                 .build();
     }
 

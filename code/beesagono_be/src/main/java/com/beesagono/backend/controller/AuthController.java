@@ -10,8 +10,10 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.beesagono.backend.dto.auth.AuthResponse;
+import com.beesagono.backend.dto.auth.LoginRequest;
+import com.beesagono.backend.dto.auth.LoginResponse;
 import com.beesagono.backend.dto.auth.RegisterRequest;
+import com.beesagono.backend.dto.auth.RegisterResponse;
 import com.beesagono.backend.service.AuthService;
 
 import jakarta.validation.Valid;
@@ -25,9 +27,15 @@ public class AuthController {
     private final AuthService authService;
 
     @PostMapping("/register")
-    public ResponseEntity<AuthResponse> register(@Valid @RequestBody RegisterRequest request) {
-        AuthResponse response = authService.register(request);
+    public ResponseEntity<RegisterResponse> register(@Valid @RequestBody RegisterRequest request) {
+        RegisterResponse response = authService.register(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    @PostMapping("/login")
+    public ResponseEntity<LoginResponse> login(@Valid @RequestBody LoginRequest request) {
+        LoginResponse response = authService.login(request);
+        return ResponseEntity.ok(response);
     }
 
     @PostMapping("/logout")
