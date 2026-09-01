@@ -1,16 +1,9 @@
 package com.beesagono.backend.entity;
 
 import java.util.Date;
-
 import com.beesagono.backend.entity.id.MilestoneRedemptionId;
-
-import jakarta.persistence.Column;
-import jakarta.persistence.EmbeddedId;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Table;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import jakarta.persistence.*;
+import lombok.*;
 import lombok.experimental.SuperBuilder;
 import org.hibernate.annotations.CreationTimestamp;
 
@@ -24,6 +17,13 @@ public class MilestoneRedemption {
 
     @EmbeddedId
     private MilestoneRedemptionId id;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumns({
+            @JoinColumn(name = "user_id", referencedColumnName = "user_id", insertable = false, updatable = false),
+            @JoinColumn(name = "year", referencedColumnName = "year", insertable = false, updatable = false)
+    })
+    private PlayerSeason playerSeason;
 
     @CreationTimestamp
     @Column(name = "redeemed_at", updatable = false, nullable = false)
