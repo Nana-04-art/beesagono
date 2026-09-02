@@ -1,6 +1,6 @@
 package com.beesagono.backend.entity;
 
-import java.util.Date;
+import java.time.LocalDateTime;
 import java.util.List;
 
 import jakarta.persistence.Column;
@@ -66,5 +66,5 @@ public class User {
 
 	@CreationTimestamp
 	@Column(name = "registered_at", updatable = false, nullable = false)
-	private Date registeredAt;
+	private LocalDateTime registeredAt;
 }
