@@ -10,6 +10,7 @@ import org.mapstruct.Mapping;
 public interface DictionaryWordMapper {
 
     @Mapping(target = "addedByUsername", source = "addedByUser.username")
+    @Mapping(target = "wordLength", expression = "java(dictionaryWord.getWord() != null ? dictionaryWord.getWord().length() : null)")
     DictionaryWordResponse toDictionaryWordResponse(DictionaryWord dictionaryWord);
 
     @Mapping(target = "wordLength", ignore = true)
