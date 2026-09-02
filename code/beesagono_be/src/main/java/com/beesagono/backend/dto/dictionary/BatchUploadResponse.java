@@ -1,4 +1,4 @@
-package com.beesagono.backend.dto.auth;
+package com.beesagono.backend.dto.dictionary;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -9,11 +9,10 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class RegisterResponse {
+public class BatchUploadResponse {
 
-    private String id;
-    private String username;
-    private String email;
-    private String role;
+    private int totalProcessed;
+    private int addedCount;
+    private int skippedCount;
     private String message;
 }
