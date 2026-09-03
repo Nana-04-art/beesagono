@@ -18,10 +18,15 @@ public class MilestoneRedemption {
     @EmbeddedId
     private MilestoneRedemptionId id;
 
+    @MapsId("userId")
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumns({
             @JoinColumn(name = "user_id", referencedColumnName = "user_id", insertable = false, updatable = false),
-            @JoinColumn(name = "year", referencedColumnName = "year", insertable = false, updatable = false)
+            @JoinColumn(name = "season_year", referencedColumnName = "season_year", insertable = false, updatable = false)
     })
     private PlayerSeason playerSeason;
 

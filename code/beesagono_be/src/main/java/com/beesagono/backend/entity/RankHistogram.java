@@ -28,7 +28,7 @@ public class RankHistogram {
 
     @ManyToOne
     @MapsId("userId")
-    @JoinColumn(name = "user_id", nullable = false)
+    @JoinColumn(name = "user_id", insertable = false, updatable = false)
     private User user;
 
     @Builder.Default

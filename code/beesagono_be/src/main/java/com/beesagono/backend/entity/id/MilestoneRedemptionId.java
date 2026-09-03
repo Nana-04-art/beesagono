@@ -16,7 +16,7 @@ public class MilestoneRedemptionId implements Serializable {
     @Column(name = "user_id")
     private String userId;
 
-    @Column(name = "year")
+    @Column(name = "season_year")
     private Integer year;
 
     @Column(name = "streak_length")

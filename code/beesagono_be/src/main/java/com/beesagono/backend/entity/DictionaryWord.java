@@ -39,8 +39,9 @@ public class DictionaryWord {
     @Column(name = "word_length", insertable = false, updatable = false)
     private Integer wordLength;
 
+    @Builder.Default
     @Column(name = "unique_letters_count", nullable = false)
-    private Integer uniqueLettersCount;
+    private Integer uniqueLettersCount = 0;
 
     @Builder.Default
     @Column(name = "is_candidate_pangram", nullable = false)

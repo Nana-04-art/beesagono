@@ -13,7 +13,7 @@ public interface PlayerStatsMapper {
     @Mapping(target = "userId", source = "user.id")
     PlayerStatsResponse toPlayerStatsResponse(PlayerStats playerStats);
 
-    @Mapping(target = "userId", source = "id.userId")
-    @Mapping(target = "year", source = "id.year")
+    @Mapping(target = "userId", source = "user.id")
+    @Mapping(target = "year", expression = "java(playerSeason.getId() != null ? playerSeason.getId().getSeasonYear() : null)")
     PlayerSeasonResponse toPlayerSeasonResponse(PlayerSeason playerSeason);
 }

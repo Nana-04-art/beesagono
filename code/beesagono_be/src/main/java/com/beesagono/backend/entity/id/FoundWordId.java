@@ -1,7 +1,7 @@
 package com.beesagono.backend.entity.id;
 
 import java.io.Serializable;
-
+import jakarta.persistence.Column;
 import jakarta.persistence.Embeddable;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -13,6 +13,9 @@ import lombok.NoArgsConstructor;
 @Embeddable
 public class FoundWordId implements Serializable {
 
+	@Column(name = "session_id")
 	private String sessionId;
+
+	@Column(name = "word")
 	private String word;
 }
