@@ -11,14 +11,16 @@ import java.util.Set;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class AuthResponse {
+public class LoginResponse {
 
     private String accessToken;
     private String refreshToken;
+
     @Builder.Default
     private String tokenType = "Bearer";
-    private String userId;
+
+    private String id;
     private String username;
     private String email;
-    private Set<String> roles;
+    private String role;
 }
