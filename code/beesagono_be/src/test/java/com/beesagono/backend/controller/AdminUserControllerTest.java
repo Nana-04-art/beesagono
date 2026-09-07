@@ -39,7 +39,9 @@ import java.util.Set;
 import static org.hamcrest.Matchers.hasItem;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -101,11 +103,10 @@ class AdminUserControllerTest {
                 "admin",
                 "admin@example.com",
                 "pwd",
-                List.of(new SimpleGrantedAuthority("ROLE_ADMIN"))
-        );
+                List.of(new SimpleGrantedAuthority("ROLE_ADMIN")));
 
-        UsernamePasswordAuthenticationToken auth =
-                new UsernamePasswordAuthenticationToken(principal, null, principal.getAuthorities());
+        UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(principal, null,
+                principal.getAuthorities());
         SecurityContextHolder.getContext().setAuthentication(auth);
     }
 
