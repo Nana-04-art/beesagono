@@ -57,17 +57,17 @@ import static org.mockito.Mockito.verify;
 @ExtendWith(MockitoExtension.class)
 class AdminServiceImplTest {
 
-    @Mock
-    private UserRepository userRepository;
+        @Mock
+        private UserRepository userRepository;
 
-    @Mock
-    private RoleRepository roleRepository;
+        @Mock
+        private RoleRepository roleRepository;
 
-    @Mock
-    private UserRoleRepository userRoleRepository;
+        @Mock
+        private UserRoleRepository userRoleRepository;
 
-    @Mock
-    private PasswordEncoder passwordEncoder;
+        @Mock
+        private PasswordEncoder passwordEncoder;
 
     @Mock
     private UserMapper userMapper;
@@ -106,19 +106,19 @@ class AdminServiceImplTest {
         User savedUser = createUser("user-admin-1", "adminuser", "admin@example.com");
         UserResponse expectedResponse = createUserResponse("user-admin-1", "adminuser", "admin@example.com", Set.of("ROLE_ADMIN", "ROLE_USER"));
 
-        when(userRepository.existsByUsername("adminuser")).thenReturn(false);
-        when(userRepository.existsByEmail("admin@example.com")).thenReturn(false);
-        when(roleRepository.findByName(RoleName.ROLE_ADMIN)).thenReturn(Optional.of(adminRole));
-        when(roleRepository.findByName(RoleName.ROLE_USER)).thenReturn(Optional.of(userRole));
-        when(passwordEncoder.encode("password123")).thenReturn("encodedPassword");
-        when(userRepository.saveAndFlush(any(User.class))).thenReturn(savedUser);
-        when(userMapper.toUserResponse(savedUser)).thenReturn(expectedResponse);
+                when(userRepository.existsByUsername("adminuser")).thenReturn(false);
+                when(userRepository.existsByEmail("admin@example.com")).thenReturn(false);
+                when(roleRepository.findByName(RoleName.ROLE_ADMIN)).thenReturn(Optional.of(adminRole));
+                when(roleRepository.findByName(RoleName.ROLE_USER)).thenReturn(Optional.of(userRole));
+                when(passwordEncoder.encode("password123")).thenReturn("encodedPassword");
+                when(userRepository.saveAndFlush(any(User.class))).thenReturn(savedUser);
+                when(userMapper.toUserResponse(savedUser)).thenReturn(expectedResponse);
 
-        UserResponse response = adminService.createAdmin(request);
+                UserResponse response = adminService.createAdmin(request);
 
-        assertThat(response).isNotNull();
-        assertThat(response.getId()).isEqualTo("user-admin-1");
-        assertThat(response.getUsername()).isEqualTo("adminuser");
+                assertThat(response).isNotNull();
+                assertThat(response.getId()).isEqualTo("user-admin-1");
+                assertThat(response.getUsername()).isEqualTo("adminuser");
 
         verify(userRoleRepository, times(2)).save(any(UserRole.class));
         verify(userRepository, times(1)).saveAndFlush(any(User.class));
@@ -129,45 +129,45 @@ class AdminServiceImplTest {
     void shouldThrowConflictWhenUsernameExists() {
         CreateAdminRequest request = createAdminRequest("existingAdmin", "admin@example.com", "pwd");
 
-        when(userRepository.existsByUsername("existingAdmin")).thenReturn(true);
+                when(userRepository.existsByUsername("existingAdmin")).thenReturn(true);
 
-        assertThatThrownBy(() -> adminService.createAdmin(request))
-                .isInstanceOf(ResponseStatusException.class)
-                .hasMessageContaining("Username già in uso")
-                .extracting(e -> ((ResponseStatusException) e).getStatusCode())
-                .isEqualTo(HttpStatus.CONFLICT);
-    }
+                assertThatThrownBy(() -> adminService.createAdmin(request))
+                                .isInstanceOf(ResponseStatusException.class)
+                                .hasMessageContaining("Username già in uso")
+                                .extracting(e -> ((ResponseStatusException) e).getStatusCode())
+                                .isEqualTo(HttpStatus.CONFLICT);
+        }
 
     @Test
     @DisplayName("createAdmin - Throws CONFLICT when email exists")
     void shouldThrowConflictWhenEmailExists() {
         CreateAdminRequest request = createAdminRequest("newAdmin", "existing@example.com", "pwd");
 
-        when(userRepository.existsByUsername("newAdmin")).thenReturn(false);
-        when(userRepository.existsByEmail("existing@example.com")).thenReturn(true);
+                when(userRepository.existsByUsername("newAdmin")).thenReturn(false);
+                when(userRepository.existsByEmail("existing@example.com")).thenReturn(true);
 
-        assertThatThrownBy(() -> adminService.createAdmin(request))
-                .isInstanceOf(ResponseStatusException.class)
-                .hasMessageContaining("Email già in uso")
-                .extracting(e -> ((ResponseStatusException) e).getStatusCode())
-                .isEqualTo(HttpStatus.CONFLICT);
-    }
+                assertThatThrownBy(() -> adminService.createAdmin(request))
+                                .isInstanceOf(ResponseStatusException.class)
+                                .hasMessageContaining("Email già in uso")
+                                .extracting(e -> ((ResponseStatusException) e).getStatusCode())
+                                .isEqualTo(HttpStatus.CONFLICT);
+        }
 
     @Test
     @DisplayName("createAdmin - Throws INTERNAL_SERVER_ERROR when ADMIN role missing")
     void shouldThrowInternalServerErrorWhenAdminRoleNotFound() {
         CreateAdminRequest request = createAdminRequest("adminuser", "admin@example.com", "pwd");
 
-        when(userRepository.existsByUsername("adminuser")).thenReturn(false);
-        when(userRepository.existsByEmail("admin@example.com")).thenReturn(false);
-        when(roleRepository.findByName(RoleName.ROLE_ADMIN)).thenReturn(Optional.empty());
+                when(userRepository.existsByUsername("adminuser")).thenReturn(false);
+                when(userRepository.existsByEmail("admin@example.com")).thenReturn(false);
+                when(roleRepository.findByName(RoleName.ROLE_ADMIN)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> adminService.createAdmin(request))
-                .isInstanceOf(ResponseStatusException.class)
-                .hasMessageContaining("Ruolo ADMIN non trovato")
-                .extracting(e -> ((ResponseStatusException) e).getStatusCode())
-                .isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
-    }
+                assertThatThrownBy(() -> adminService.createAdmin(request))
+                                .isInstanceOf(ResponseStatusException.class)
+                                .hasMessageContaining("Ruolo ADMIN non trovato")
+                                .extracting(e -> ((ResponseStatusException) e).getStatusCode())
+                                .isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+        }
 
     @Test
     @DisplayName("getUsers - Returns page without search filter")
@@ -176,12 +176,12 @@ class AdminServiceImplTest {
         User user = createUser("u1", "user1", "user1@example.com");
         UserResponse responseDto = createUserResponse("u1", "user1", "user1@example.com", Set.of("ROLE_USER"));
 
-        Page<User> userPage = new PageImpl<>(List.of(user));
+                Page<User> userPage = new PageImpl<>(List.of(user));
 
-        when(userRepository.findAll(pageable)).thenReturn(userPage);
-        when(userMapper.toUserResponse(user)).thenReturn(responseDto);
+                when(userRepository.findAll(pageable)).thenReturn(userPage);
+                when(userMapper.toUserResponse(user)).thenReturn(responseDto);
 
-        Page<UserResponse> result = adminService.getUsers(null, pageable);
+                Page<UserResponse> result = adminService.getUsers(null, pageable);
 
         assertThat(result.getContent()).hasSize(1);
         assertThat(result.getContent().get(0).getUsername()).isEqualTo("user1");
@@ -198,13 +198,13 @@ class AdminServiceImplTest {
         User user = createUser("u2", "john_doe", "john@example.com");
         UserResponse responseDto = createUserResponse("u2", "john_doe", "john@example.com", Set.of("ROLE_USER"));
 
-        Page<User> userPage = new PageImpl<>(List.of(user));
+                Page<User> userPage = new PageImpl<>(List.of(user));
 
         when(userRepository.findByUsernameContainingIgnoreCaseOrEmailContainingIgnoreCase(searchKey, searchKey, pageable))
                 .thenReturn(userPage);
         when(userMapper.toUserResponse(user)).thenReturn(responseDto);
 
-        Page<UserResponse> result = adminService.getUsers(searchKey, pageable);
+                Page<UserResponse> result = adminService.getUsers(searchKey, pageable);
 
         assertThat(result.getContent()).hasSize(1);
         assertThat(result.getContent().get(0).getUsername()).isEqualTo("john_doe");
