@@ -1,6 +1,5 @@
 package com.beesagono.backend.service;
 
-
 import com.beesagono.backend.dto.dictionary.AddWordRequest;
 import com.beesagono.backend.dto.dictionary.BatchAddWordRequest;
 import com.beesagono.backend.dto.dictionary.BatchUploadResponse;
@@ -147,10 +146,12 @@ public class DictionaryServiceImpl implements DictionaryService {
                     int uniqueCount = (int) w.chars().distinct().count();
                     return DictionaryWord.builder()
                             .word(w)
+                            .wordLength(w.length())
                             .uniqueLettersCount(uniqueCount)
                             .letterMask(calculateLetterMask(w))
                             .isCandidatePangram(uniqueCount == 7)
                             .addedByUser(adminUser)
+                            .addedAt(new java.util.Date())
                             .build();
                 })
                 .collect(Collectors.toList());
@@ -178,6 +179,10 @@ public class DictionaryServiceImpl implements DictionaryService {
         return withoutAccents.replaceAll("[^A-Z]", "");
     }
 
+    /**
+     * Calculates the 32-bit bitmask based on the positions of the letters A-Z
+     * (A=bit 0, B=bit 1, ..., Z=bit 25)
+     */
     private int calculateLetterMask(String word) {
         if (word == null) {
             return 0;
