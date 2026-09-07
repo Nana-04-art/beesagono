@@ -1,6 +1,10 @@
 package com.beesagono.backend.service;
 
-import com.beesagono.backend.dto.dictionary.*;
+import com.beesagono.backend.dto.dictionary.AddWordRequest;
+import com.beesagono.backend.dto.dictionary.BatchAddWordRequest;
+import com.beesagono.backend.dto.dictionary.BatchUploadResponse;
+import com.beesagono.backend.dto.dictionary.DictionaryFilterRequest;
+import com.beesagono.backend.dto.dictionary.DictionaryWordResponse;
 import com.beesagono.backend.entity.DictionaryWord;
 import com.beesagono.backend.entity.User;
 import com.beesagono.backend.mapper.DictionaryWordMapper;
@@ -20,7 +24,11 @@ import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.text.Normalizer;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
+import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.springframework.data.domain.Page;
@@ -62,6 +70,7 @@ public class DictionaryServiceImpl implements DictionaryService {
                 .word(cleanWord)
                 .wordLength(cleanWord.length())
                 .uniqueLettersCount(uniqueLetters)
+                .letterMask(calculateLetterMask(cleanWord))
                 .isCandidatePangram(isPangram)
                 .addedByUser(adminUser)
                 .addedAt(new java.util.Date())
@@ -139,9 +148,12 @@ public class DictionaryServiceImpl implements DictionaryService {
                     int uniqueCount = (int) w.chars().distinct().count();
                     return DictionaryWord.builder()
                             .word(w)
+                            .wordLength(w.length())
                             .uniqueLettersCount(uniqueCount)
+                            .letterMask(calculateLetterMask(w))
                             .isCandidatePangram(uniqueCount == 7)
                             .addedByUser(adminUser)
+                            .addedAt(new java.util.Date())
                             .build();
                 })
                 .collect(Collectors.toList());
@@ -167,5 +179,22 @@ public class DictionaryServiceImpl implements DictionaryService {
         String normalized = Normalizer.normalize(input.trim().toUpperCase(Locale.ITALIAN), Normalizer.Form.NFD);
         String withoutAccents = normalized.replaceAll("\\p{M}", "");
         return withoutAccents.replaceAll("[^A-Z]", "");
+    }
+
+    /**
+     * Calculates the 32-bit bitmask based on the positions of the letters A-Z
+     * (A=bit 0, B=bit 1, ..., Z=bit 25)
+     */
+    private int calculateLetterMask(String word) {
+        if (word == null) {
+            return 0;
+        }
+        int mask = 0;
+        for (char c : word.toUpperCase(Locale.ITALIAN).toCharArray()) {
+            if (c >= 'A' && c <= 'Z') {
+                mask |= (1 << (c - 'A'));
+            }
+        }
+        return mask;
     }
 }
