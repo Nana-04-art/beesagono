@@ -43,6 +43,3 @@ Thumbs.db
 
 # Logs
 *.log
-
-# Local application properties
-**/src/main/resources/application.properties

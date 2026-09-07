@@ -10,13 +10,15 @@ import jakarta.persistence.OneToMany;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
-import lombok.Data;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 import lombok.experimental.SuperBuilder;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UuidGenerator;
 
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
@@ -42,12 +44,6 @@ public class User {
 	@OneToMany(mappedBy = "user")
 	private List<RankHistogram> rankHistogramEntries;
 
-	/**
-	 * Shared-key one-to-one relationship with player_stats. 
-	 * Note: in the SQL schema, the FK is physically declared on users.id -> player_stats.user_id
-	 * (direction reversed compared to the norm); here it is modeled in the
-	 * conventional way, with PlayerStats owning the FK via @MapsId.
-	 */
 	@OneToOne(mappedBy = "user")
 	private PlayerStats playerStats;
 

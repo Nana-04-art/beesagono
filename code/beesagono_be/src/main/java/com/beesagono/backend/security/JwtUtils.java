@@ -13,6 +13,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.stereotype.Component;
 
+import java.nio.charset.StandardCharsets;
 import java.security.Key;
 import java.time.Instant;
 import java.util.Date;
@@ -27,9 +28,10 @@ public class JwtUtils {
     private final Key signingKey;
     private final long jwtExpirationMs;
 
-    public JwtUtils(@Value("${jwt.secret}") String secret,
+    public JwtUtils(
+            @Value("${jwt.secret}") String secret,
             @Value("${jwt.expiration-ms}") long jwtExpirationMs) {
-        this.signingKey = Keys.hmacShaKeyFor(secret.getBytes());
+        this.signingKey = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
         this.jwtExpirationMs = jwtExpirationMs;
     }
 

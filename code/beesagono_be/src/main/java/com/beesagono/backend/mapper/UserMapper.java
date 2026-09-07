@@ -37,7 +37,7 @@ public interface UserMapper {
             return Collections.emptySet();
         }
         return userRoles.stream()
-                .filter(ur -> ur.getRole() != null && ur.getRole().getName() != null)
+                .filter(ur -> ur != null && ur.getRole() != null && ur.getRole().getName() != null)
                 .map(ur -> ur.getRole().getName().name())
                 .collect(Collectors.toSet());
     }

@@ -1,6 +1,5 @@
 package com.beesagono.backend.security;
 
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import java.time.Instant;
@@ -19,7 +18,6 @@ public class TokenBlacklist {
         return blacklistedTokens.containsKey(token);
     }
 
-    @Scheduled(fixedDelay = 3600000)
     public void purgeExpiredTokens() {
         Instant now = Instant.now();
         blacklistedTokens.entrySet().removeIf(entry -> entry.getValue().isBefore(now));

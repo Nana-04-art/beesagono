@@ -10,9 +10,11 @@ import org.mapstruct.Mapping;
 @Mapper(componentModel = "spring")
 public interface PlayerStatsMapper {
 
-    @Mapping(target = "userId", source = "user.id")
+    // PlayerStat mapping
+    @Mapping(target = "userId", source = "userId")
     PlayerStatsResponse toPlayerStatsResponse(PlayerStats playerStats);
 
+    // PlayerSeason mapping
     @Mapping(target = "userId", source = "user.id")
     @Mapping(target = "year", expression = "java(playerSeason.getId() != null ? playerSeason.getId().getSeasonYear() : null)")
     PlayerSeasonResponse toPlayerSeasonResponse(PlayerSeason playerSeason);

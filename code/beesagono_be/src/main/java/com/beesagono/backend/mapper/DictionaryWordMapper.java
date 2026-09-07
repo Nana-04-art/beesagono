@@ -14,6 +14,8 @@ public interface DictionaryWordMapper {
 
     @Mapping(target = "wordLength", ignore = true)
     @Mapping(target = "uniqueLettersCount", ignore = true)
+    @Mapping(target = "isCandidatePangram", defaultValue = "false")
+    @Mapping(target = "letterMask", ignore = true)
     @Mapping(target = "addedByUser", ignore = true)
     @Mapping(target = "addedAt", ignore = true)
     @Mapping(target = "puzzleWords", ignore = true)
