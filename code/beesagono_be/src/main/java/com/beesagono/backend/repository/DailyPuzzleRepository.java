@@ -8,4 +8,5 @@ import java.util.Optional;
 
 public interface DailyPuzzleRepository extends JpaRepository<DailyPuzzle, String> {
     Optional<DailyPuzzle> findByPuzzleDate(LocalDate puzzleDate);
+    boolean existsByPuzzleDate(LocalDate puzzleDate);
 }
