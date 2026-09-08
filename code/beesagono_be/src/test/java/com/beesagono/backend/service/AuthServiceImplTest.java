@@ -6,6 +6,7 @@ import com.beesagono.backend.dto.auth.RegisterRequest;
 import com.beesagono.backend.dto.auth.RegisterResponse;
 import com.beesagono.backend.entity.Role;
 import com.beesagono.backend.entity.User;
+import com.beesagono.backend.entity.UserRole;
 import com.beesagono.backend.enums.RoleName;
 import com.beesagono.backend.repository.RoleRepository;
 import com.beesagono.backend.repository.UserRepository;
@@ -19,6 +20,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -43,16 +45,22 @@ class AuthServiceImplTest {
 
     @Mock
     private UserRepository userRepository;
+
     @Mock
     private RoleRepository roleRepository;
+
     @Mock
     private UserRoleRepository userRoleRepository;
+
     @Mock
     private PasswordEncoder passwordEncoder;
+
     @Mock
     private JwtUtils jwtUtils;
+
     @Mock
     private TokenBlacklist tokenBlacklist;
+
     @Mock
     private AuthenticationManager authenticationManager;
 
@@ -61,7 +69,7 @@ class AuthServiceImplTest {
 
     @Test
     @DisplayName("register - Success")
-    void register_Success() {
+    void shouldRegisterSuccessfully() {
         RegisterRequest request = new RegisterRequest();
         request.setUsername("testuser");
         request.setEmail("test@example.com");
@@ -86,12 +94,12 @@ class AuthServiceImplTest {
         assertThat(response).isNotNull();
         assertThat(response.getId()).isEqualTo("user-1");
         assertThat(response.getUsername()).isEqualTo("testuser");
-        verify(userRoleRepository, times(1)).save(any());
+        verify(userRoleRepository, times(1)).save(any(UserRole.class));
     }
 
     @Test
-    @DisplayName("register - Throws Exception when email exists")
-    void register_EmailAlreadyExists() {
+    @DisplayName("register - Throws BAD_REQUEST when email exists")
+    void shouldThrowBadRequestWhenEmailExists() {
         RegisterRequest request = new RegisterRequest();
         request.setEmail("test@example.com");
 
@@ -99,12 +107,14 @@ class AuthServiceImplTest {
 
         assertThatThrownBy(() -> authService.register(request))
                 .isInstanceOf(ResponseStatusException.class)
-                .hasMessageContaining("Email già in uso");
+                .hasMessageContaining("Email già in uso")
+                .extracting(e -> ((ResponseStatusException) e).getStatusCode())
+                .isEqualTo(HttpStatus.BAD_REQUEST);
     }
 
     @Test
     @DisplayName("login - Success")
-    void login_Success() {
+    void shouldLoginSuccessfully() {
         LoginRequest request = new LoginRequest();
         request.setUsernameOrEmail("testuser");
         request.setPassword("password123");
@@ -126,7 +136,7 @@ class AuthServiceImplTest {
 
     @Test
     @DisplayName("logout - Adds token to blacklist")
-    void logout_Success() {
+    void shouldAddTokenToBlacklistOnLogout() {
         String token = "Bearer sample.jwt.token";
         Instant expiry = Instant.now().plusSeconds(3600);
 
