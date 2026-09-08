@@ -4,6 +4,7 @@ import com.beesagono.backend.dto.auth.CreateAdminRequest;
 import com.beesagono.backend.dto.auth.UserResponse;
 import com.beesagono.backend.entity.Role;
 import com.beesagono.backend.entity.User;
+import com.beesagono.backend.entity.UserRole;
 import com.beesagono.backend.enums.RoleName;
 import com.beesagono.backend.mapper.UserMapper;
 import com.beesagono.backend.repository.RoleRepository;
@@ -58,7 +59,7 @@ class AdminServiceImplTest {
 
         @Test
         @DisplayName("createAdmin - Success")
-        void createAdmin_Success() {
+        void shouldCreateAdminSuccessfully() {
                 CreateAdminRequest request = new CreateAdminRequest();
                 request.setUsername("adminuser");
                 request.setEmail("admin@example.com");
@@ -95,13 +96,13 @@ class AdminServiceImplTest {
                 assertThat(response.getId()).isEqualTo("user-admin-1");
                 assertThat(response.getUsername()).isEqualTo("adminuser");
 
-                verify(userRoleRepository, times(2)).save(any());
+                verify(userRoleRepository, times(2)).save(any(UserRole.class));
                 verify(userRepository, times(1)).saveAndFlush(any(User.class));
         }
 
         @Test
-        @DisplayName("createAdmin - Username Conflict Throws 409")
-        void createAdmin_UsernameConflict() {
+        @DisplayName("createAdmin - Throws CONFLICT when username exists")
+        void shouldThrowConflictWhenUsernameExists() {
                 CreateAdminRequest request = new CreateAdminRequest();
                 request.setUsername("existingAdmin");
 
@@ -115,8 +116,8 @@ class AdminServiceImplTest {
         }
 
         @Test
-        @DisplayName("createAdmin - Email Conflict Throws 409")
-        void createAdmin_EmailConflict() {
+        @DisplayName("createAdmin - Throws CONFLICT when email exists")
+        void shouldThrowConflictWhenEmailExists() {
                 CreateAdminRequest request = new CreateAdminRequest();
                 request.setUsername("newAdmin");
                 request.setEmail("existing@example.com");
@@ -132,8 +133,8 @@ class AdminServiceImplTest {
         }
 
         @Test
-        @DisplayName("createAdmin - Role ADMIN Missing Throws 500")
-        void createAdmin_RoleAdminNotFound() {
+        @DisplayName("createAdmin - Throws INTERNAL_SERVER_ERROR when ADMIN role missing")
+        void shouldThrowInternalServerErrorWhenAdminRoleNotFound() {
                 CreateAdminRequest request = new CreateAdminRequest();
                 request.setUsername("adminuser");
                 request.setEmail("admin@example.com");
@@ -150,8 +151,8 @@ class AdminServiceImplTest {
         }
 
         @Test
-        @DisplayName("getUsers - Without Search Query Success")
-        void getUsers_WithoutSearch_Success() {
+        @DisplayName("getUsers - Returns page without search filter")
+        void shouldGetUsersWithoutSearch() {
                 Pageable pageable = Pageable.unpaged();
                 User user = User.builder().id("u1").username("user1").build();
                 UserResponse responseDto = UserResponse.builder().id("u1").username("user1").build();
@@ -167,13 +168,12 @@ class AdminServiceImplTest {
                 assertThat(result.getContent().get(0).getUsername()).isEqualTo("user1");
                 verify(userRepository, times(1)).findAll(pageable);
                 verify(userRepository, never()).findByUsernameContainingIgnoreCaseOrEmailContainingIgnoreCase(any(),
-                                any(),
-                                any());
+                                any(), any());
         }
 
         @Test
-        @DisplayName("getUsers - With Search Query Success")
-        void getUsers_WithSearch_Success() {
+        @DisplayName("getUsers - Returns filtered page with search query")
+        void shouldGetUsersWithSearch() {
                 Pageable pageable = Pageable.unpaged();
                 String searchKey = "john";
 
@@ -192,8 +192,7 @@ class AdminServiceImplTest {
                 assertThat(result.getContent()).hasSize(1);
                 assertThat(result.getContent().get(0).getUsername()).isEqualTo("john_doe");
                 verify(userRepository, times(1)).findByUsernameContainingIgnoreCaseOrEmailContainingIgnoreCase(
-                                searchKey,
-                                searchKey, pageable);
+                                searchKey, searchKey, pageable);
                 verify(userRepository, never()).findAll(pageable);
         }
 }

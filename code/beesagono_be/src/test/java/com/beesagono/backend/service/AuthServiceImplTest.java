@@ -9,6 +9,7 @@ import com.beesagono.backend.dto.auth.RegisterRequest;
 import com.beesagono.backend.dto.auth.RegisterResponse;
 import com.beesagono.backend.entity.Role;
 import com.beesagono.backend.entity.User;
+import com.beesagono.backend.entity.UserRole;
 import com.beesagono.backend.enums.RoleName;
 import com.beesagono.backend.repository.RoleRepository;
 import com.beesagono.backend.repository.UserRepository;
@@ -23,6 +24,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -53,16 +55,22 @@ class AuthServiceImplTest {
 
     @Mock
     private UserRepository userRepository;
+
     @Mock
     private RoleRepository roleRepository;
+
     @Mock
     private UserRoleRepository userRoleRepository;
+
     @Mock
     private PasswordEncoder passwordEncoder;
+
     @Mock
     private JwtUtils jwtUtils;
+
     @Mock
     private TokenBlacklist tokenBlacklist;
+
     @Mock
     private AuthenticationManager authenticationManager;
     @Mock
