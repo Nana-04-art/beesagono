@@ -243,6 +243,6 @@ class PuzzleGeneratorServiceImplTest {
 
         verify(dailyPuzzleRepository, times(1)).save(any(DailyPuzzle.class));
             verify(puzzleOuterLetterRepository, times(1)).saveAll(any());
-        }
     }
+}
 }
