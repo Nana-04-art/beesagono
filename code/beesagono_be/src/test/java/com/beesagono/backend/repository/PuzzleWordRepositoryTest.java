@@ -56,19 +56,11 @@ class PuzzleWordRepositoryTest {
                 .build());
     }
 
-<<<<<<< HEAD
     // --- findByIdPuzzleIdAndIdWord ---
 
     @Test
     @DisplayName("findByIdPuzzleIdAndIdWord - Should return PuzzleWord when composite key matches")
     void shouldFindByIdPuzzleIdAndIdWord() {
-=======
-    // --- findByPuzzleIdAndIdWord ---
-
-    @Test
-    @DisplayName("findByPuzzleIdAndIdWord - Should return PuzzleWord when composite key matches")
-    void shouldFindByPuzzleIdAndIdWord() {
->>>>>>> 3edd3fd (code/beesagono_be: update repository test)
         PuzzleWord pw = PuzzleWord.builder()
                 .id(new PuzzleWordId(puzzle.getId(), "ALBERGO"))
                 .puzzle(puzzle)
@@ -77,26 +69,16 @@ class PuzzleWordRepositoryTest {
                 .build();
         entityManager.persistAndFlush(pw);
 
-<<<<<<< HEAD
         Optional<PuzzleWord> result = puzzleWordRepository.findByIdPuzzleIdAndIdWord(puzzle.getId(), "ALBERGO");
-=======
-        Optional<PuzzleWord> result = puzzleWordRepository.findByPuzzleIdAndIdWord(puzzle.getId(), "ALBERGO");
->>>>>>> 3edd3fd (code/beesagono_be: update repository test)
 
         assertThat(result).isPresent();
         assertThat(result.get().getDictionaryWord().getWord()).isEqualTo("ALBERGO");
     }
 
     @Test
-<<<<<<< HEAD
     @DisplayName("findByIdPuzzleIdAndIdWord - Should return empty Optional when not found")
     void shouldReturnEmptyWhenPuzzleWordNotFound() {
         Optional<PuzzleWord> result = puzzleWordRepository.findByIdPuzzleIdAndIdWord(puzzle.getId(), "INEXISTENT");
-=======
-    @DisplayName("findByPuzzleIdAndIdWord - Should return empty Optional when not found")
-    void shouldReturnEmptyWhenPuzzleWordNotFound() {
-        Optional<PuzzleWord> result = puzzleWordRepository.findByPuzzleIdAndIdWord(puzzle.getId(), "INEXISTENT");
->>>>>>> 3edd3fd (code/beesagono_be: update repository test)
 
         assertThat(result).isEmpty();
     }
@@ -114,25 +96,15 @@ class PuzzleWordRepositoryTest {
                 .build();
         entityManager.persistAndFlush(pw);
 
-<<<<<<< HEAD
         int count = puzzleWordRepository.countByIdPuzzleId(puzzle.getId());
 
         assertThat(count).isEqualTo(1);
-=======
-        long count = puzzleWordRepository.countByIdPuzzleId(puzzle.getId());
-
-        assertThat(count).isEqualTo(1L);
->>>>>>> 3edd3fd (code/beesagono_be: update repository test)
     }
 
     @Test
     @DisplayName("countByIdPuzzleId - Should return zero when puzzle has no words")
     void shouldReturnZeroWhenPuzzleHasNoWords() {
-<<<<<<< HEAD
         int count = puzzleWordRepository.countByIdPuzzleId("fake-puzzle-id");
-=======
-        long count = puzzleWordRepository.countByIdPuzzleId("fake-puzzle-id");
->>>>>>> 3edd3fd (code/beesagono_be: update repository test)
 
         assertThat(count).isZero();
     }
