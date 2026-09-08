@@ -20,14 +20,14 @@ public interface DictionaryWordRepository
         List<String> findCandidatePangrams();
 
         /**
-         * Trova tutte le parole che:
-         * 1. Contengono la lettera centrale: (letter_mask & centerBit) = centerBit
-         * 2. Sono composte SOLO da sottoinsiemi delle lettere del puzzle: (letter_mask
-         * | puzzleMask) = puzzleMask
+         * Find all words that:
+         * Contain the center letter: (letter_mask & centerBit) = centerBit
+         * Are composed ONLY of subsets of the puzzle letters: (letter_mask |
+         * puzzleMask) = puzzleMask
          */
-        @Query(value = "SELECT * FROM dictionary_words dw " +
-                        "WHERE (dw.letter_mask & :centerBit) = :centerBit " +
-                        "AND (dw.letter_mask | :puzzleMask) = :puzzleMask", nativeQuery = true)
+        @Query("SELECT dw FROM DictionaryWord dw " +
+                        "WHERE bitand(dw.letterMask, cast(:centerBit as integer)) = cast(:centerBit as integer) " +
+                        "AND bitor(dw.letterMask, cast(:puzzleMask as integer)) = cast(:puzzleMask as integer)")
         List<DictionaryWord> findValidWordsForPuzzle(@Param("centerBit") int centerBit,
                         @Param("puzzleMask") int puzzleMask);
 }

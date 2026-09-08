@@ -25,6 +25,8 @@ class GameSessionRepositoryTest {
         @Autowired
         private TestEntityManager entityManager;
 
+        // --- findByUserIdAndPuzzleId ---
+
         @Test
         @DisplayName("findByUserIdAndPuzzleId - Should find session by userId and puzzleId")
         void shouldFindByUserIdAndPuzzleId() {
@@ -57,6 +59,16 @@ class GameSessionRepositoryTest {
         }
 
         @Test
+        @DisplayName("findByUserIdAndPuzzleId - Should return empty Optional when session not found")
+        void shouldReturnEmptyWhenSessionNotFound() {
+                Optional<GameSession> found = gameSessionRepository.findByUserIdAndPuzzleId("fake-user", "fake-puzzle");
+
+                assertThat(found).isEmpty();
+        }
+
+        // --- findByUserId ---
+
+        @Test
         @DisplayName("findByUserId - Should find all sessions by userId")
         void shouldFindByUserId() {
                 User user = entityManager.persist(User.builder()
@@ -83,5 +95,13 @@ class GameSessionRepositoryTest {
                 List<GameSession> sessions = gameSessionRepository.findByUserId(user.getId());
 
                 assertThat(sessions).hasSize(1);
+        }
+
+        @Test
+        @DisplayName("findByUserId - Should return empty list when user has no sessions")
+        void shouldReturnEmptyWhenUserHasNoSessions() {
+                List<GameSession> sessions = gameSessionRepository.findByUserId("nonexistent-user");
+
+                assertThat(sessions).isEmpty();
         }
 }

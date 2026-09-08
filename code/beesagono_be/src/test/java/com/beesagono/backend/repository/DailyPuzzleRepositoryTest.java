@@ -2,7 +2,6 @@ package com.beesagono.backend.repository;
 
 import com.beesagono.backend.entity.DailyPuzzle;
 import com.beesagono.backend.testsupport.H2DataJpaTest;
-
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,6 +16,8 @@ class DailyPuzzleRepositoryTest {
 
     @Autowired
     private DailyPuzzleRepository dailyPuzzleRepository;
+
+    // --- findByPuzzleDate ---
 
     @Test
     @DisplayName("findByPuzzleDate - Should find DailyPuzzle by puzzleDate")
@@ -34,5 +35,40 @@ class DailyPuzzleRepositoryTest {
 
         assertThat(found).isPresent();
         assertThat(found.get().getCenterLetter()).isEqualTo("A");
+    }
+
+    @Test
+    @DisplayName("findByPuzzleDate - Should return empty Optional when date does not exist")
+    void shouldReturnEmptyWhenPuzzleDateNotFound() {
+        Optional<DailyPuzzle> found = dailyPuzzleRepository.findByPuzzleDate(LocalDate.of(2099, 1, 1));
+
+        assertThat(found).isEmpty();
+    }
+
+    // --- existsByPuzzleDate ---
+
+    @Test
+    @DisplayName("existsByPuzzleDate - Should return true when puzzle exists for date")
+    void shouldReturnTrueWhenExistsByPuzzleDate() {
+        LocalDate today = LocalDate.now();
+        DailyPuzzle puzzle = DailyPuzzle.builder()
+                .puzzleDate(today)
+                .centerLetter("A")
+                .maxScore(100)
+                .seed("seed-123")
+                .build();
+        dailyPuzzleRepository.save(puzzle);
+
+        boolean exists = dailyPuzzleRepository.existsByPuzzleDate(today);
+
+        assertThat(exists).isTrue();
+    }
+
+    @Test
+    @DisplayName("existsByPuzzleDate - Should return false when puzzle does not exist for date")
+    void shouldReturnFalseWhenNotExistsByPuzzleDate() {
+        boolean exists = dailyPuzzleRepository.existsByPuzzleDate(LocalDate.of(2099, 1, 1));
+
+        assertThat(exists).isFalse();
     }
 }

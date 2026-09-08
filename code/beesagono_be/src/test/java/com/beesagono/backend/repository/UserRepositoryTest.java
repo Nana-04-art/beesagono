@@ -22,6 +22,8 @@ class UserRepositoryTest {
     @Autowired
     private TestEntityManager entityManager;
 
+    // --- findByUsername ---
+
     @Test
     @DisplayName("findByUsername - Should find user by username")
     void shouldFindByUsername() {
@@ -37,6 +39,16 @@ class UserRepositoryTest {
         assertThat(found).isPresent();
         assertThat(found.get().getEmail()).isEqualTo("mario@example.com");
     }
+
+    @Test
+    @DisplayName("findByUsername - Should return empty Optional when username does not exist")
+    void shouldReturnEmptyWhenUsernameNotFound() {
+        Optional<User> found = userRepository.findByUsername("nonexistent");
+
+        assertThat(found).isEmpty();
+    }
+
+    // --- findByEmail ---
 
     @Test
     @DisplayName("findByEmail - Should find user by email")
@@ -55,7 +67,17 @@ class UserRepositoryTest {
     }
 
     @Test
-    @DisplayName("findByUsernameOrEmail - Should find user by username or email")
+    @DisplayName("findByEmail - Should return empty Optional when email does not exist")
+    void shouldReturnEmptyWhenEmailNotFound() {
+        Optional<User> found = userRepository.findByEmail("unknown@example.com");
+
+        assertThat(found).isEmpty();
+    }
+
+    // --- findByUsernameOrEmail ---
+
+    @Test
+    @DisplayName("findByUsernameOrEmail - Should find user matching username or email")
     void shouldFindByUsernameOrEmail() {
         User user = User.builder()
                 .username("peach")
@@ -70,6 +92,16 @@ class UserRepositoryTest {
         assertThat(foundByUsername).isPresent();
         assertThat(foundByEmail).isPresent();
     }
+
+    @Test
+    @DisplayName("findByUsernameOrEmail - Should return empty Optional when neither username nor email match")
+    void shouldReturnEmptyWhenUsernameOrEmailNotFound() {
+        Optional<User> found = userRepository.findByUsernameOrEmail("wrongUser", "wrongEmail@example.com");
+
+        assertThat(found).isEmpty();
+    }
+
+    // --- existsByUsername ---
 
     @Test
     @DisplayName("existsByUsername - Should return true when username exists")
@@ -94,6 +126,8 @@ class UserRepositoryTest {
         assertThat(exists).isFalse();
     }
 
+    // --- existsByEmail ---
+
     @Test
     @DisplayName("existsByEmail - Should return true when email exists")
     void shouldReturnTrueWhenEmailExists() {
@@ -116,6 +150,8 @@ class UserRepositoryTest {
 
         assertThat(exists).isFalse();
     }
+
+    // --- findByUsernameContainingIgnoreCaseOrEmailContainingIgnoreCase ---
 
     @Test
     @DisplayName("findByUsernameContainingIgnoreCaseOrEmailContainingIgnoreCase - Should find users matching search filter")
@@ -141,5 +177,14 @@ class UserRepositoryTest {
 
         assertThat(result.getContent()).hasSize(1);
         assertThat(result.getContent().get(0).getUsername()).isEqualTo("toad_admin");
+    }
+
+    @Test
+    @DisplayName("findByUsernameContainingIgnoreCaseOrEmailContainingIgnoreCase - Should return empty page when no users match search filter")
+    void shouldReturnEmptyPageWhenSearchQueryMatchesNothing() {
+        Page<User> result = userRepository.findByUsernameContainingIgnoreCaseOrEmailContainingIgnoreCase(
+                "nonexistent", "nonexistent", PageRequest.of(0, 10));
+
+        assertThat(result.getContent()).isEmpty();
     }
 }
