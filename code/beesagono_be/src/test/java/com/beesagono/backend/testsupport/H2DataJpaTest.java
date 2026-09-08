@@ -35,16 +35,17 @@ import java.lang.annotation.Target;
 @Inherited
 @DataJpaTest
 @TestPropertySource(properties = {
-                "spring.datasource.driver-class-name=org.h2.Driver",
-                "spring.datasource.username=sa",
-                "spring.datasource.password=",
-                "spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.H2Dialect",
-                "spring.jpa.hibernate.ddl-auto=create-drop",
-                "spring.jpa.show-sql=true",
-                "spring.jpa.properties.hibernate.format_sql=true",
-                "logging.level.org.hibernate.SQL=DEBUG",
-                "logging.level.org.hibernate.tool.schema=DEBUG",
-                "logging.level.org.hibernate.type.descriptor.sql=TRACE"
+        "spring.datasource.url=jdbc:h2:mem:testdb;MODE=MySQL;DB_CLOSE_DELAY=-1",
+        "spring.datasource.driver-class-name=org.h2.Driver",
+        "spring.datasource.username=sa",
+        "spring.datasource.password=",
+        "spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.H2Dialect",
+        "spring.jpa.hibernate.ddl-auto=create-drop",
+        "spring.jpa.show-sql=true",
+        "spring.jpa.properties.hibernate.format_sql=true",
+        "logging.level.org.hibernate.SQL=DEBUG",
+        "logging.level.org.hibernate.tool.schema=DEBUG",
+        "logging.level.org.hibernate.type.descriptor.sql=TRACE"
 })
 public @interface H2DataJpaTest {
 }
