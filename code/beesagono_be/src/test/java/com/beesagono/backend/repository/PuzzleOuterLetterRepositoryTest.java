@@ -10,10 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.jpa.test.autoconfigure.TestEntityManager;
 
 import java.time.LocalDate;
-<<<<<<< HEAD
 import java.util.List;
-=======
->>>>>>> 3edd3fd (code/beesagono_be: update repository test)
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -61,7 +58,6 @@ class PuzzleOuterLetterRepositoryTest {
 
         assertThat(found).isEmpty();
     }
-<<<<<<< HEAD
 
     // --- findByPuzzleId ---
 
@@ -93,6 +89,4 @@ class PuzzleOuterLetterRepositoryTest {
         assertThat(outerLetters).hasSize(2);
         assertThat(outerLetters).extracting(ol -> ol.getId().getLetter()).containsExactlyInAnyOrder("B", "C");
     }
-=======
->>>>>>> 3edd3fd (code/beesagono_be: update repository test)
 }
