@@ -2,6 +2,9 @@ package com.beesagono.backend.service;
 
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -31,9 +34,11 @@ import com.beesagono.backend.security.TokenBlacklist;
 import com.beesagono.backend.security.UserDetailsImpl;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class AuthServiceImpl implements AuthService {
 
     private final UserRepository userRepository;
@@ -43,6 +48,10 @@ public class AuthServiceImpl implements AuthService {
     private final JwtUtils jwtUtils;
     private final TokenBlacklist tokenBlacklist;
     private final AuthenticationManager authenticationManager;
+
+    private static final List<String> ROLE_PRIORITY = List.of(
+            RoleName.ROLE_ADMIN.name(),
+            RoleName.ROLE_USER.name());
 
     @Override
     @Transactional
@@ -102,11 +111,7 @@ public class AuthServiceImpl implements AuthService {
         UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
 
         String token = jwtUtils.generateJwtToken(userDetails);
-
-        String role = userDetails.getAuthorities().stream()
-                .findFirst()
-                .map(GrantedAuthority::getAuthority)
-                .orElse("ROLE_USER");
+        String primaryRole = extractHighestPriorityRole(userDetails);
 
         return LoginResponse.builder()
                 .accessToken(token)
@@ -114,7 +119,7 @@ public class AuthServiceImpl implements AuthService {
                 .id(userDetails.getId())
                 .username(userDetails.getUsername())
                 .email(userDetails.getEmail())
-                .role(role)
+                .role(primaryRole)
                 .build();
     }
 
@@ -122,8 +127,25 @@ public class AuthServiceImpl implements AuthService {
     public void logout(String token) {
         if (token != null && token.startsWith("Bearer ")) {
             String pureToken = token.substring(7);
-            Instant expiry = jwtUtils.extractExpiry(pureToken);
-            tokenBlacklist.add(pureToken, expiry);
+            try {
+                if (jwtUtils.validateJwtToken(pureToken)) {
+                    Instant expiry = jwtUtils.extractExpiry(pureToken);
+                    tokenBlacklist.add(pureToken, expiry);
+                }
+            } catch (Exception e) {
+                log.warn("Invalid or expired token submitted for logout: {}", e.getMessage());
+            }
         }
+    }
+
+    private String extractHighestPriorityRole(UserDetailsImpl userDetails) {
+        Set<String> authorities = userDetails.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .collect(Collectors.toSet());
+
+        return ROLE_PRIORITY.stream()
+                .filter(authorities::contains)
+                .findFirst()
+                .orElse("ROLE_USER");
     }
 }
