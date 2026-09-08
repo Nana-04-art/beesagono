@@ -10,17 +10,21 @@ import jakarta.persistence.Id;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import lombok.ToString;
 import lombok.experimental.SuperBuilder;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UuidGenerator;
 
-@Getter 
-@Setter 
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
+@ToString(onlyExplicitlyIncluded = true)
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 @Entity
 @Table(name = "daily_puzzles")
 @SuperBuilder
@@ -37,11 +41,15 @@ public class DailyPuzzle {
 
 	@Id
 	@UuidGenerator
+	@EqualsAndHashCode.Include
+	@ToString.Include
 	private String id;
 
+	@ToString.Include
 	@Column(name = "puzzle_date", nullable = false, unique = true)
 	private LocalDate puzzleDate;
 
+	@ToString.Include
 	@Column(name = "center_letter", nullable = false, length = 1)
 	private String centerLetter;
 

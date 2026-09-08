@@ -10,9 +10,11 @@ import jakarta.persistence.OneToMany;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import lombok.ToString;
 import lombok.experimental.SuperBuilder;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UuidGenerator;
@@ -21,6 +23,8 @@ import org.hibernate.annotations.UuidGenerator;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
+@ToString(onlyExplicitlyIncluded = true)
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 @Entity
 @Table(name = "users")
 @SuperBuilder
@@ -49,11 +53,15 @@ public class User {
 
 	@Id
 	@UuidGenerator
+	@EqualsAndHashCode.Include
+	@ToString.Include
 	private String id;
 
+	@ToString.Include
 	@Column(name = "username", nullable = false, unique = true, length = 50)
 	private String username;
 
+	@ToString.Include
 	@Column(name = "email", nullable = false, unique = true, length = 150)
 	private String email;
 
