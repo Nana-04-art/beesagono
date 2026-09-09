@@ -1,25 +1,25 @@
 package com.beesagono.backend.controller;
 
-import com.beesagono.backend.dto.auth.CreateAdminRequest;
-import com.beesagono.backend.dto.auth.UserResponse;
+import com.beesagono.backend.dto.puzzle.DailyPuzzleResponse;
+import com.beesagono.backend.dto.puzzle.WordSubmissionRequest;
+import com.beesagono.backend.dto.puzzle.WordSubmissionResponse;
+import com.beesagono.backend.entity.User;
+import com.beesagono.backend.repository.UserRepository;
 import com.beesagono.backend.security.JwtAuthenticationFilter;
 import com.beesagono.backend.security.JwtUtils;
 import com.beesagono.backend.security.TokenBlacklist;
 import com.beesagono.backend.security.UserDetailsImpl;
-import com.beesagono.backend.service.AdminService;
+import com.beesagono.backend.service.PuzzleService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.core.MethodParameter;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -33,12 +33,10 @@ import org.springframework.web.method.support.HandlerMethodArgumentResolver;
 import org.springframework.web.method.support.ModelAndViewContainer;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Set;
 
-import static org.hamcrest.Matchers.hasItem;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -47,9 +45,9 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@WebMvcTest(AdminUserController.class)
+@WebMvcTest(PuzzleController.class)
 @AutoConfigureMockMvc(addFilters = false)
-class AdminUserControllerTest {
+class PuzzleControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
@@ -58,7 +56,10 @@ class AdminUserControllerTest {
     private ObjectMapper objectMapper;
 
     @MockitoBean
-    private AdminService adminService;
+    private PuzzleService puzzleService;
+
+    @MockitoBean
+    private UserRepository userRepository;
 
     @MockitoBean
     private JwtUtils jwtUtils;
@@ -68,6 +69,9 @@ class AdminUserControllerTest {
 
     @MockitoBean
     private TokenBlacklist tokenBlacklist;
+
+    private User testUser;
+    private UserDetailsImpl principal;
 
     @TestConfiguration
     static class TestConfig implements WebMvcConfigurer {
@@ -98,84 +102,63 @@ class AdminUserControllerTest {
 
     @BeforeEach
     void setUp() {
-        UserDetailsImpl principal = new UserDetailsImpl(
-                "admin-1",
-                "admin",
-                "admin@example.com",
-                "pwd",
-                List.of(new SimpleGrantedAuthority("ROLE_ADMIN")));
+        testUser = User.builder()
+                .id("user-1")
+                .username("testuser")
+                .email("user@example.com")
+                .build();
 
-        UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(principal, null,
-                principal.getAuthorities());
+        principal = new UserDetailsImpl(
+                testUser.getId(),
+                testUser.getUsername(),
+                testUser.getEmail(),
+                "pwd",
+                List.of(new SimpleGrantedAuthority("ROLE_USER")));
+
+        UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
+                principal, null, principal.getAuthorities());
         SecurityContextHolder.getContext().setAuthentication(auth);
     }
 
     @Test
-    @DisplayName("GET /api/admin/users - Success")
-    void getUsers_Success() throws Exception {
-        UserResponse userResponse = UserResponse.builder()
-                .id("user-1")
-                .username("testuser")
-                .email("test@example.com")
+    @DisplayName("GET /api/puzzles/today - Success")
+    void getTodayPuzzle_Success() throws Exception {
+        DailyPuzzleResponse response = DailyPuzzleResponse.builder()
+                .id("puz-1")
+                .puzzleDate(LocalDate.now())
+                .centerLetter("A")
+                .maxScore(100)
+                .outerLetters(Set.of("B", "C", "D", "E", "F", "G")) // <- Usa Set.of anziché List.of
                 .build();
-        Page<UserResponse> page = new PageImpl<>(List.of(userResponse));
 
-        when(adminService.getUsers(eq(null), any(Pageable.class))).thenReturn(page);
+        when(puzzleService.getTodayPuzzle()).thenReturn(response);
 
-        mockMvc.perform(get("/api/admin/users"))
+        mockMvc.perform(get("/api/puzzles/today"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.content[0].id").value("user-1"))
-                .andExpect(jsonPath("$.content[0].username").value("testuser"));
+                .andExpect(jsonPath("$.id").value("puz-1"))
+                .andExpect(jsonPath("$.centerLetter").value("A"))
+                .andExpect(jsonPath("$.maxScore").value(100));
 
-        verify(adminService, times(1)).getUsers(eq(null), any(Pageable.class));
+        verify(puzzleService, times(1)).getTodayPuzzle();
     }
 
     @Test
-    @DisplayName("GET /api/admin/users - With Search Parameter Success")
-    void getUsers_WithSearch_Success() throws Exception {
-        UserResponse userResponse = UserResponse.builder()
-                .id("user-1")
-                .username("searchedUser")
-                .email("search@example.com")
-                .build();
-        Page<UserResponse> page = new PageImpl<>(List.of(userResponse));
+    @DisplayName("POST /api/puzzles/{puzzleId}/submit - Success")
+    void submitWord_Success() throws Exception {
+        WordSubmissionRequest request = new WordSubmissionRequest("ALBERGO");
+        WordSubmissionResponse response = new WordSubmissionResponse(true, "ALBERGO", 14, true, null, null);
 
-        when(adminService.getUsers(eq("searchedUser"), any(Pageable.class))).thenReturn(page);
+        when(puzzleService.validateAndScoreWord("puz-1", "ALBERGO")).thenReturn(response);
 
-        mockMvc.perform(get("/api/admin/users")
-                .param("search", "searchedUser"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.content[0].username").value("searchedUser"));
-
-        verify(adminService, times(1)).getUsers(eq("searchedUser"), any(Pageable.class));
-    }
-
-    @Test
-    @DisplayName("POST /api/admin/users/admin - Success")
-    void createAdmin_Success() throws Exception {
-        CreateAdminRequest request = new CreateAdminRequest();
-        request.setUsername("newadmin");
-        request.setEmail("newadmin@example.com");
-        request.setPassword("password123");
-
-        UserResponse response = UserResponse.builder()
-                .id("admin-2")
-                .username("newadmin")
-                .email("newadmin@example.com")
-                .roles(Set.of("ROLE_ADMIN", "ROLE_USER"))
-                .build();
-
-        when(adminService.createAdmin(any(CreateAdminRequest.class))).thenReturn(response);
-
-        mockMvc.perform(post("/api/admin/users/admin")
+        mockMvc.perform(post("/api/puzzles/puz-1/submit")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.id").value("admin-2"))
-                .andExpect(jsonPath("$.username").value("newadmin"))
-                .andExpect(jsonPath("$.roles", hasItem("ROLE_ADMIN")))
-                .andExpect(jsonPath("$.roles", hasItem("ROLE_USER")));
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.valid").value(true))
+                .andExpect(jsonPath("$.word").value("ALBERGO"))
+                .andExpect(jsonPath("$.score").value(14))
+                .andExpect(jsonPath("$.isMielegramma").value(true));
 
-        verify(adminService, times(1)).createAdmin(any(CreateAdminRequest.class));
+        verify(puzzleService, times(1)).validateAndScoreWord("puz-1", "ALBERGO");
     }
 }

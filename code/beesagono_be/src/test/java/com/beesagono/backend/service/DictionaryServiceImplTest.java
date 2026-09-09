@@ -1,6 +1,10 @@
 package com.beesagono.backend.service;
 
-import com.beesagono.backend.dto.dictionary.*;
+import com.beesagono.backend.dto.dictionary.AddWordRequest;
+import com.beesagono.backend.dto.dictionary.BatchAddWordRequest;
+import com.beesagono.backend.dto.dictionary.BatchUploadResponse;
+import com.beesagono.backend.dto.dictionary.DictionaryFilterRequest;
+import com.beesagono.backend.dto.dictionary.DictionaryWordResponse;
 import com.beesagono.backend.entity.DictionaryWord;
 import com.beesagono.backend.entity.User;
 import com.beesagono.backend.mapper.DictionaryWordMapper;
@@ -25,7 +29,10 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.eq;
 
 @ExtendWith(MockitoExtension.class)
 class DictionaryServiceImplTest {
@@ -48,7 +55,7 @@ class DictionaryServiceImplTest {
 
     @Test
     @DisplayName("addSingleWord - Success")
-    void addSingleWord_Success() {
+    void shouldAddSingleWordSuccessfully() {
         AddWordRequest request = new AddWordRequest();
         request.setWord("àlbero");
 
@@ -80,7 +87,7 @@ class DictionaryServiceImplTest {
 
     @Test
     @DisplayName("addSingleWord - Throws Exception when word length < 4")
-    void addSingleWord_TooShort() {
+    void shouldThrowExceptionWhenWordTooShort() {
         AddWordRequest request = new AddWordRequest();
         request.setWord("SOL");
 
@@ -91,7 +98,7 @@ class DictionaryServiceImplTest {
 
     @Test
     @DisplayName("addSingleWord - Throws Exception when word already exists")
-    void addSingleWord_AlreadyExists() {
+    void shouldThrowExceptionWhenWordAlreadyExists() {
         AddWordRequest request = new AddWordRequest();
         request.setWord("CASA");
 
@@ -104,7 +111,7 @@ class DictionaryServiceImplTest {
 
     @Test
     @DisplayName("addSingleWord - Throws Exception when unique letters > 7")
-    void addSingleWord_TooManyUniqueLetters() {
+    void shouldThrowExceptionWhenTooManyUniqueLetters() {
         AddWordRequest request = new AddWordRequest();
         request.setWord("ABCDEFGHI");
 
@@ -115,13 +122,12 @@ class DictionaryServiceImplTest {
 
     @Test
     @DisplayName("addBatchWords - Success")
-    void addBatchWords_Success() {
+    void shouldAddBatchWordsSuccessfully() {
         BatchAddWordRequest request = new BatchAddWordRequest();
         request.setWords(List.of("casa", "albero", "duplicata"));
 
         when(dictionaryWordRepository.findAllById(any())).thenReturn(List.of(
-                DictionaryWord.builder().word("DUPLICATA").build()
-        ));
+                DictionaryWord.builder().word("DUPLICATA").build()));
 
         BatchUploadResponse response = dictionaryService.addBatchWords(request, adminUser);
 
@@ -133,13 +139,12 @@ class DictionaryServiceImplTest {
 
     @Test
     @DisplayName("uploadWordsFromFile - Success")
-    void uploadWordsFromFile_Success() {
+    void shouldUploadWordsFromFileSuccessfully() {
         MockMultipartFile file = new MockMultipartFile(
                 "file",
                 "test.txt",
                 "text/plain",
-                "casa, albero\nfiore".getBytes()
-        );
+                "casa, albero\nfiore".getBytes());
 
         when(dictionaryWordRepository.findAllById(any())).thenReturn(Collections.emptyList());
 
@@ -152,7 +157,7 @@ class DictionaryServiceImplTest {
 
     @Test
     @DisplayName("uploadWordsFromFile - Empty file throws Exception")
-    void uploadWordsFromFile_EmptyFile() {
+    void shouldThrowExceptionWhenUploadedFileIsEmpty() {
         MockMultipartFile file = new MockMultipartFile("file", "empty.txt", "text/plain", new byte[0]);
 
         assertThatThrownBy(() -> dictionaryService.uploadWordsFromFile(file, adminUser))
@@ -163,7 +168,7 @@ class DictionaryServiceImplTest {
     @Test
     @DisplayName("getWords - Success")
     @SuppressWarnings("unchecked")
-    void getWords_Success() {
+    void shouldGetWordsSuccessfully() {
         DictionaryFilterRequest filterRequest = new DictionaryFilterRequest();
         Pageable pageable = Pageable.unpaged();
 

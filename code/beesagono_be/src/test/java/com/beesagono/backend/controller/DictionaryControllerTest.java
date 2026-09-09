@@ -1,6 +1,10 @@
 package com.beesagono.backend.controller;
 
-import com.beesagono.backend.dto.dictionary.*;
+import com.beesagono.backend.dto.dictionary.AddWordRequest;
+import com.beesagono.backend.dto.dictionary.BatchAddWordRequest;
+import com.beesagono.backend.dto.dictionary.BatchUploadResponse;
+import com.beesagono.backend.dto.dictionary.DictionaryFilterRequest;
+import com.beesagono.backend.dto.dictionary.DictionaryWordResponse;
 import com.beesagono.backend.entity.User;
 import com.beesagono.backend.repository.UserRepository;
 import com.beesagono.backend.security.JwtAuthenticationFilter;
@@ -40,8 +44,12 @@ import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.*;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -113,11 +121,10 @@ class DictionaryControllerTest {
                 adminUser.getUsername(),
                 adminUser.getEmail(),
                 "pwd",
-                List.of(new SimpleGrantedAuthority("ROLE_ADMIN"))
-        );
+                List.of(new SimpleGrantedAuthority("ROLE_ADMIN")));
 
-        UsernamePasswordAuthenticationToken auth =
-                new UsernamePasswordAuthenticationToken(principal, null, principal.getAuthorities());
+        UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(principal, null,
+                principal.getAuthorities());
         SecurityContextHolder.getContext().setAuthentication(auth);
     }
 

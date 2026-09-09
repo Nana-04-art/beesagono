@@ -46,4 +46,12 @@ class RankHistogramRepositoryTest {
         assertThat(results.get(0).getId().getRankLabel()).isEqualTo("Genio");
         assertThat(results.get(0).getCount()).isEqualTo(3);
     }
+
+    @Test
+    @DisplayName("findByIdUserId - Should return empty list when no rank histogram found for userId")
+    void shouldReturnEmptyWhenNoRankHistogramFound() {
+        List<RankHistogram> results = rankHistogramRepository.findByIdUserId("nonexistent-user");
+
+        assertThat(results).isEmpty();
+    }
 }
