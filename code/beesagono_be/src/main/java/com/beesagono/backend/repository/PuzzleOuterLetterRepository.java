@@ -4,5 +4,8 @@ import com.beesagono.backend.entity.PuzzleOuterLetter;
 import com.beesagono.backend.entity.id.PuzzleOuterLetterId;
 import org.springframework.data.jpa.repository.JpaRepository;
 
+import java.util.List;
+
 public interface PuzzleOuterLetterRepository extends JpaRepository<PuzzleOuterLetter, PuzzleOuterLetterId> {
+    List<PuzzleOuterLetter> findByPuzzleId(String puzzleId);
 }

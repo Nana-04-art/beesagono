@@ -12,6 +12,7 @@ import com.beesagono.backend.repository.PuzzleOuterLetterRepository;
 import com.beesagono.backend.repository.PuzzleWordRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -37,6 +38,7 @@ public class PuzzleGeneratorServiceImpl implements PuzzleGeneratorService {
     private static final int MIN_MIELEGRAMMI_COUNT = 1;
     private static final int MAX_GENERATION_ATTEMPTS = 50;
     private static final int MIELEGRAMMA_BONUS = 7;
+    private static final int RECENT_CENTER_LETTERS_LIMIT = 3;
 
     @Override
     @Transactional
@@ -46,6 +48,13 @@ public class PuzzleGeneratorServiceImpl implements PuzzleGeneratorService {
             log.info("Puzzle per la data {} già esistente a database.", dateStr);
             return;
         }
+
+        // Retrieve the middle letters of the last 3 puzzles to avoid repetitions
+        List<String> recentCenterLetters = dailyPuzzleRepository
+                .findAllByOrderByPuzzleDateDesc(PageRequest.of(0, RECENT_CENTER_LETTERS_LIMIT))
+                .stream()
+                .map(DailyPuzzle::getCenterLetter)
+                .toList();
 
         // Extraction of pangram candidates
         List<String> pangramCandidates = dictionaryWordRepository.findCandidatePangrams();
@@ -68,13 +77,21 @@ public class PuzzleGeneratorServiceImpl implements PuzzleGeneratorService {
                     .sorted()
                     .collect(Collectors.toList());
 
-            String centerLetter = uniqueLetters.get((int) Math.floor(rng.get() * uniqueLetters.size()));
+            // Filter by excluding recent central letters.
+            List<String> preferredLetters = uniqueLetters.stream()
+                    .filter(l -> !recentCenterLetters.contains(l))
+                    .collect(Collectors.toList());
+
+            // If all the letters of the pangram have been used recently, use the full set.
+            List<String> candidateLetters = preferredLetters.isEmpty() ? uniqueLetters : preferredLetters;
+
+            String centerLetter = candidateLetters.get((int) Math.floor(rng.get() * candidateLetters.size()));
 
             // Calculation of Bitmasks
             int puzzleMask = calculateMaskFromString(targetPangram);
             int centerBit = 1 << (centerLetter.charAt(0) - 'A');
 
-            // Native query to retrieve only valid words
+            // JPQL bitwise query to retrieve valid words
             List<DictionaryWord> validWordsFromDb = dictionaryWordRepository.findValidWordsForPuzzle(centerBit,
                     puzzleMask);
 
@@ -149,8 +166,8 @@ public class PuzzleGeneratorServiceImpl implements PuzzleGeneratorService {
 
             puzzleWordRepository.saveAll(puzzleWords);
 
-            log.info(">>> DailyPuzzle per il {} generato con successo! (Seed: {}, MaxScore: {})",
-                    date, boardToSave.seed(), maxScore);
+            log.info(">>> DailyPuzzle per il {} generato con successo! (Centro: {}, Seed: {}, MaxScore: {})",
+                    date, boardToSave.centerLetter(), boardToSave.seed(), maxScore);
         }
     }
 
