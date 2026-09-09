@@ -30,7 +30,6 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.bind.support.WebDataBinderFactory;
@@ -105,12 +104,11 @@ class PuzzleControllerTest {
 
     @Nested
     @DisplayName("GET /api/puzzles/today Tests")
-    @ContextConfiguration(classes = TestConfig.class)
     class GetTodayPuzzleTests {
 
         @Test
-        @DisplayName("GET /api/puzzles/today - Success")
-        void getTodayPuzzle_Success() throws Exception {
+        @DisplayName("Should return today's puzzle successfully with 200 OK")
+        void shouldReturnTodayPuzzleSuccessfully() throws Exception {
             DailyPuzzleResponse response = DailyPuzzleResponse.builder()
                     .id("puz-1")
                     .puzzleDate(LocalDate.now())
@@ -149,12 +147,11 @@ class PuzzleControllerTest {
 
     @Nested
     @DisplayName("POST /api/puzzles/{puzzleId}/submit Tests")
-    @ContextConfiguration(classes = TestConfig.class)
     class SubmitWordTests {
 
         @Test
-        @DisplayName("POST /api/puzzles/{puzzleId}/submit - Success (Valid Word)")
-        void submitWord_Success() throws Exception {
+        @DisplayName("Should return 200 OK with valid word response")
+        void shouldSubmitWordSuccessfully() throws Exception {
             WordSubmissionRequest request = new WordSubmissionRequest("ALBERGO");
             WordSubmissionResponse response = new WordSubmissionResponse(true, "ALBERGO", 14, true, null, null);
 
@@ -173,8 +170,8 @@ class PuzzleControllerTest {
         }
 
         @Test
-        @DisplayName("POST /api/puzzles/{puzzleId}/submit - Success (Invalid Word)")
-        void submitWord_InvalidWord() throws Exception {
+        @DisplayName("Should return 200 OK with invalid word response when missing center letter")
+        void shouldReturnInvalidWordResponseWhenMissingCenterLetter() throws Exception {
             WordSubmissionRequest request = new WordSubmissionRequest("ROBO");
             WordSubmissionResponse response = new WordSubmissionResponse(
                     false, "ROBO", 0, false, ErrorTypeCode.MISSING_CENTER, "Manca la lettera centrale.");
@@ -194,8 +191,8 @@ class PuzzleControllerTest {
         }
 
         @Test
-        @DisplayName("POST /api/puzzles/{puzzleId}/submit - Puzzle Not Found Throws 404")
-        void submitWord_PuzzleNotFound() throws Exception {
+        @DisplayName("Should return 404 NOT_FOUND when submitted puzzle ID does not exist")
+        void shouldReturnNotFoundWhenPuzzleIdDoesNotExist() throws Exception {
             WordSubmissionRequest request = new WordSubmissionRequest("ALBERGO");
 
             when(puzzleService.validateAndScoreWord("user-1", "puz-invalid", "ALBERGO"))
@@ -216,7 +213,9 @@ class PuzzleControllerTest {
     static class TestConfig implements WebMvcConfigurer {
         @Bean
         public ObjectMapper objectMapper() {
-            return new ObjectMapper();
+            ObjectMapper mapper = new ObjectMapper();
+            mapper.findAndRegisterModules();
+            return mapper;
         }
 
         @Override
