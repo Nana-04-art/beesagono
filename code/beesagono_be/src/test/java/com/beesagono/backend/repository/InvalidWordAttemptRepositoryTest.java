@@ -1,6 +1,10 @@
 package com.beesagono.backend.repository;
 
-import com.beesagono.backend.entity.*;
+import com.beesagono.backend.entity.DailyPuzzle;
+import com.beesagono.backend.entity.ErrorType;
+import com.beesagono.backend.entity.GameSession;
+import com.beesagono.backend.entity.InvalidWordAttempt;
+import com.beesagono.backend.entity.User;
 import com.beesagono.backend.enums.ErrorTypeCode;
 import com.beesagono.backend.testsupport.H2DataJpaTest;
 import org.junit.jupiter.api.DisplayName;
