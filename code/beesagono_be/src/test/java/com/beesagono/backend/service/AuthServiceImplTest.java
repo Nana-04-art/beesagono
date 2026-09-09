@@ -137,15 +137,15 @@ class AuthServiceImplTest {
     @Test
     @DisplayName("logout - Adds token to blacklist")
     void shouldAddTokenToBlacklistOnLogout() {
-        String token = "Bearer sample.jwt.token";
-        String pureToken = "sample.jwt.token";
+        String rawToken = "sample.jwt.token";
+        String token = "Bearer " + rawToken;
         Instant expiry = Instant.now().plusSeconds(3600);
 
-        when(jwtUtils.validateJwtToken(pureToken)).thenReturn(true);
-        when(jwtUtils.extractExpiry(pureToken)).thenReturn(expiry);
+        when(jwtUtils.validateJwtToken(rawToken)).thenReturn(true);
+        when(jwtUtils.extractExpiry(rawToken)).thenReturn(expiry);
 
         authService.logout(token);
 
-        verify(tokenBlacklist, times(1)).add(pureToken, expiry);
+        verify(tokenBlacklist, times(1)).add(rawToken, expiry);
     }
 }
