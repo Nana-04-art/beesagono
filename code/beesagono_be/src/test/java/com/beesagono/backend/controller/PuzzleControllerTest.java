@@ -137,6 +137,7 @@ class PuzzleControllerTest {
 
             verify(puzzleService, times(1)).getTodayPuzzle();
         }
+
     }
 
     // --- Private Helper Methods ---
@@ -156,6 +157,7 @@ class PuzzleControllerTest {
                 user.getEmail(),
                 "pwd",
                 List.of(new SimpleGrantedAuthority("ROLE_USER")));
+
     }
 
     @TestConfiguration
