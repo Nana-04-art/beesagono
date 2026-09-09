@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.jpa.test.autoconfigure.TestEntityManager;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -56,5 +57,36 @@ class PuzzleOuterLetterRepositoryTest {
         Optional<PuzzleOuterLetter> found = puzzleOuterLetterRepository.findById(id);
 
         assertThat(found).isEmpty();
+    }
+
+    // --- findByPuzzleId ---
+
+    @Test
+    @DisplayName("findByPuzzleId - Should return all outer letters for a specific puzzle")
+    void shouldFindByPuzzleId() {
+        DailyPuzzle puzzle = entityManager.persist(DailyPuzzle.builder()
+                .puzzleDate(LocalDate.now())
+                .centerLetter("A")
+                .maxScore(100)
+                .seed("seed-outer-2")
+                .build());
+
+        PuzzleOuterLetter l1 = PuzzleOuterLetter.builder()
+                .id(new PuzzleOuterLetterId(puzzle.getId(), "B"))
+                .puzzle(puzzle)
+                .build();
+        PuzzleOuterLetter l2 = PuzzleOuterLetter.builder()
+                .id(new PuzzleOuterLetterId(puzzle.getId(), "C"))
+                .puzzle(puzzle)
+                .build();
+
+        entityManager.persist(l1);
+        entityManager.persist(l2);
+        entityManager.flush();
+
+        List<PuzzleOuterLetter> outerLetters = puzzleOuterLetterRepository.findByPuzzleId(puzzle.getId());
+
+        assertThat(outerLetters).hasSize(2);
+        assertThat(outerLetters).extracting(ol -> ol.getId().getLetter()).containsExactlyInAnyOrder("B", "C");
     }
 }
