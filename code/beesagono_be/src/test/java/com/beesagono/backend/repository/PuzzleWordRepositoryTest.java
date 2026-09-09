@@ -56,11 +56,11 @@ class PuzzleWordRepositoryTest {
                 .build());
     }
 
-    // --- findByPuzzleIdAndIdWord ---
+    // --- findByIdPuzzleIdAndIdWord ---
 
     @Test
-    @DisplayName("findByPuzzleIdAndIdWord - Should return PuzzleWord when composite key matches")
-    void shouldFindByPuzzleIdAndIdWord() {
+    @DisplayName("findByIdPuzzleIdAndIdWord - Should return PuzzleWord when composite key matches")
+    void shouldFindByIdPuzzleIdAndIdWord() {
         PuzzleWord pw = PuzzleWord.builder()
                 .id(new PuzzleWordId(puzzle.getId(), "ALBERGO"))
                 .puzzle(puzzle)
@@ -69,16 +69,16 @@ class PuzzleWordRepositoryTest {
                 .build();
         entityManager.persistAndFlush(pw);
 
-        Optional<PuzzleWord> result = puzzleWordRepository.findByPuzzleIdAndIdWord(puzzle.getId(), "ALBERGO");
+        Optional<PuzzleWord> result = puzzleWordRepository.findByIdPuzzleIdAndIdWord(puzzle.getId(), "ALBERGO");
 
         assertThat(result).isPresent();
         assertThat(result.get().getDictionaryWord().getWord()).isEqualTo("ALBERGO");
     }
 
     @Test
-    @DisplayName("findByPuzzleIdAndIdWord - Should return empty Optional when not found")
+    @DisplayName("findByIdPuzzleIdAndIdWord - Should return empty Optional when not found")
     void shouldReturnEmptyWhenPuzzleWordNotFound() {
-        Optional<PuzzleWord> result = puzzleWordRepository.findByPuzzleIdAndIdWord(puzzle.getId(), "INEXISTENT");
+        Optional<PuzzleWord> result = puzzleWordRepository.findByIdPuzzleIdAndIdWord(puzzle.getId(), "INEXISTENT");
 
         assertThat(result).isEmpty();
     }
@@ -96,15 +96,15 @@ class PuzzleWordRepositoryTest {
                 .build();
         entityManager.persistAndFlush(pw);
 
-        long count = puzzleWordRepository.countByIdPuzzleId(puzzle.getId());
+        int count = puzzleWordRepository.countByIdPuzzleId(puzzle.getId());
 
-        assertThat(count).isEqualTo(1L);
+        assertThat(count).isEqualTo(1);
     }
 
     @Test
     @DisplayName("countByIdPuzzleId - Should return zero when puzzle has no words")
     void shouldReturnZeroWhenPuzzleHasNoWords() {
-        long count = puzzleWordRepository.countByIdPuzzleId("fake-puzzle-id");
+        int count = puzzleWordRepository.countByIdPuzzleId("fake-puzzle-id");
 
         assertThat(count).isZero();
     }
