@@ -2,11 +2,8 @@ package com.beesagono.backend.service;
 
 import com.beesagono.backend.entity.DailyPuzzle;
 import com.beesagono.backend.entity.DictionaryWord;
-<<<<<<< HEAD
 import com.beesagono.backend.entity.PuzzleOuterLetter;
 import com.beesagono.backend.entity.id.PuzzleOuterLetterId;
-=======
->>>>>>> d5e5c21 (code/beesagono_be: update service test)
 import com.beesagono.backend.repository.DailyPuzzleRepository;
 import com.beesagono.backend.repository.DictionaryWordRepository;
 import com.beesagono.backend.repository.PuzzleOuterLetterRepository;
@@ -19,17 +16,12 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDate;
-<<<<<<< HEAD
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
-=======
-import java.util.List;
-
->>>>>>> d5e5c21 (code/beesagono_be: update service test)
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.never;
@@ -56,7 +48,6 @@ class PuzzleGeneratorServiceImplTest {
     private PuzzleGeneratorServiceImpl puzzleGeneratorService;
 
     @Test
-<<<<<<< HEAD
     @DisplayName("generateAndSavePuzzleForDate - Returns existing puzzle when already present")
     void shouldReturnExistingPuzzleWhenAlreadyExists() {
         LocalDate date = LocalDate.of(2026, 9, 8);
@@ -69,23 +60,12 @@ class PuzzleGeneratorServiceImplTest {
 
         assertThat(result).isNotNull();
         assertThat(result.getId()).isEqualTo("puzzle-existing");
-=======
-    @DisplayName("generateAndSavePuzzleForDate - Does nothing when puzzle already exists")
-    void shouldDoNothingWhenPuzzleAlreadyExists() {
-        LocalDate date = LocalDate.of(2026, 9, 8);
-
-        when(dailyPuzzleRepository.existsByPuzzleDate(date)).thenReturn(true);
-
-        puzzleGeneratorService.generateAndSavePuzzleForDate(date);
-
->>>>>>> d5e5c21 (code/beesagono_be: update service test)
         verify(dailyPuzzleRepository, never()).save(any());
         verify(puzzleOuterLetterRepository, never()).saveAll(any());
         verify(puzzleWordRepository, never()).saveAll(any());
     }
 
     @Test
-<<<<<<< HEAD
     @DisplayName("generateAndSavePuzzleForDate - Generates and saves puzzle successfully using fallback candidates")
     void shouldGenerateAndSavePuzzleSuccessfullyWhenNoCandidatesFound() {
         LocalDate date = LocalDate.of(2026, 9, 8);
@@ -95,44 +75,19 @@ class PuzzleGeneratorServiceImplTest {
         when(dailyPuzzleRepository.existsByPuzzleDate(date)).thenReturn(false);
         when(dailyPuzzleRepository.findAllByOrderByPuzzleDateDesc()).thenReturn(Collections.emptyList());
         when(dictionaryWordRepository.findCandidatePangrams()).thenReturn(Collections.emptyList());
-=======
-    @DisplayName("generateAndSavePuzzleForDate - Generates and saves puzzle successfully")
-    void shouldGenerateAndSavePuzzleSuccessfully() {
-        LocalDate date = LocalDate.of(2026, 9, 8);
-
-        DictionaryWord pangramWord = DictionaryWord.builder()
-                .word("ALBERGO")
-                .uniqueLettersCount(7)
-                .build();
-
-        DailyPuzzle savedPuzzle = DailyPuzzle.builder()
-                .id("puzzle-1")
-                .puzzleDate(date)
-                .centerLetter("A")
-                .maxScore(100)
-                .build();
-
-        when(dailyPuzzleRepository.existsByPuzzleDate(date)).thenReturn(false);
-        when(dictionaryWordRepository.findCandidatePangrams()).thenReturn(List.of("ALBERGO"));
->>>>>>> d5e5c21 (code/beesagono_be: update service test)
         when(dictionaryWordRepository.findValidWordsForPuzzle(anyInt(), anyInt()))
                 .thenReturn(List.of(pangramWord));
         when(dailyPuzzleRepository.save(any(DailyPuzzle.class))).thenReturn(savedPuzzle);
 
-<<<<<<< HEAD
         DailyPuzzle result = puzzleGeneratorService.generateAndSavePuzzleForDate(date);
 
         assertThat(result).isNotNull();
         assertThat(result.getId()).isEqualTo("puzzle-1");
-=======
-        puzzleGeneratorService.generateAndSavePuzzleForDate(date);
->>>>>>> d5e5c21 (code/beesagono_be: update service test)
 
         verify(dailyPuzzleRepository, times(1)).save(any(DailyPuzzle.class));
         verify(puzzleOuterLetterRepository, times(1)).saveAll(any());
         verify(puzzleWordRepository, times(1)).saveAll(any());
     }
-<<<<<<< HEAD
 
     @Test
     @DisplayName("generateAndSavePuzzleForDate - Generates and saves puzzle successfully with candidates")
@@ -219,6 +174,4 @@ class PuzzleGeneratorServiceImplTest {
                 .id(new PuzzleOuterLetterId(puzzleId, letter))
                 .build();
     }
-=======
->>>>>>> d5e5c21 (code/beesagono_be: update service test)
 }
