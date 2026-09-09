@@ -7,7 +7,10 @@ import com.beesagono.backend.entity.PuzzleWord;
 import com.beesagono.backend.enums.ErrorTypeCode;
 import com.beesagono.backend.mapper.DailyPuzzleMapper;
 import com.beesagono.backend.repository.DailyPuzzleRepository;
+<<<<<<< HEAD
 import com.beesagono.backend.repository.GameSessionRepository;
+=======
+>>>>>>> 8e3764f (code/beesagono_be: update service, repository and controller test)
 import com.beesagono.backend.repository.PuzzleWordRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -16,7 +19,10 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+<<<<<<< HEAD
 import org.springframework.web.server.ResponseStatusException;
+=======
+>>>>>>> 8e3764f (code/beesagono_be: update service, repository and controller test)
 
 import java.time.LocalDate;
 import java.util.Optional;
@@ -24,11 +30,15 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+<<<<<<< HEAD
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+=======
+import static org.mockito.Mockito.*;
+>>>>>>> 8e3764f (code/beesagono_be: update service, repository and controller test)
 
 @ExtendWith(MockitoExtension.class)
 class PuzzleServiceImplTest {
@@ -40,9 +50,12 @@ class PuzzleServiceImplTest {
     private PuzzleWordRepository puzzleWordRepository;
 
     @Mock
+<<<<<<< HEAD
     private GameSessionRepository gameSessionRepository;
 
     @Mock
+=======
+>>>>>>> 8e3764f (code/beesagono_be: update service, repository and controller test)
     private PuzzleGeneratorService puzzleGeneratorService;
 
     @Mock
@@ -53,7 +66,10 @@ class PuzzleServiceImplTest {
 
     private DailyPuzzle samplePuzzle;
     private DailyPuzzleResponse sampleResponse;
+<<<<<<< HEAD
     private final String userId = "user-123";
+=======
+>>>>>>> 8e3764f (code/beesagono_be: update service, repository and controller test)
 
     @BeforeEach
     void setUp() {
@@ -113,8 +129,13 @@ class PuzzleServiceImplTest {
         when(dailyPuzzleRepository.findByPuzzleDate(today)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> puzzleService.getTodayPuzzle())
+<<<<<<< HEAD
                 .isInstanceOf(ResponseStatusException.class)
                 .hasMessageContaining("Puzzle del giorno non trovato");
+=======
+                .isInstanceOf(RuntimeException.class)
+                .hasMessage("Puzzle del giorno non trovato");
+>>>>>>> 8e3764f (code/beesagono_be: update service, repository and controller test)
     }
 
     // --- validateAndScoreWord ---
@@ -122,11 +143,17 @@ class PuzzleServiceImplTest {
     @Test
     @DisplayName("validateAndScoreWord - Reject null, blank or short words (<4 chars)")
     void shouldRejectShortOrNullWords() {
+<<<<<<< HEAD
         when(dailyPuzzleRepository.findById("puz-123")).thenReturn(Optional.of(samplePuzzle));
 
         WordSubmissionResponse nullRes = puzzleService.validateAndScoreWord(userId, "puz-123", null);
         WordSubmissionResponse shortRes = puzzleService.validateAndScoreWord(userId, "puz-123", "   ");
         WordSubmissionResponse threeCharRes = puzzleService.validateAndScoreWord(userId, "puz-123", "APE");
+=======
+        WordSubmissionResponse nullRes = puzzleService.validateAndScoreWord("puz-123", null);
+        WordSubmissionResponse shortRes = puzzleService.validateAndScoreWord("puz-123", "   ");
+        WordSubmissionResponse threeCharRes = puzzleService.validateAndScoreWord("puz-123", "APE");
+>>>>>>> 8e3764f (code/beesagono_be: update service, repository and controller test)
 
         assertThat(nullRes.valid()).isFalse();
         assertThat(nullRes.errorCode()).isEqualTo(ErrorTypeCode.TOO_SHORT);
@@ -136,6 +163,7 @@ class PuzzleServiceImplTest {
     }
 
     @Test
+<<<<<<< HEAD
     @DisplayName("validateAndScoreWord - Reject word already found by user")
     void shouldRejectAlreadyFoundWord() {
         when(dailyPuzzleRepository.findById("puz-123")).thenReturn(Optional.of(samplePuzzle));
@@ -158,6 +186,13 @@ class PuzzleServiceImplTest {
                 .thenReturn(false);
 
         WordSubmissionResponse response = puzzleService.validateAndScoreWord(userId, "puz-123", "ROBO");
+=======
+    @DisplayName("validateAndScoreWord - Reject word missing center letter")
+    void shouldRejectWordMissingCenterLetter() {
+        when(dailyPuzzleRepository.findById("puz-123")).thenReturn(Optional.of(samplePuzzle));
+
+        WordSubmissionResponse response = puzzleService.validateAndScoreWord("puz-123", "ROBO");
+>>>>>>> 8e3764f (code/beesagono_be: update service, repository and controller test)
 
         assertThat(response.valid()).isFalse();
         assertThat(response.errorCode()).isEqualTo(ErrorTypeCode.MISSING_CENTER);
@@ -169,12 +204,18 @@ class PuzzleServiceImplTest {
         PuzzleWord pw = PuzzleWord.builder().isMielegramma(false).build();
 
         when(dailyPuzzleRepository.findById("puz-123")).thenReturn(Optional.of(samplePuzzle));
+<<<<<<< HEAD
         when(gameSessionRepository.existsByUserIdAndPuzzleIdAndFoundWordsContaining(anyString(), anyString(),
                 anyString()))
                 .thenReturn(false);
         when(puzzleWordRepository.findByIdPuzzleIdAndIdWord("puz-123", "CASA")).thenReturn(Optional.of(pw));
 
         WordSubmissionResponse response = puzzleService.validateAndScoreWord(userId, "puz-123", "casa");
+=======
+        when(puzzleWordRepository.findByIdPuzzleIdAndIdWord("puz-123", "CASA")).thenReturn(Optional.of(pw));
+
+        WordSubmissionResponse response = puzzleService.validateAndScoreWord("puz-123", "casa");
+>>>>>>> 8e3764f (code/beesagono_be: update service, repository and controller test)
 
         assertThat(response.valid()).isTrue();
         assertThat(response.word()).isEqualTo("CASA");
@@ -188,12 +229,18 @@ class PuzzleServiceImplTest {
         PuzzleWord pw = PuzzleWord.builder().isMielegramma(true).build();
 
         when(dailyPuzzleRepository.findById("puz-123")).thenReturn(Optional.of(samplePuzzle));
+<<<<<<< HEAD
         when(gameSessionRepository.existsByUserIdAndPuzzleIdAndFoundWordsContaining(anyString(), anyString(),
                 anyString()))
                 .thenReturn(false);
         when(puzzleWordRepository.findByIdPuzzleIdAndIdWord("puz-123", "ALBERGO")).thenReturn(Optional.of(pw));
 
         WordSubmissionResponse response = puzzleService.validateAndScoreWord(userId, "puz-123", "ALBERGO");
+=======
+        when(puzzleWordRepository.findByIdPuzzleIdAndIdWord("puz-123", "ALBERGO")).thenReturn(Optional.of(pw));
+
+        WordSubmissionResponse response = puzzleService.validateAndScoreWord("puz-123", "ALBERGO");
+>>>>>>> 8e3764f (code/beesagono_be: update service, repository and controller test)
 
         assertThat(response.valid()).isTrue();
         assertThat(response.score()).isEqualTo(14);
@@ -204,12 +251,18 @@ class PuzzleServiceImplTest {
     @DisplayName("validateAndScoreWord - Reject word not present in dictionary")
     void shouldRejectWordNotInDictionary() {
         when(dailyPuzzleRepository.findById("puz-123")).thenReturn(Optional.of(samplePuzzle));
+<<<<<<< HEAD
         when(gameSessionRepository.existsByUserIdAndPuzzleIdAndFoundWordsContaining(anyString(), anyString(),
                 anyString()))
                 .thenReturn(false);
         when(puzzleWordRepository.findByIdPuzzleIdAndIdWord("puz-123", "AMARONE")).thenReturn(Optional.empty());
 
         WordSubmissionResponse response = puzzleService.validateAndScoreWord(userId, "puz-123", "AMARONE");
+=======
+        when(puzzleWordRepository.findByIdPuzzleIdAndIdWord("puz-123", "AMARONE")).thenReturn(Optional.empty());
+
+        WordSubmissionResponse response = puzzleService.validateAndScoreWord("puz-123", "AMARONE");
+>>>>>>> 8e3764f (code/beesagono_be: update service, repository and controller test)
 
         assertThat(response.valid()).isFalse();
         assertThat(response.errorCode()).isEqualTo(ErrorTypeCode.NOT_IN_DICTIONARY);
