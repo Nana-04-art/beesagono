@@ -93,7 +93,7 @@ public class GameServiceImpl implements GameService {
         }
 
         String rawWord = request.getWord();
-
+        
         // Minimum Length Validation
         if (rawWord == null || rawWord.isBlank() || rawWord.trim().length() < 4) {
             recordInvalidAttempt(session, rawWord, ErrorTypeCode.TOO_SHORT);
@@ -103,7 +103,7 @@ public class GameServiceImpl implements GameService {
 
         String word = rawWord.trim().toUpperCase();
 
-        // Duplicate word check in session
+        // Duplicate word check in session (Prevents invalid points accumulation)
         if (foundWordRepository.existsByIdSessionIdAndIdWord(session.getId(), word)) {
             recordInvalidAttempt(session, word, ErrorTypeCode.ALREADY_FOUND);
             return buildErrorResponse(word, session, ErrorTypeCode.ALREADY_FOUND, "Hai già trovato questa parola!");
@@ -159,7 +159,7 @@ public class GameServiceImpl implements GameService {
                     .build();
         }
 
-        // Global Dictionary check
+        // Global Dictionary check 
         boolean existsInDictionary = dictionaryRepository.existsByWord(word);
 
         if (existsInDictionary) {
