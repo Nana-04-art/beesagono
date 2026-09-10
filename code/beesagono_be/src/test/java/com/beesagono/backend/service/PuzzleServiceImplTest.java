@@ -11,7 +11,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
 import java.util.Optional;
@@ -100,7 +99,7 @@ class PuzzleServiceImplTest {
         when(dailyPuzzleRepository.findByPuzzleDate(today)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> puzzleService.getTodayPuzzle())
-                .isInstanceOf(ResponseStatusException.class)
-                .hasMessageContaining("Puzzle del giorno non trovato");
+                .isInstanceOf(RuntimeException.class)
+                .hasMessage("Puzzle del giorno non trovato");
     }
 }

@@ -23,18 +23,12 @@ import com.beesagono.backend.repository.PuzzleWordRepository;
 import com.beesagono.backend.repository.UserRepository;
 
 import lombok.RequiredArgsConstructor;
-<<<<<<< HEAD
 
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import org.springframework.web.server.ResponseStatusException;
-=======
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.util.StringUtils;
->>>>>>> b5da005 (code/beesagono_be: implement bulk game sync and session scoring logic)
 
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -77,7 +71,6 @@ public class GameServiceImpl implements GameService {
     @Override
     @Transactional
     public SubmitWordResponse validateAndScoreWord(SubmitWordRequest request, String userId) {
-<<<<<<< HEAD
         // Session and Puzzle existence check (Highest priority -> HTTP 404
         // ResponseStatusException)
         GameSession session = gameSessionRepository.findById(request.getSessionId())
@@ -94,23 +87,11 @@ public class GameServiceImpl implements GameService {
         if (!session.getUser().getId().equals(userId)) {
             throw new ResponseStatusException(
                     HttpStatus.FORBIDDEN, "Non sei autorizzato a modificare questa sessione di gioco.");
-=======
-        GameSession session = gameSessionRepository.findById(request.getSessionId())
-                .orElseThrow(
-                        () -> new RuntimeException("Sessione di gioco non trovata con ID: " + request.getSessionId()));
-
-        if (!session.getUser().getId().equals(userId)) {
-            throw new IllegalArgumentException("Non sei autorizzato a modificare questa sessione di gioco.");
->>>>>>> b5da005 (code/beesagono_be: implement bulk game sync and session scoring logic)
         }
 
         String rawWord = request.getWord();
 
-<<<<<<< HEAD
         // Syntactic input validation (Minimum length)
-=======
-        // Minimum Length Validation
->>>>>>> b5da005 (code/beesagono_be: implement bulk game sync and session scoring logic)
         if (rawWord == null || rawWord.isBlank() || rawWord.trim().length() < 4) {
             recordInvalidAttempt(session, rawWord, ErrorTypeCode.TOO_SHORT);
             return buildErrorResponse(rawWord, session, ErrorTypeCode.TOO_SHORT,
@@ -119,7 +100,6 @@ public class GameServiceImpl implements GameService {
 
         String word = rawWord.trim().toUpperCase();
 
-<<<<<<< HEAD
         // Duplicate word check in session (Prevents invalid points accumulation)
         if (foundWordRepository.existsByIdSessionIdAndIdWord(session.getId(), word)) {
             recordInvalidAttempt(session, word, ErrorTypeCode.ALREADY_FOUND);
@@ -127,26 +107,13 @@ public class GameServiceImpl implements GameService {
         }
 
         // Mandatory center letter check
-=======
-        // Center Letter Validation
->>>>>>> b5da005 (code/beesagono_be: implement bulk game sync and session scoring logic)
         if (!word.contains(session.getPuzzle().getCenterLetter())) {
             recordInvalidAttempt(session, word, ErrorTypeCode.MISSING_CENTER);
             return buildErrorResponse(word, session, ErrorTypeCode.MISSING_CENTER,
                     "La parola non contiene la lettera centrale obbligatoria.");
         }
 
-<<<<<<< HEAD
         // Solution verification in daily puzzle and score calculation
-=======
-        // Duplicate Check in Session
-        if (foundWordRepository.existsByIdSessionIdAndIdWord(session.getId(), word)) {
-            recordInvalidAttempt(session, word, ErrorTypeCode.ALREADY_FOUND);
-            return buildErrorResponse(word, session, ErrorTypeCode.ALREADY_FOUND, "Hai già trovato questa parola!");
-        }
-
-        // Verification in Today's Puzzle
->>>>>>> b5da005 (code/beesagono_be: implement bulk game sync and session scoring logic)
         Optional<PuzzleWord> puzzleWord = puzzleWordRepository.findByIdPuzzleIdAndIdWord(session.getPuzzle().getId(),
                 word);
 
@@ -182,12 +149,8 @@ public class GameServiceImpl implements GameService {
                     .build();
         }
 
-<<<<<<< HEAD
         // Global Dictionary check (Distinguishes between missing from puzzle vs missing
         // from dictionary)
-=======
-        // If not in puzzle, check in Global Dictionary
->>>>>>> b5da005 (code/beesagono_be: implement bulk game sync and session scoring logic)
         boolean existsInDictionary = dictionaryRepository.existsByWord(word);
 
         if (existsInDictionary) {
@@ -222,11 +185,7 @@ public class GameServiceImpl implements GameService {
                     .orElseThrow(() -> new RuntimeException(
                             "Errore nel recupero del puzzle per la data: " + singleSync.getPuzzleDate()));
 
-<<<<<<< HEAD
             // Check Inconsistencies: If center letter doesn't match, ignore FE payload
-=======
-            // Check Inconsistencies: If center letter doesn't match, ignore FE
->>>>>>> b5da005 (code/beesagono_be: implement bulk game sync and session scoring logic)
             if (StringUtils.hasText(singleSync.getCenterLetter()) &&
                     !singleSync.getCenterLetter().trim().equalsIgnoreCase(puzzle.getCenterLetter())) {
                 continue;
