@@ -5,5 +5,6 @@ public enum ErrorTypeCode {
     MISSING_CENTER,
     INVALID_LETTERS,
     ALREADY_FOUND,
-    NOT_IN_DICTIONARY
+    NOT_IN_DICTIONARY,
+    NOT_IN_PUZZLE
 }

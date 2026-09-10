@@ -4,6 +4,8 @@ import java.util.Date;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
@@ -18,6 +20,8 @@ import lombok.ToString;
 import lombok.experimental.SuperBuilder;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UuidGenerator;
+
+import com.beesagono.backend.enums.ErrorTypeCode;
 
 @Getter
 @Setter
@@ -34,9 +38,9 @@ public class InvalidWordAttempt {
     @JoinColumn(name = "session_id", nullable = false)
     private GameSession session;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "error_reason", nullable = false)
-    private ErrorType errorReason;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "error_reason", nullable = false, length = 50)
+    private ErrorTypeCode errorReason;
 
     @Id
     @UuidGenerator
