@@ -215,6 +215,7 @@ public class GameServiceImpl implements GameService {
                             HttpStatus.NOT_FOUND,
                             "Errore nel recupero del puzzle per la data: " + singleSync.getPuzzleDate()));
 
+            // Check Inconsistencies: If center letter doesn't match, ignore FE payload
             if (StringUtils.hasText(singleSync.getCenterLetter()) &&
                     !singleSync.getCenterLetter().trim().equalsIgnoreCase(puzzle.getCenterLetter())) {
                 continue;
