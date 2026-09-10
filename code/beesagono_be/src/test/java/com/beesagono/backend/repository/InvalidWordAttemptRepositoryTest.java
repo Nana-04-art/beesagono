@@ -1,7 +1,6 @@
 package com.beesagono.backend.repository;
 
 import com.beesagono.backend.entity.DailyPuzzle;
-import com.beesagono.backend.entity.ErrorType;
 import com.beesagono.backend.entity.GameSession;
 import com.beesagono.backend.entity.InvalidWordAttempt;
 import com.beesagono.backend.entity.User;
@@ -27,6 +26,7 @@ class InvalidWordAttemptRepositoryTest {
         @Autowired
         private TestEntityManager entityManager;
 
+        // -- findBySessionId --
         @Test
         @DisplayName("findBySessionId - Should return list of invalid word attempts for a given sessionId")
         void shouldFindBySessionId() {
@@ -50,24 +50,20 @@ class InvalidWordAttemptRepositoryTest {
                                 .currentRankLabel("Beginner")
                                 .startTime(new Date())
                                 .build());
-
-                ErrorType errorType = entityManager.persist(ErrorType.builder()
-                                .code(ErrorTypeCode.TOO_SHORT)
-                                .description("Too short")
-                                .build());
-
                 entityManager.persistAndFlush(InvalidWordAttempt.builder()
                                 .session(session)
                                 .attemptedWord("SOL")
-                                .errorReason(errorType)
+                                .errorReason(ErrorTypeCode.TOO_SHORT)
                                 .build());
 
                 List<InvalidWordAttempt> attempts = invalidWordAttemptRepository.findBySessionId(session.getId());
 
                 assertThat(attempts).hasSize(1);
                 assertThat(attempts.get(0).getAttemptedWord()).isEqualTo("SOL");
+                assertThat(attempts.get(0).getErrorReason()).isEqualTo(ErrorTypeCode.TOO_SHORT);
         }
 
+        // -- findBySessionId --
         @Test
         @DisplayName("findBySessionId - Should return empty list when no attempts exist for sessionId")
         void shouldReturnEmptyWhenNoAttemptsFound() {
