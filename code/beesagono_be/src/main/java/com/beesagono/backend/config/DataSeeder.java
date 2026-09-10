@@ -74,7 +74,8 @@ public class DataSeeder implements ApplicationRunner {
                 ErrorTypeCode.MISSING_CENTER, "La parola non contiene la lettera centrale obbligatoria.",
                 ErrorTypeCode.INVALID_LETTERS, "La parola contiene lettere non presenti nell'alveare.",
                 ErrorTypeCode.ALREADY_FOUND, "Hai già trovato questa parola in questa sessione.",
-                ErrorTypeCode.NOT_IN_DICTIONARY, "Parola non è presente nel dizionario ufficiale.");
+                ErrorTypeCode.NOT_IN_DICTIONARY, "Parola non è presente nel dizionario ufficiale.",
+                ErrorTypeCode.NOT_IN_PUZZLE, "La parola non fa parte delle soluzioni del puzzle di oggi.");
 
         errorTypes.forEach((code, description) -> {
             if (!errorTypeRepository.existsById(code)) {
