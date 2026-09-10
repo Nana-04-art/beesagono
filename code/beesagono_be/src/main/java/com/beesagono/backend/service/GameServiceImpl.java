@@ -161,8 +161,7 @@ public class GameServiceImpl implements GameService {
                     .build();
         }
 
-        // Global Dictionary check (Distinguishes between missing from puzzle vs missing
-        // from dictionary)
+        // Global Dictionary check (Distinguishes between missing from puzzle vs missing from dictionary)
         boolean existsInDictionary = dictionaryRepository.existsByWord(word);
 
         if (existsInDictionary) {
