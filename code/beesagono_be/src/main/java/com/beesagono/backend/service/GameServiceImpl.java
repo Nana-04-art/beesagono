@@ -97,6 +97,7 @@ public class GameServiceImpl implements GameService {
         if (!session.getUser().getId().equals(userId)) {
             throw new ResponseStatusException(
                     HttpStatus.FORBIDDEN, "Non sei autorizzato a modificare questa sessione di gioco.");
+                    
         }
 
         // Every word submission attempt (valid or invalid) records today's play for the
@@ -114,7 +115,6 @@ public class GameServiceImpl implements GameService {
         }
 
         String word = rawWord.trim().toUpperCase();
-
         // Duplicate word check in session (Prevents invalid points accumulation)
         if (foundWordRepository.existsByIdSessionIdAndIdWord(session.getId(), word)) {
             recordInvalidAttempt(session, word, ErrorTypeCode.ALREADY_FOUND);
