@@ -12,7 +12,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-<<<<<<< HEAD
 import org.springframework.data.domain.Pageable;
 
 import java.time.LocalDate;
@@ -20,12 +19,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-=======
-
-import java.time.LocalDate;
-import java.util.List;
-
->>>>>>> d5e5c21 (code/beesagono_be: update service test)
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.never;
@@ -52,11 +45,7 @@ class PuzzleGeneratorServiceImplTest {
     private PuzzleGeneratorServiceImpl puzzleGeneratorService;
 
     @Test
-<<<<<<< HEAD
     @DisplayName("generateAndSavePuzzleForDate - Idempotency check: does nothing when puzzle already exists")
-=======
-    @DisplayName("generateAndSavePuzzleForDate - Does nothing when puzzle already exists")
->>>>>>> d5e5c21 (code/beesagono_be: update service test)
     void shouldDoNothingWhenPuzzleAlreadyExists() {
         LocalDate date = LocalDate.of(2026, 9, 8);
 
@@ -70,7 +59,6 @@ class PuzzleGeneratorServiceImplTest {
     }
 
     @Test
-<<<<<<< HEAD
     @DisplayName("generateAndSavePuzzleForDate - Generates and saves puzzle successfully when Quality Gate is passed")
     void shouldGenerateAndSavePuzzleSuccessfully() {
         LocalDate date = LocalDate.of(2026, 9, 8);
@@ -87,16 +75,6 @@ class PuzzleGeneratorServiceImplTest {
                     .uniqueLettersCount(4)
                     .build());
         }
-=======
-    @DisplayName("generateAndSavePuzzleForDate - Generates and saves puzzle successfully")
-    void shouldGenerateAndSavePuzzleSuccessfully() {
-        LocalDate date = LocalDate.of(2026, 9, 8);
-
-        DictionaryWord pangramWord = DictionaryWord.builder()
-                .word("ALBERGO")
-                .uniqueLettersCount(7)
-                .build();
->>>>>>> d5e5c21 (code/beesagono_be: update service test)
 
         DailyPuzzle savedPuzzle = DailyPuzzle.builder()
                 .id("puzzle-1")
@@ -106,17 +84,11 @@ class PuzzleGeneratorServiceImplTest {
                 .build();
 
         when(dailyPuzzleRepository.existsByPuzzleDate(date)).thenReturn(false);
-<<<<<<< HEAD
         when(dailyPuzzleRepository.findAllByOrderByPuzzleDateDesc(any(Pageable.class)))
                 .thenReturn(List.of());
         when(dictionaryWordRepository.findCandidatePangrams()).thenReturn(List.of("ALBERGO"));
         when(dictionaryWordRepository.findValidWordsForPuzzle(anyInt(), anyInt()))
                 .thenReturn(validWords);
-=======
-        when(dictionaryWordRepository.findCandidatePangrams()).thenReturn(List.of("ALBERGO"));
-        when(dictionaryWordRepository.findValidWordsForPuzzle(anyInt(), anyInt()))
-                .thenReturn(List.of(pangramWord));
->>>>>>> d5e5c21 (code/beesagono_be: update service test)
         when(dailyPuzzleRepository.save(any(DailyPuzzle.class))).thenReturn(savedPuzzle);
 
         puzzleGeneratorService.generateAndSavePuzzleForDate(date);
@@ -125,7 +97,6 @@ class PuzzleGeneratorServiceImplTest {
         verify(puzzleOuterLetterRepository, times(1)).saveAll(any());
         verify(puzzleWordRepository, times(1)).saveAll(any());
     }
-<<<<<<< HEAD
 
     @Test
     @DisplayName("generateAndSavePuzzleForDate - Fallback mode: uses best available board when Quality Gate fails after max attempts")
@@ -250,6 +221,4 @@ class PuzzleGeneratorServiceImplTest {
         verify(dailyPuzzleRepository, times(1)).save(any(DailyPuzzle.class));
         verify(puzzleOuterLetterRepository, times(1)).saveAll(any());
     }
-=======
->>>>>>> d5e5c21 (code/beesagono_be: update service test)
 }
