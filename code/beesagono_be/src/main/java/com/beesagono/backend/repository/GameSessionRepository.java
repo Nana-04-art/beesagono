@@ -17,4 +17,8 @@ public interface GameSessionRepository extends JpaRepository<GameSession, String
     Optional<GameSession> findByUserIdAndPuzzlePuzzleDate(String userId, LocalDate puzzleDate);
 
     boolean existsByUserIdAndPuzzleId(String userId, String puzzleId);
+
+    Long countByPuzzleIdAndIsCompletedFalse(String puzzleId);
+
+    Long countByPuzzleIdAndIsCompletedTrue(String puzzleId);
 }
