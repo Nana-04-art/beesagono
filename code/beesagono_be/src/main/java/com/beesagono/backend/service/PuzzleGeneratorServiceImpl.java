@@ -38,14 +38,14 @@ public class PuzzleGeneratorServiceImpl implements PuzzleGeneratorService {
         private static final int MIN_MIELEGRAMMI_COUNT = 1;
         private static final int MAX_GENERATION_ATTEMPTS = 50;
 
-        @Override
-        @Transactional(propagation = Propagation.REQUIRES_NEW)
-        public DailyPuzzle generateAndSavePuzzleForDate(LocalDate date) {
-                String dateStr = date.toString();
-                if (dailyPuzzleRepository.existsByPuzzleDate(date)) {
-                        log.info("Puzzle per la data {} già esistente a database.", dateStr);
-                        return dailyPuzzleRepository.findByPuzzleDate(date).orElse(null);
-                }
+    @Override
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public DailyPuzzle generateAndSavePuzzleForDate(LocalDate date) {
+        String dateStr = date.toString();
+        if (dailyPuzzleRepository.existsByPuzzleDate(date)) {
+            log.info("Puzzle per la data {} già esistente a database.", dateStr);
+            return dailyPuzzleRepository.findByPuzzleDate(date).orElse(null);
+        }
 
                 // Retrieve the middle letters of the last 3 puzzles to avoid repetitions
                 List<String> recentCenterLetters = dailyPuzzleRepository
