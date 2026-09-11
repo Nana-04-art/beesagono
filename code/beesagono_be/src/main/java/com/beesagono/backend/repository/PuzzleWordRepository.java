@@ -11,4 +11,6 @@ public interface PuzzleWordRepository extends JpaRepository<PuzzleWord, PuzzleWo
     Optional<PuzzleWord> findByIdPuzzleIdAndIdWord(String puzzleId, String word);
 
     int countByIdPuzzleId(String puzzleId);
+
+    void deleteByIdWord(String word);
 }
