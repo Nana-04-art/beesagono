@@ -144,6 +144,8 @@ public class PuzzleGeneratorServiceImpl implements PuzzleGeneratorService {
                             .build())
                     .collect(Collectors.toList());
 
+            puzzleOuterLetterRepository.saveAll(outerLetters);
+
             List<PuzzleWord> puzzleWords = boardToSave.words().stream()
                     .map(pwd -> PuzzleWord.builder()
                             .id(new PuzzleWordId(savedPuzzle.getId(), pwd.dictEntity().getWord()))
@@ -166,7 +168,6 @@ public class PuzzleGeneratorServiceImpl implements PuzzleGeneratorService {
         }
 
         return null;
-
     }
 
     @Override
