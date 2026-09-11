@@ -25,21 +25,23 @@ class PuzzleSchedulerTest {
     private PuzzleScheduler puzzleScheduler;
 
     @Test
-    @DisplayName("generateDailyPuzzleJob - Invokes generator with current date")
+    @DisplayName("generateDailyPuzzleJob - Invokes generator for tomorrow's date")
     void shouldGenerateDailyPuzzleJob() {
         puzzleScheduler.generateDailyPuzzleJob();
 
         verify(puzzleGeneratorService, times(1))
-                .generateAndSavePuzzleForDate(LocalDate.now());
+                .generateAndSavePuzzleForDate(LocalDate.now().plusDays(1));
     }
 
     @Test
-    @DisplayName("onApplicationStart - Invokes generator on startup")
+    @DisplayName("onApplicationStart - Invokes generator for both today and tomorrow")
     void shouldGeneratePuzzleOnApplicationStart() {
         puzzleScheduler.onApplicationStart();
 
         verify(puzzleGeneratorService, times(1))
                 .generateAndSavePuzzleForDate(LocalDate.now());
+        verify(puzzleGeneratorService, times(1))
+                .generateAndSavePuzzleForDate(LocalDate.now().plusDays(1));
     }
 
     @Test
@@ -52,6 +54,6 @@ class PuzzleSchedulerTest {
         puzzleScheduler.generateDailyPuzzleJob();
 
         verify(puzzleGeneratorService, times(1))
-                .generateAndSavePuzzleForDate(LocalDate.now());
+                .generateAndSavePuzzleForDate(LocalDate.now().plusDays(1));
     }
 }
