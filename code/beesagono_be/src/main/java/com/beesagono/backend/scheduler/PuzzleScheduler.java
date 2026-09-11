@@ -19,24 +19,27 @@ public class PuzzleScheduler {
 
     /**
      * DEPLOY: Runs the job every day at exactly midnight (00:00:00).
-     * Cron expression: "seconds minutes hours day-of-month month
-     * day-of-week"
+     * Generates the puzzle for TOMORROW (D+1) 24 hours in advance.
      */
     @Scheduled(cron = "0 0 0 * * *")
     public void generateDailyPuzzleJob() {
-        checkAndGeneratePuzzleForDate(LocalDate.now());
+        LocalDate tomorrow = LocalDate.now().plusDays(1);
+        log.info(">>> [SCHEDULER] Generazione automatica puzzle per domani ({})", tomorrow);
+        checkAndGeneratePuzzleForDate(tomorrow);
     }
 
     /**
-     * DEVELOPMENT: Triggers AUTOMATICALLY every time you start the
-     * server.
-     * If you launch the app at 11:00 AM and today's puzzle is missing, it creates
-     * it on the fly.
+     * DEVELOPMENT: Triggers AUTOMATICALLY every time the server starts.
+     * Ensures that puzzles for BOTH today (D) and tomorrow (D+1) exist in the DB.
      */
     @EventListener(ApplicationReadyEvent.class)
     public void onApplicationStart() {
-        log.info(">>> Server avviato: verifica presenza puzzle per la data odierna...");
-        checkAndGeneratePuzzleForDate(LocalDate.now());
+        LocalDate today = LocalDate.now();
+        LocalDate tomorrow = today.plusDays(1);
+
+        log.info(">>> Server avviato: verifica presenza puzzle per oggi ({}) e domani ({})...", today, tomorrow);
+        checkAndGeneratePuzzleForDate(today);
+        checkAndGeneratePuzzleForDate(tomorrow);
     }
 
     private void checkAndGeneratePuzzleForDate(LocalDate date) {
