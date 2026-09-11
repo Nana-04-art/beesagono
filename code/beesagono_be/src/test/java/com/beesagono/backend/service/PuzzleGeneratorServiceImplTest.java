@@ -95,7 +95,7 @@ class PuzzleGeneratorServiceImplTest {
         @Test
         @DisplayName("Should generate and save puzzle successfully when candidate pangrams are present")
         void shouldGenerateAndSavePuzzleSuccessfullyWithCandidates() {
-            List<DictionaryWord> validWords = createMockValidWords(22); // > 20 parole per superare il Quality Gate
+            List<DictionaryWord> validWords = createMockValidWords(22); // > 20 words to pass the Quality Gate
             DailyPuzzle savedPuzzle = createDailyPuzzle("puzzle-1", testDate, "A", 88);
 
             when(dailyPuzzleRepository.existsByPuzzleDate(testDate)).thenReturn(false);

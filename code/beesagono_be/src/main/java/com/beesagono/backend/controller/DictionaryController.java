@@ -4,6 +4,7 @@ import com.beesagono.backend.dto.dictionary.WordValidationRequest;
 import com.beesagono.backend.dto.dictionary.WordValidationResponse;
 import com.beesagono.backend.service.DictionaryService;
 import lombok.RequiredArgsConstructor;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
