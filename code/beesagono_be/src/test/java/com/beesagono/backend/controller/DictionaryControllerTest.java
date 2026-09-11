@@ -11,6 +11,7 @@ import com.beesagono.backend.security.JwtAuthenticationFilter;
 import com.beesagono.backend.security.JwtUtils;
 import com.beesagono.backend.security.TokenBlacklist;
 import com.beesagono.backend.security.UserDetailsImpl;
+import com.beesagono.backend.service.AdminService;
 import com.beesagono.backend.service.DictionaryService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
@@ -44,9 +45,9 @@ import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -68,6 +69,9 @@ class DictionaryControllerTest {
 
     @MockitoBean
     private UserRepository userRepository;
+
+    @MockitoBean
+    private AdminService adminService;
 
     @MockitoBean
     private JwtUtils jwtUtils;

@@ -14,14 +14,12 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.data.domain.Pageable;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -109,8 +107,7 @@ class PuzzleGeneratorServiceImplTest {
                                         .build();
 
                         when(dailyPuzzleRepository.existsByPuzzleDate(testDate)).thenReturn(false);
-                        when(dailyPuzzleRepository.findAllByOrderByPuzzleDateDesc(any(Pageable.class)))
-                                        .thenReturn(List.of());
+                        when(dailyPuzzleRepository.findAllByOrderByPuzzleDateDesc()).thenReturn(List.of());
                         when(dictionaryWordRepository.findCandidatePangrams()).thenReturn(List.of("ALBERGO"));
                         when(dictionaryWordRepository.findValidWordsForPuzzle(anyInt(), anyInt()))
                                         .thenReturn(validWords);
@@ -140,8 +137,7 @@ class PuzzleGeneratorServiceImplTest {
                                         .build();
 
                         when(dailyPuzzleRepository.existsByPuzzleDate(testDate)).thenReturn(false);
-                        when(dailyPuzzleRepository.findAllByOrderByPuzzleDateDesc(any(Pageable.class)))
-                                        .thenReturn(List.of());
+                        when(dailyPuzzleRepository.findAllByOrderByPuzzleDateDesc()).thenReturn(List.of());
                         when(dictionaryWordRepository.findCandidatePangrams()).thenReturn(List.of("ALBERGO"));
                         when(dictionaryWordRepository.findValidWordsForPuzzle(anyInt(), anyInt()))
                                         .thenReturn(validWords);
@@ -171,8 +167,7 @@ class PuzzleGeneratorServiceImplTest {
                                         DictionaryWord.builder().word("ALBERGO").uniqueLettersCount(7).build());
 
                         when(dailyPuzzleRepository.existsByPuzzleDate(testDate)).thenReturn(false);
-                        when(dailyPuzzleRepository.findAllByOrderByPuzzleDateDesc(any(Pageable.class)))
-                                        .thenReturn(List.of());
+                        when(dailyPuzzleRepository.findAllByOrderByPuzzleDateDesc()).thenReturn(List.of());
                         when(dictionaryWordRepository.findCandidatePangrams()).thenReturn(List.of("ALBERGO"));
                         when(dictionaryWordRepository.findValidWordsForPuzzle(anyInt(), anyInt()))
                                         .thenReturn(validWords);
@@ -202,8 +197,7 @@ class PuzzleGeneratorServiceImplTest {
                                         .build();
 
                         when(dailyPuzzleRepository.existsByPuzzleDate(testDate)).thenReturn(false);
-                        when(dailyPuzzleRepository.findAllByOrderByPuzzleDateDesc(any(Pageable.class)))
-                                        .thenReturn(List.of());
+                        when(dailyPuzzleRepository.findAllByOrderByPuzzleDateDesc()).thenReturn(List.of());
                         when(dictionaryWordRepository.findCandidatePangrams()).thenReturn(List.of("ALBERGO"));
                         when(dictionaryWordRepository.findValidWordsForPuzzle(anyInt(), anyInt()))
                                         .thenReturn(validWords);
@@ -233,8 +227,7 @@ class PuzzleGeneratorServiceImplTest {
                                         .build();
 
                         when(dailyPuzzleRepository.existsByPuzzleDate(testDate)).thenReturn(false);
-                        when(dailyPuzzleRepository.findAllByOrderByPuzzleDateDesc(any(Pageable.class)))
-                                        .thenReturn(List.of());
+                        when(dailyPuzzleRepository.findAllByOrderByPuzzleDateDesc()).thenReturn(List.of());
                         when(dictionaryWordRepository.findCandidatePangrams()).thenReturn(List.of("ALBERGO"));
                         when(dictionaryWordRepository.findValidWordsForPuzzle(anyInt(), anyInt()))
                                         .thenReturn(validWords);

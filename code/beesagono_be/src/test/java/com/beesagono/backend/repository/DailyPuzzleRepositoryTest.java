@@ -5,7 +5,6 @@ import com.beesagono.backend.testsupport.H2DataJpaTest;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.PageRequest;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -95,7 +94,7 @@ class DailyPuzzleRepositoryTest {
         dailyPuzzleRepository.save(p1);
         dailyPuzzleRepository.save(p2);
 
-        List<DailyPuzzle> results = dailyPuzzleRepository.findAllByOrderByPuzzleDateDesc(PageRequest.of(0, 10));
+        List<DailyPuzzle> results = dailyPuzzleRepository.findAllByOrderByPuzzleDateDesc();
 
         assertThat(results).hasSize(2);
         assertThat(results.get(0).getPuzzleDate()).isEqualTo(LocalDate.of(2026, 9, 2));
