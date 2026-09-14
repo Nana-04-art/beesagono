@@ -20,6 +20,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.http.HttpStatus;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -33,6 +34,7 @@ import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.never;
 
 @ExtendWith(MockitoExtension.class)
 class DictionaryServiceImplTest {
@@ -56,22 +58,10 @@ class DictionaryServiceImplTest {
     @Test
     @DisplayName("addSingleWord - Success")
     void shouldAddSingleWordSuccessfully() {
-        AddWordRequest request = new AddWordRequest();
-        request.setWord("àlbero");
+        AddWordRequest request = createAddWordRequest("àlbero", null);
 
-        DictionaryWord savedWord = DictionaryWord.builder()
-                .word("ALBERO")
-                .uniqueLettersCount(5)
-                .letterMask(17)
-                .isCandidatePangram(false)
-                .addedByUser(adminUser)
-                .build();
-
-        DictionaryWordResponse expectedResponse = DictionaryWordResponse.builder()
-                .word("ALBERO")
-                .uniqueLettersCount(5)
-                .isCandidatePangram(false)
-                .build();
+        DictionaryWord savedWord = createDictionaryWord("ALBERO", 6, 5, false, adminUser);
+        DictionaryWordResponse expectedResponse = createDictionaryWordResponse("ALBERO", 6, 5, false);
 
         when(dictionaryWordRepository.existsById("ALBERO")).thenReturn(false);
         when(dictionaryWordRepository.save(any(DictionaryWord.class))).thenReturn(savedWord);
@@ -87,36 +77,45 @@ class DictionaryServiceImplTest {
     @Test
     @DisplayName("addSingleWord - Throws Exception when word length < 4")
     void shouldThrowExceptionWhenWordTooShort() {
-        AddWordRequest request = new AddWordRequest();
-        request.setWord("SOL");
+        AddWordRequest request = createAddWordRequest("SOL", null);
 
         assertThatThrownBy(() -> dictionaryService.addSingleWord(request, adminUser))
                 .isInstanceOf(ResponseStatusException.class)
-                .hasMessageContaining("almeno 4 lettere");
+                .hasMessageContaining("almeno 4 lettere")
+                .extracting(e -> ((ResponseStatusException) e).getStatusCode())
+                .isEqualTo(HttpStatus.BAD_REQUEST);
+
+        verify(dictionaryWordRepository, never()).save(any());
     }
 
     @Test
     @DisplayName("addSingleWord - Throws Exception when word already exists")
     void shouldThrowExceptionWhenWordAlreadyExists() {
-        AddWordRequest request = new AddWordRequest();
-        request.setWord("CASA");
+        AddWordRequest request = createAddWordRequest("CASA", null);
 
         when(dictionaryWordRepository.existsById("CASA")).thenReturn(true);
 
         assertThatThrownBy(() -> dictionaryService.addSingleWord(request, adminUser))
                 .isInstanceOf(ResponseStatusException.class)
-                .hasMessageContaining("già presente nel dizionario");
+                .hasMessageContaining("già presente nel dizionario")
+                .extracting(e -> ((ResponseStatusException) e).getStatusCode())
+                .isEqualTo(HttpStatus.CONFLICT);
+
+        verify(dictionaryWordRepository, never()).save(any());
     }
 
     @Test
     @DisplayName("addSingleWord - Throws Exception when unique letters > 7")
     void shouldThrowExceptionWhenTooManyUniqueLetters() {
-        AddWordRequest request = new AddWordRequest();
-        request.setWord("ABCDEFGHI");
+        AddWordRequest request = createAddWordRequest("ABCDEFGHI", null);
 
         assertThatThrownBy(() -> dictionaryService.addSingleWord(request, adminUser))
                 .isInstanceOf(ResponseStatusException.class)
-                .hasMessageContaining("più di 7 lettere uniche");
+                .hasMessageContaining("più di 7 lettere uniche")
+                .extracting(e -> ((ResponseStatusException) e).getStatusCode())
+                .isEqualTo(HttpStatus.BAD_REQUEST);
+
+        verify(dictionaryWordRepository, never()).save(any());
     }
 
     @Test
@@ -125,8 +124,8 @@ class DictionaryServiceImplTest {
         BatchAddWordRequest request = new BatchAddWordRequest();
         request.setWords(List.of("casa", "albero", "duplicata"));
 
-        when(dictionaryWordRepository.findAllById(any())).thenReturn(List.of(
-                DictionaryWord.builder().word("DUPLICATA").build()));
+        DictionaryWord duplicateEntity = createDictionaryWord("DUPLICATA", 9, 7, true, adminUser);
+        when(dictionaryWordRepository.findAllById(any())).thenReturn(List.of(duplicateEntity));
 
         BatchUploadResponse response = dictionaryService.addBatchWords(request, adminUser);
 
@@ -161,7 +160,9 @@ class DictionaryServiceImplTest {
 
         assertThatThrownBy(() -> dictionaryService.uploadWordsFromFile(file, adminUser))
                 .isInstanceOf(ResponseStatusException.class)
-                .hasMessageContaining("file inviato è vuoto");
+                .hasMessageContaining("file inviato è vuoto")
+                .extracting(e -> ((ResponseStatusException) e).getStatusCode())
+                .isEqualTo(HttpStatus.BAD_REQUEST);
     }
 
     @Test
@@ -171,8 +172,8 @@ class DictionaryServiceImplTest {
         DictionaryFilterRequest filterRequest = new DictionaryFilterRequest();
         Pageable pageable = Pageable.unpaged();
 
-        DictionaryWord entity = DictionaryWord.builder().word("CASA").build();
-        DictionaryWordResponse responseDto = DictionaryWordResponse.builder().word("CASA").build();
+        DictionaryWord entity = createDictionaryWord("CASA", 4, 3, false, adminUser);
+        DictionaryWordResponse responseDto = createDictionaryWordResponse("CASA", 4, 3, false);
         Page<DictionaryWord> page = new PageImpl<>(List.of(entity));
 
         when(dictionaryWordRepository.findAll(any(Specification.class), eq(pageable))).thenReturn(page);
@@ -182,5 +183,35 @@ class DictionaryServiceImplTest {
 
         assertThat(result.getContent()).hasSize(1);
         assertThat(result.getContent().get(0).getWord()).isEqualTo("CASA");
+    }
+
+    // --- Helper Methods ---
+
+    private AddWordRequest createAddWordRequest(String word, Boolean isCandidatePangram) {
+        AddWordRequest request = new AddWordRequest();
+        request.setWord(word);
+        request.setIsCandidatePangram(isCandidatePangram);
+        return request;
+    }
+
+    private DictionaryWord createDictionaryWord(String word, int length, int uniqueLetters, boolean isPangram,
+            User user) {
+        return DictionaryWord.builder()
+                .word(word)
+                .wordLength(length)
+                .uniqueLettersCount(uniqueLetters)
+                .isCandidatePangram(isPangram)
+                .addedByUser(user)
+                .build();
+    }
+
+    private DictionaryWordResponse createDictionaryWordResponse(String word, int length, int uniqueLetters,
+            boolean isPangram) {
+        return DictionaryWordResponse.builder()
+                .word(word)
+                .wordLength(length)
+                .uniqueLettersCount(uniqueLetters)
+                .isCandidatePangram(isPangram)
+                .build();
     }
 }

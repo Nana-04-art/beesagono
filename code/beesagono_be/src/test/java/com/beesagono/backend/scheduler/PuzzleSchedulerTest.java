@@ -50,7 +50,6 @@ class PuzzleSchedulerTest {
         doThrow(new RuntimeException("Database error"))
                 .when(puzzleGeneratorService).generateAndSavePuzzleForDate(any(LocalDate.class));
 
-        // Must not throw an exception out of the scheduled method
         puzzleScheduler.generateDailyPuzzleJob();
 
         verify(puzzleGeneratorService, times(1))
