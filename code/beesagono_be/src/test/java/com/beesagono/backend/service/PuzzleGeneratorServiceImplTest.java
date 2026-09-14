@@ -85,7 +85,7 @@ class PuzzleGeneratorServiceImplTest {
         assertThat(result.getId()).isEqualTo("puzzle-1");
 
         verify(dailyPuzzleRepository, times(1)).save(any(DailyPuzzle.class));
-        verify(puzzleOuterLetterRepository, times(1)).saveAll(any());
+        verify(puzzleOuterLetterRepository, times(2)).saveAll(any());
         verify(puzzleWordRepository, times(1)).saveAll(any());
     }
 
@@ -110,7 +110,7 @@ class PuzzleGeneratorServiceImplTest {
         assertThat(result.getId()).isEqualTo("puzzle-1");
 
         verify(dailyPuzzleRepository, times(1)).save(any(DailyPuzzle.class));
-        verify(puzzleOuterLetterRepository, times(1)).saveAll(any());
+        verify(puzzleOuterLetterRepository, times(2)).saveAll(any());
         verify(puzzleWordRepository, times(1)).saveAll(any());
     }
 
@@ -137,7 +137,7 @@ class PuzzleGeneratorServiceImplTest {
         puzzle.getOuterLetters().addAll(List.of(outerLetterB, outerLetterR));
 
         DictionaryWord dictWord1 = createDictionaryWord("ARABA", 3); // 5 letters -> 5 points
-        DictionaryWord dictWord2 = createDictionaryWord("RABA", 3);  // 4 letters -> 1 point
+        DictionaryWord dictWord2 = createDictionaryWord("RABA", 3); // 4 letters -> 1 point
 
         when(dictionaryWordRepository.findValidWordsForPuzzle(anyInt(), anyInt()))
                 .thenReturn(List.of(dictWord1, dictWord2));
