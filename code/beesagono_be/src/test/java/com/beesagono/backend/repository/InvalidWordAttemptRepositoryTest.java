@@ -42,11 +42,8 @@ class InvalidWordAttemptRepositoryTest {
     @Test
     @DisplayName("findBySessionId - Should return list of invalid word attempts for a given sessionId")
     void shouldFindBySessionId() {
-        entityManager.persistAndFlush(InvalidWordAttempt.builder()
-                .session(defaultSession)
-                .attemptedWord("SOL")
-                .errorReason(ErrorTypeCode.TOO_SHORT)
-                .build());
+        InvalidWordAttempt attempt = createInvalidAttempt(defaultSession, "SOL", ErrorTypeCode.TOO_SHORT);
+        entityManager.persistAndFlush(attempt);
 
         List<InvalidWordAttempt> attempts = invalidWordAttemptRepository.findBySessionId(defaultSession.getId());
 
@@ -73,8 +70,7 @@ class InvalidWordAttemptRepositoryTest {
         entityManager.persist(createInvalidAttempt(defaultSession, "CASA", ErrorTypeCode.NOT_IN_DICTIONARY));
         entityManager.flush();
 
-        List<InvalidWordAttemptStat> stats = invalidWordAttemptRepository
-                .findByErrorReason(ErrorTypeCode.NOT_IN_DICTIONARY);
+        List<InvalidWordAttemptStat> stats = invalidWordAttemptRepository.findByErrorReason(ErrorTypeCode.NOT_IN_DICTIONARY);
 
         assertThat(stats).isNotEmpty();
 
@@ -90,8 +86,7 @@ class InvalidWordAttemptRepositoryTest {
     @Test
     @DisplayName("findByErrorReason - Should return empty list when no attempts exist for given error reason")
     void shouldReturnEmptyWhenErrorReasonNotFound() {
-        List<InvalidWordAttemptStat> stats = invalidWordAttemptRepository
-                .findByErrorReason(ErrorTypeCode.MISSING_CENTER);
+        List<InvalidWordAttemptStat> stats = invalidWordAttemptRepository.findByErrorReason(ErrorTypeCode.MISSING_CENTER);
 
         assertThat(stats).isEmpty();
     }
