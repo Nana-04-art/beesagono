@@ -25,21 +25,23 @@ class PuzzleSchedulerTest {
     private PuzzleScheduler puzzleScheduler;
 
     @Test
-    @DisplayName("generateDailyPuzzleJob - Invokes generator with current date")
+    @DisplayName("generateDailyPuzzleJob - Invokes generator with tomorrow's date")
     void shouldGenerateDailyPuzzleJob() {
         puzzleScheduler.generateDailyPuzzleJob();
 
         verify(puzzleGeneratorService, times(1))
-                .generateAndSavePuzzleForDate(LocalDate.now());
+                .generateAndSavePuzzleForDate(LocalDate.now().plusDays(1));
     }
 
     @Test
-    @DisplayName("onApplicationStart - Invokes generator on startup")
+    @DisplayName("onApplicationStart - Invokes generator for today and tomorrow on startup")
     void shouldGeneratePuzzleOnApplicationStart() {
         puzzleScheduler.onApplicationStart();
 
         verify(puzzleGeneratorService, times(1))
                 .generateAndSavePuzzleForDate(LocalDate.now());
+        verify(puzzleGeneratorService, times(1))
+                .generateAndSavePuzzleForDate(LocalDate.now().plusDays(1));
     }
 
     @Test
@@ -48,10 +50,9 @@ class PuzzleSchedulerTest {
         doThrow(new RuntimeException("Database error"))
                 .when(puzzleGeneratorService).generateAndSavePuzzleForDate(any(LocalDate.class));
 
-        // Must not throw an exception out of the scheduled method
         puzzleScheduler.generateDailyPuzzleJob();
 
         verify(puzzleGeneratorService, times(1))
-                .generateAndSavePuzzleForDate(LocalDate.now());
+                .generateAndSavePuzzleForDate(LocalDate.now().plusDays(1));
     }
 }
