@@ -75,18 +75,8 @@ class PuzzleControllerTest {
 
     @BeforeEach
     void setUp() {
-        testUser = User.builder()
-                .id("user-1")
-                .username("testuser")
-                .email("user@example.com")
-                .build();
-
-        principal = new UserDetailsImpl(
-                testUser.getId(),
-                testUser.getUsername(),
-                testUser.getEmail(),
-                "pwd",
-                List.of(new SimpleGrantedAuthority("ROLE_USER")));
+        testUser = createTestUser("user-1", "testuser", "user@example.com");
+        principal = createTestPrincipal(testUser);
 
         UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
                 principal, null, principal.getAuthorities());
@@ -102,13 +92,7 @@ class PuzzleControllerTest {
         @Test
         @DisplayName("Should return 200 OK with puzzle data when puzzle exists or is generated")
         void shouldReturnOkWithPuzzleDataWhenPuzzleExists() throws Exception {
-            DailyPuzzleResponse response = DailyPuzzleResponse.builder()
-                    .id("puz-1")
-                    .puzzleDate(LocalDate.now())
-                    .centerLetter("A")
-                    .maxScore(100)
-                    .outerLetters(Set.of("B", "C", "D", "E", "F", "G"))
-                    .build();
+            DailyPuzzleResponse response = createDailyPuzzleResponse("puz-1", LocalDate.now(), "A", 100);
 
             when(puzzleService.getTodayPuzzle()).thenReturn(response);
 
@@ -136,6 +120,50 @@ class PuzzleControllerTest {
 
             verify(puzzleService, times(1)).getTodayPuzzle();
         }
+
+        @Test
+        @DisplayName("Should return 500 Internal Server Error when generic exception occurs")
+        void shouldReturnInternalServerErrorWhenGenericErrorOccurs() throws Exception {
+            when(puzzleService.getTodayPuzzle())
+                    .thenThrow(new RuntimeException("Database connection failure"));
+
+            mockMvc.perform(get("/api/puzzles/today"))
+                    .andExpect(status().isInternalServerError())
+                    .andExpect(jsonPath("$.status").value(500))
+                    .andExpect(jsonPath("$.message").value("Si è verificato un errore interno al server."));
+
+            verify(puzzleService, times(1)).getTodayPuzzle();
+        }
+    }
+
+    // --- Private Helper Methods ---
+
+    private User createTestUser(String id, String username, String email) {
+        return User.builder()
+                .id(id)
+                .username(username)
+                .email(email)
+                .build();
+    }
+
+    private UserDetailsImpl createTestPrincipal(User user) {
+        return new UserDetailsImpl(
+                user.getId(),
+                user.getUsername(),
+                user.getEmail(),
+                "pwd",
+                List.of(new SimpleGrantedAuthority("ROLE_USER")));
+    }
+
+    private DailyPuzzleResponse createDailyPuzzleResponse(String id, LocalDate date, String centerLetter,
+            int maxScore) {
+        return DailyPuzzleResponse.builder()
+                .id(id)
+                .puzzleDate(date)
+                .centerLetter(centerLetter)
+                .maxScore(maxScore)
+                .outerLetters(Set.of("B", "C", "D", "E", "F", "G"))
+                .build();
     }
 
     @TestConfiguration
