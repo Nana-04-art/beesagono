@@ -58,18 +58,17 @@ class PuzzleServiceImplTest {
 
     @BeforeEach
     void setUp() {
+        LocalDate today = LocalDate.now();
         samplePuzzle = DailyPuzzle.builder()
-                .id("puz-123")
-                .puzzleDate(LocalDate.now())
+                .id("puzzle-today")
+                .puzzleDate(today)
                 .centerLetter("A")
-                .maxScore(100)
                 .build();
 
         sampleResponse = DailyPuzzleResponse.builder()
-                .id("puz-123")
-                .puzzleDate(LocalDate.now())
+                .id("puzzle-today")
+                .puzzleDate(today)
                 .centerLetter("A")
-                .maxScore(100)
                 .build();
     }
 
@@ -91,7 +90,7 @@ class PuzzleServiceImplTest {
 
             verify(puzzleGeneratorService, times(1)).generateAndSavePuzzleForDate(today);
             assertThat(response).isNotNull();
-            assertThat(response.getId()).isEqualTo("puz-123");
+            assertThat(response.getId()).isEqualTo("puzzle-today");
         }
 
         @Test
