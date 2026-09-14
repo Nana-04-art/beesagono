@@ -79,13 +79,14 @@ class PuzzleControllerTest {
         principal = createTestPrincipal(testUser);
 
         UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
-                principal, null, principal.getAuthorities());
+                principal, null, principal.getAuthorities()
+        );
         SecurityContextHolder.getContext().setAuthentication(auth);
     }
 
     // --- GET /api/puzzles/today ---
 
-    @Nested
+    @Nested 
     @DisplayName("GET /api/puzzles/today Tests")
     class GetTodayPuzzleTests {
 
@@ -94,7 +95,7 @@ class PuzzleControllerTest {
         void shouldReturnOkWithPuzzleDataWhenPuzzleExists() throws Exception {
             DailyPuzzleResponse response = createDailyPuzzleResponse("puz-1", LocalDate.now(), "A", 100);
 
-            when(puzzleService.getTodayPuzzle()).thenReturn(response);
+        when(puzzleService.getTodayPuzzle()).thenReturn(response);
 
             mockMvc.perform(get("/api/puzzles/today")
                     .contentType(MediaType.APPLICATION_JSON))
