@@ -119,12 +119,6 @@ public class GameServiceImpl implements GameService {
                     "La parola non contiene la lettera centrale obbligatoria.");
         }
 
-        // Duplicate Check in Session
-        if (foundWordRepository.existsByIdSessionIdAndIdWord(session.getId(), word)) {
-            recordInvalidAttempt(session, word, ErrorTypeCode.ALREADY_FOUND);
-            return buildErrorResponse(word, session, ErrorTypeCode.ALREADY_FOUND, "Hai già trovato questa parola!");
-        }
-
         // Verification in Today's Puzzle
         Optional<PuzzleWord> puzzleWord = puzzleWordRepository.findByIdPuzzleIdAndIdWord(session.getPuzzle().getId(),
                 word);
@@ -278,9 +272,6 @@ public class GameServiceImpl implements GameService {
         User user = userRepository.findById(userId)
                  .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "Utente non trovato con ID: " + userId));
-
-        // Record that the user started today's match
-        playerSeasonService.updateSeasonProgress(userId, 0, false);
 
         // Record that the user started today's match
         playerSeasonService.updateSeasonProgress(userId, 0, false);
