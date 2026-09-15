@@ -40,6 +40,9 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -96,7 +99,7 @@ class GameServiceImplTest {
                 .user(user)
                 .puzzle(puzzle)
                 .currentScore(0)
-                .currentRankLabel(RankTier.BEGINNER.getLabel())
+                .currentRankLabel(RankTier.INITIAL.getLabel())
                 .isCompleted(false)
                 .startTime(new Date())
                 .lastUpdated(new Date())
@@ -127,6 +130,7 @@ class GameServiceImplTest {
             verify(puzzleService, times(1)).generateAndSavePuzzleForDate(today);
             verify(userRepository, never()).findById(any());
             verify(gameSessionRepository, never()).save(any());
+            verify(playerSeasonService, never()).updateSeasonProgress(anyString(), anyInt(), anyBoolean());
         }
 
         @Test
@@ -147,6 +151,7 @@ class GameServiceImplTest {
             assertThat(response.getId()).isEqualTo(session.getId());
 
             verify(puzzleService, times(1)).generateAndSavePuzzleForDate(today);
+            verify(playerSeasonService, times(1)).updateSeasonProgress(user.getId(), 0, false);
             verify(userRepository, times(1)).findById(user.getId());
             verify(gameSessionRepository, times(1)).save(any(GameSession.class));
             verify(playerSeasonService, times(1)).updateSeasonProgress(user.getId(), 0, false);
@@ -278,7 +283,7 @@ class GameServiceImplTest {
             SubmitWordResponse response = gameService.validateAndScoreWord(request, user.getId());
 
             assertThat(response.isSuccess()).isTrue();
-            assertThat(response.getPointsEarned()).isEqualTo(14); // 7 length + 7 bonus
+            assertThat(response.getPointsEarned()).isEqualTo(14);
             assertThat(response.isMielegramma()).isTrue();
             verify(playerSeasonService, times(1)).updateSeasonProgress(user.getId(), 14, false);
         }
