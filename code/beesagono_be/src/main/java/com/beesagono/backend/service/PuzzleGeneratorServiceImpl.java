@@ -144,8 +144,6 @@ public class PuzzleGeneratorServiceImpl implements PuzzleGeneratorService {
                             .build())
                     .collect(Collectors.toList());
 
-            puzzleOuterLetterRepository.saveAll(outerLetters);
-
             List<PuzzleWord> puzzleWords = boardToSave.words().stream()
                     .map(pwd -> PuzzleWord.builder()
                             .id(new PuzzleWordId(savedPuzzle.getId(), pwd.dictEntity().getWord()))
@@ -155,7 +153,11 @@ public class PuzzleGeneratorServiceImpl implements PuzzleGeneratorService {
                             .build())
                     .collect(Collectors.toList());
 
+            puzzleOuterLetterRepository.saveAll(outerLetters);
             puzzleWordRepository.saveAll(puzzleWords);
+
+            savedPuzzle.setOuterLetters(outerLetters);
+            savedPuzzle.setPuzzleWords(puzzleWords);
 
             log.info(">>> DailyPuzzle per il {} generato con successo! (Centro: {}, Seed: {}, MaxScore: {})",
                     date, boardToSave.centerLetter(), boardToSave.seed(), maxScore);
@@ -164,6 +166,7 @@ public class PuzzleGeneratorServiceImpl implements PuzzleGeneratorService {
         }
 
         return null;
+
     }
 
     @Override
