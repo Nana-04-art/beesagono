@@ -4,6 +4,7 @@ import com.beesagono.backend.dto.stats.PlayerSeasonResponse;
 import com.beesagono.backend.dto.stats.PlayerStatsResponse;
 import com.beesagono.backend.entity.PlayerSeason;
 import com.beesagono.backend.entity.PlayerStats;
+
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 
@@ -12,6 +13,10 @@ public interface PlayerStatsMapper {
 
     // PlayerSeason mapping
     @Mapping(target = "year", expression = "java(playerSeason.getId() != null ? playerSeason.getId().getSeasonYear() : null)")
+    @Mapping(target = "gamesPlayed", ignore = true)
+    @Mapping(target = "gamesCompleted", ignore = true)
+    @Mapping(target = "currentStreak", ignore = true)
+    @Mapping(target = "maxStreak", ignore = true)
     PlayerSeasonResponse toPlayerSeasonResponse(PlayerSeason playerSeason);
 
     // PlayerStats mapping
