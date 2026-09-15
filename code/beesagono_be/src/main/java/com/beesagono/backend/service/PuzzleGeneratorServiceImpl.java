@@ -28,16 +28,16 @@ import java.util.stream.Collectors;
 @Slf4j
 public class PuzzleGeneratorServiceImpl implements PuzzleGeneratorService {
 
-    private final DictionaryWordRepository dictionaryWordRepository;
-    private final DailyPuzzleRepository dailyPuzzleRepository;
-    private final PuzzleOuterLetterRepository puzzleOuterLetterRepository;
-    private final PuzzleWordRepository puzzleWordRepository;
-    private final ScoringService scoringService;
+        private final DictionaryWordRepository dictionaryWordRepository;
+        private final DailyPuzzleRepository dailyPuzzleRepository;
+        private final PuzzleOuterLetterRepository puzzleOuterLetterRepository;
+        private final PuzzleWordRepository puzzleWordRepository;
+        private final ScoringService scoringService;
 
-    private static final int REQUIRED_LETTERS_COUNT = 7;
-    private static final int MIN_TARGET_WORDS_COUNT = 20;
-    private static final int MIN_MIELEGRAMMI_COUNT = 1;
-    private static final int MAX_GENERATION_ATTEMPTS = 50;
+        private static final int REQUIRED_LETTERS_COUNT = 7;
+        private static final int MIN_TARGET_WORDS_COUNT = 20;
+        private static final int MIN_MIELEGRAMMI_COUNT = 1;
+        private static final int MAX_GENERATION_ATTEMPTS = 50;
 
     @Override
     @Transactional(propagation = Propagation.REQUIRES_NEW)
@@ -54,69 +54,69 @@ public class PuzzleGeneratorServiceImpl implements PuzzleGeneratorService {
                 .map(DailyPuzzle::getCenterLetter)
                 .toList();
 
-        // Extraction of pangram candidates
-        List<String> pangramCandidates = dictionaryWordRepository.findCandidatePangrams();
-        List<String> safeCandidates = pangramCandidates.isEmpty()
-                ? List.of("ALBERGO")
-                : pangramCandidates;
+                // Extraction of pangram candidates
+                List<String> pangramCandidates = dictionaryWordRepository.findCandidatePangrams();
+                List<String> safeCandidates = pangramCandidates.isEmpty()
+                                ? List.of("ALBERGO")
+                                : pangramCandidates;
 
-        long baseSeed = hashDateString(dateStr);
-        Supplier<Double> rng = mulberry32(baseSeed);
+                long baseSeed = hashDateString(dateStr);
+                Supplier<Double> rng = mulberry32(baseSeed);
 
-        GeneratedBoard selectedBoard = null;
-        GeneratedBoard fallbackBoard = null;
+                GeneratedBoard selectedBoard = null;
+                GeneratedBoard fallbackBoard = null;
 
-        for (int attempt = 0; attempt < MAX_GENERATION_ATTEMPTS; attempt++) {
-            String targetPangram = safeCandidates.get((int) Math.floor(rng.get() * safeCandidates.size()));
+                for (int attempt = 0; attempt < MAX_GENERATION_ATTEMPTS; attempt++) {
+                        String targetPangram = safeCandidates.get((int) Math.floor(rng.get() * safeCandidates.size()));
 
-            List<String> uniqueLetters = targetPangram.chars()
-                    .mapToObj(c -> String.valueOf((char) c))
-                    .distinct()
-                    .sorted()
-                    .collect(Collectors.toList());
+                        List<String> uniqueLetters = targetPangram.chars()
+                                        .mapToObj(c -> String.valueOf((char) c))
+                                        .distinct()
+                                        .sorted()
+                                        .collect(Collectors.toList());
 
-            // Filter by excluding recent central letters.
-            List<String> preferredLetters = uniqueLetters.stream()
-                    .filter(l -> !recentCenterLetters.contains(l))
-                    .collect(Collectors.toList());
+                        // Filter by excluding recent central letters.
+                        List<String> preferredLetters = uniqueLetters.stream()
+                                        .filter(l -> !recentCenterLetters.contains(l))
+                                        .collect(Collectors.toList());
 
-            // If all the letters of the pangram have been used recently, use the full set.
-            List<String> candidateLetters = preferredLetters.isEmpty() ? uniqueLetters : preferredLetters;
+                        // If all the letters of the pangram have been used recently, use the full set.
+                        List<String> candidateLetters = preferredLetters.isEmpty() ? uniqueLetters : preferredLetters;
 
             String centerLetter = candidateLetters
                     .get((int) Math.floor(rng.get() * candidateLetters.size()));
 
-            // Calculation of Bitmasks
-            int puzzleMask = calculateMaskFromString(targetPangram);
-            int centerBit = 1 << (centerLetter.charAt(0) - 'A');
+                        // Calculation of Bitmasks
+                        int puzzleMask = calculateMaskFromString(targetPangram);
+                        int centerBit = 1 << (centerLetter.charAt(0) - 'A');
 
             // JPQL bitwise query to retrieve valid words
             List<DictionaryWord> validWordsFromDb = dictionaryWordRepository.findValidWordsForPuzzle(
                     centerBit,
                     puzzleMask);
 
-            List<PuzzleWordData> targetWords = new ArrayList<>();
-            List<String> mielegrammi = new ArrayList<>();
+                        List<PuzzleWordData> targetWords = new ArrayList<>();
+                        List<String> mielegrammi = new ArrayList<>();
 
-            for (DictionaryWord dw : validWordsFromDb) {
-                String word = dw.getWord().toUpperCase();
-                boolean isMielegramma = dw.getUniqueLettersCount() == REQUIRED_LETTERS_COUNT;
+                        for (DictionaryWord dw : validWordsFromDb) {
+                                String word = dw.getWord().toUpperCase();
+                                boolean isMielegramma = dw.getUniqueLettersCount() == REQUIRED_LETTERS_COUNT;
 
-                if (isMielegramma) {
-                    mielegrammi.add(word);
-                }
+                                if (isMielegramma) {
+                                        mielegrammi.add(word);
+                                }
 
-                // Using the centralized scoring service
-                int score = scoringService.calculateWordScore(word, isMielegramma);
+                                // Using the centralized scoring service
+                                int score = scoringService.calculateWordScore(word, isMielegramma);
 
-                targetWords.add(new PuzzleWordData(dw, isMielegramma, score));
-            }
+                                targetWords.add(new PuzzleWordData(dw, isMielegramma, score));
+                        }
 
-            GeneratedBoard currentBoard = new GeneratedBoard(
-                    centerLetter,
-                    uniqueLetters,
-                    targetWords,
-                    baseSeed + "_" + attempt);
+                        GeneratedBoard currentBoard = new GeneratedBoard(
+                                        centerLetter,
+                                        uniqueLetters,
+                                        targetWords,
+                                        baseSeed + "_" + attempt);
 
             // Quality Gate check
             if (targetWords.size() >= MIN_TARGET_WORDS_COUNT
@@ -125,12 +125,12 @@ public class PuzzleGeneratorServiceImpl implements PuzzleGeneratorService {
                 break;
             }
 
-            if (fallbackBoard == null || currentBoard.words().size() > fallbackBoard.words().size()) {
-                fallbackBoard = currentBoard;
-            }
-        }
+                        if (fallbackBoard == null || currentBoard.words().size() > fallbackBoard.words().size()) {
+                                fallbackBoard = currentBoard;
+                        }
+                }
 
-        GeneratedBoard boardToSave = selectedBoard != null ? selectedBoard : fallbackBoard;
+                GeneratedBoard boardToSave = selectedBoard != null ? selectedBoard : fallbackBoard;
 
         if (boardToSave == null || boardToSave.words().isEmpty()) {
             log.error(
@@ -141,25 +141,25 @@ public class PuzzleGeneratorServiceImpl implements PuzzleGeneratorService {
                             + ": nessun tabellone valido trovato.");
         }
 
-        int maxScore = boardToSave.words().stream().mapToInt(PuzzleWordData::score).sum();
+                int maxScore = boardToSave.words().stream().mapToInt(PuzzleWordData::score).sum();
 
-        DailyPuzzle dailyPuzzle = DailyPuzzle.builder()
-                .puzzleDate(date)
-                .centerLetter(boardToSave.centerLetter())
-                .maxScore(maxScore)
-                .seed(boardToSave.seed())
-                .build();
+                DailyPuzzle dailyPuzzle = DailyPuzzle.builder()
+                                .puzzleDate(date)
+                                .centerLetter(boardToSave.centerLetter())
+                                .maxScore(maxScore)
+                                .seed(boardToSave.seed())
+                                .build();
 
-        DailyPuzzle savedPuzzle = dailyPuzzleRepository.save(dailyPuzzle);
+                DailyPuzzle savedPuzzle = dailyPuzzleRepository.save(dailyPuzzle);
 
-        // Batch saving of outer letters
-        List<PuzzleOuterLetter> outerLetters = boardToSave.uniqueLetters().stream()
-                .filter(l -> !l.equals(boardToSave.centerLetter()))
-                .map(letter -> PuzzleOuterLetter.builder()
-                        .id(new PuzzleOuterLetterId(savedPuzzle.getId(), letter))
-                        .puzzle(savedPuzzle)
-                        .build())
-                .collect(Collectors.toList());
+                // Batch saving of outer letters
+                List<PuzzleOuterLetter> outerLetters = boardToSave.uniqueLetters().stream()
+                                .filter(l -> !l.equals(boardToSave.centerLetter()))
+                                .map(letter -> PuzzleOuterLetter.builder()
+                                                .id(new PuzzleOuterLetterId(savedPuzzle.getId(), letter))
+                                                .puzzle(savedPuzzle)
+                                                .build())
+                                .collect(Collectors.toList());
 
         List<PuzzleWord> puzzleWords = boardToSave.words().stream()
                 .map(pwd -> PuzzleWord.builder()
@@ -181,99 +181,99 @@ public class PuzzleGeneratorServiceImpl implements PuzzleGeneratorService {
                 date, boardToSave.centerLetter(), boardToSave.seed(), maxScore,
                 boardToSave.words().size());
 
-        return savedPuzzle;
-    }
-
-    @Override
-    @Transactional
-    public void recalculatePuzzleWords(DailyPuzzle puzzle) {
-        if (puzzle == null || puzzle.getCenterLetter() == null) {
-            return;
+                return savedPuzzle;
         }
 
-        StringBuilder lettersBuilder = new StringBuilder(puzzle.getCenterLetter());
-        if (puzzle.getOuterLetters() != null) {
-            puzzle.getOuterLetters().forEach(pol -> lettersBuilder.append(pol.getId().getLetter()));
-        }
+        @Override
+        @Transactional
+        public void recalculatePuzzleWords(DailyPuzzle puzzle) {
+                if (puzzle == null || puzzle.getCenterLetter() == null) {
+                        return;
+                }
 
-        int puzzleMask = calculateMaskFromString(lettersBuilder.toString());
-        int centerBit = 1 << (puzzle.getCenterLetter().charAt(0) - 'A');
+                StringBuilder lettersBuilder = new StringBuilder(puzzle.getCenterLetter());
+                if (puzzle.getOuterLetters() != null) {
+                        puzzle.getOuterLetters().forEach(pol -> lettersBuilder.append(pol.getId().getLetter()));
+                }
+
+                int puzzleMask = calculateMaskFromString(lettersBuilder.toString());
+                int centerBit = 1 << (puzzle.getCenterLetter().charAt(0) - 'A');
 
         List<DictionaryWord> validWordsFromDb = dictionaryWordRepository.findValidWordsForPuzzle(centerBit,
                 puzzleMask);
 
-        if (puzzle.getPuzzleWords() != null) {
-            puzzle.getPuzzleWords().clear();
+                if (puzzle.getPuzzleWords() != null) {
+                        puzzle.getPuzzleWords().clear();
+                }
+
+                int newMaxScore = 0;
+                List<PuzzleWord> newPuzzleWords = new ArrayList<>();
+
+                for (DictionaryWord dw : validWordsFromDb) {
+                        String word = dw.getWord().toUpperCase();
+                        boolean isMielegramma = dw.getUniqueLettersCount() == REQUIRED_LETTERS_COUNT;
+
+                        int score = scoringService.calculateWordScore(word, isMielegramma);
+                        newMaxScore += score;
+
+                        newPuzzleWords.add(PuzzleWord.builder()
+                                        .id(new PuzzleWordId(puzzle.getId(), dw.getWord()))
+                                        .puzzle(puzzle)
+                                        .dictionaryWord(dw)
+                                        .isMielegramma(isMielegramma)
+                                        .build());
+                }
+
+                puzzle.setMaxScore(newMaxScore);
+                puzzleWordRepository.saveAll(newPuzzleWords);
         }
 
-        int newMaxScore = 0;
-        List<PuzzleWord> newPuzzleWords = new ArrayList<>();
+        // --- Utility Bitmask and PRNG Algorithms ---
 
-        for (DictionaryWord dw : validWordsFromDb) {
-            String word = dw.getWord().toUpperCase();
-            boolean isMielegramma = dw.getUniqueLettersCount() == REQUIRED_LETTERS_COUNT;
-
-            int score = scoringService.calculateWordScore(word, isMielegramma);
-            newMaxScore += score;
-
-            newPuzzleWords.add(PuzzleWord.builder()
-                    .id(new PuzzleWordId(puzzle.getId(), dw.getWord()))
-                    .puzzle(puzzle)
-                    .dictionaryWord(dw)
-                    .isMielegramma(isMielegramma)
-                    .build());
+        private int calculateMaskFromString(String str) {
+                int mask = 0;
+                for (char c : str.toUpperCase().toCharArray()) {
+                        if (c >= 'A' && c <= 'Z') {
+                                mask |= (1 << (c - 'A'));
+                        }
+                }
+                return mask;
         }
 
-        puzzle.setMaxScore(newMaxScore);
-        puzzleWordRepository.saveAll(newPuzzleWords);
-    }
-
-    // --- Utility Bitmask and PRNG Algorithms ---
-
-    private int calculateMaskFromString(String str) {
-        int mask = 0;
-        for (char c : str.toUpperCase().toCharArray()) {
-            if (c >= 'A' && c <= 'Z') {
-                mask |= (1 << (c - 'A'));
-            }
+        private long hashDateString(String dateStr) {
+                long hash = 5381L;
+                for (int i = 0; i < dateStr.length(); i++) {
+                        hash = ((hash * 33) ^ dateStr.charAt(i)) & 0xFFFFFFFFL;
+                }
+                return hash;
         }
-        return mask;
-    }
 
-    private long hashDateString(String dateStr) {
-        long hash = 5381L;
-        for (int i = 0; i < dateStr.length(); i++) {
-            hash = ((hash * 33) ^ dateStr.charAt(i)) & 0xFFFFFFFFL;
+        private Supplier<Double> mulberry32(long seed) {
+                long[] state = new long[] { seed & 0xFFFFFFFFL };
+                return () -> {
+                        state[0] = (state[0] + 0x6D2B79F5L) & 0xFFFFFFFFL;
+                        long t = state[0];
+
+                        long term1 = (t ^ (t >>> 15)) & 0xFFFFFFFFL;
+                        long term2 = (t | 1L) & 0xFFFFFFFFL;
+                        t = (term1 * term2) & 0xFFFFFFFFL;
+
+                        long term3 = (t ^ (t >>> 7)) & 0xFFFFFFFFL;
+                        long term4 = (t | 61L) & 0xFFFFFFFFL;
+                        t = (t ^ (t + term3 * term4)) & 0xFFFFFFFFL;
+
+                        long result = (t ^ (t >>> 14)) & 0xFFFFFFFFL;
+                        return (double) result / 4294967296.0;
+                };
         }
-        return hash;
-    }
 
-    private Supplier<Double> mulberry32(long seed) {
-        long[] state = new long[] { seed & 0xFFFFFFFFL };
-        return () -> {
-            state[0] = (state[0] + 0x6D2B79F5L) & 0xFFFFFFFFL;
-            long t = state[0];
+        private record PuzzleWordData(DictionaryWord dictEntity, boolean isPangram, int score) {
+        }
 
-            long term1 = (t ^ (t >>> 15)) & 0xFFFFFFFFL;
-            long term2 = (t | 1L) & 0xFFFFFFFFL;
-            t = (term1 * term2) & 0xFFFFFFFFL;
-
-            long term3 = (t ^ (t >>> 7)) & 0xFFFFFFFFL;
-            long term4 = (t | 61L) & 0xFFFFFFFFL;
-            t = (t ^ (t + term3 * term4)) & 0xFFFFFFFFL;
-
-            long result = (t ^ (t >>> 14)) & 0xFFFFFFFFL;
-            return (double) result / 4294967296.0;
-        };
-    }
-
-    private record PuzzleWordData(DictionaryWord dictEntity, boolean isPangram, int score) {
-    }
-
-    private record GeneratedBoard(
-            String centerLetter,
-            List<String> uniqueLetters,
-            List<PuzzleWordData> words,
-            String seed) {
-    }
+        private record GeneratedBoard(
+                        String centerLetter,
+                        List<String> uniqueLetters,
+                        List<PuzzleWordData> words,
+                        String seed) {
+        }
 }
