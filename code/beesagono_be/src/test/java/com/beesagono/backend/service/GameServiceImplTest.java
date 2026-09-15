@@ -64,6 +64,10 @@ class GameServiceImplTest {
     private DictionaryWordRepository dictionaryRepository;
     @Mock
     private PuzzleGeneratorService puzzleService;
+    @Mock
+    private ScoringService scoringService;
+    @Mock
+    private PlayerSeasonService playerSeasonService;
 
     @InjectMocks
     private GameServiceImpl gameService;
@@ -145,6 +149,7 @@ class GameServiceImplTest {
             verify(puzzleService, times(1)).generateAndSavePuzzleForDate(today);
             verify(userRepository, times(1)).findById(user.getId());
             verify(gameSessionRepository, times(1)).save(any(GameSession.class));
+            verify(playerSeasonService, times(1)).updateSeasonProgress(user.getId(), 0, false);
         }
 
         @Test
@@ -242,6 +247,8 @@ class GameServiceImplTest {
             when(foundWordRepository.existsByIdSessionIdAndIdWord(session.getId(), "CASA")).thenReturn(false);
             when(puzzleWordRepository.findByIdPuzzleIdAndIdWord(puzzle.getId(), "CASA"))
                     .thenReturn(Optional.of(puzzleWord));
+            when(scoringService.calculateWordScore("CASA", false)).thenReturn(1);
+            when(scoringService.calculateCurrentRank(1, puzzle.getMaxScore())).thenReturn(RankTier.BEGINNER);
 
             SubmitWordResponse response = gameService.validateAndScoreWord(request, user.getId());
 
@@ -253,6 +260,7 @@ class GameServiceImplTest {
 
             verify(foundWordRepository, times(1)).save(any(FoundWord.class));
             verify(gameSessionRepository, times(1)).save(session);
+            verify(playerSeasonService, times(1)).updateSeasonProgress(user.getId(), 1, false);
         }
 
         @Test
@@ -265,12 +273,15 @@ class GameServiceImplTest {
             when(foundWordRepository.existsByIdSessionIdAndIdWord(session.getId(), "ALBERGO")).thenReturn(false);
             when(puzzleWordRepository.findByIdPuzzleIdAndIdWord(puzzle.getId(), "ALBERGO"))
                     .thenReturn(Optional.of(puzzleWord));
+            when(scoringService.calculateWordScore("ALBERGO", true)).thenReturn(14);
+            when(scoringService.calculateCurrentRank(14, puzzle.getMaxScore())).thenReturn(RankTier.BEGINNER);
 
             SubmitWordResponse response = gameService.validateAndScoreWord(request, user.getId());
 
             assertThat(response.isSuccess()).isTrue();
             assertThat(response.getPointsEarned()).isEqualTo(14); // 7 length + 7 bonus
             assertThat(response.isMielegramma()).isTrue();
+            verify(playerSeasonService, times(1)).updateSeasonProgress(user.getId(), 14, false);
         }
 
         @Test
@@ -293,8 +304,6 @@ class GameServiceImplTest {
         @Test
         @DisplayName("Should fail with NOT_IN_DICTIONARY when word is not in dictionary")
         void shouldFailWhenWordNotInDictionary() {
-            // We use "ZZZA" because it contains the central letter 'A' and has a length of
-            // 4 or greater
             SubmitWordRequest request = new SubmitWordRequest(session.getId(), "ZZZA");
 
             when(gameSessionRepository.findById(session.getId())).thenReturn(Optional.of(session));
@@ -347,6 +356,10 @@ class GameServiceImplTest {
             when(puzzleWordRepository.findByIdPuzzleIdAndIdWord(puzzle.getId(), "CASA")).thenReturn(Optional.of(pw1));
             when(puzzleWordRepository.findByIdPuzzleIdAndIdWord(puzzle.getId(), "ALBERO")).thenReturn(Optional.of(pw2));
 
+            when(scoringService.calculateWordScore("CASA", false)).thenReturn(1);
+            when(scoringService.calculateWordScore("ALBERO", true)).thenReturn(13);
+            when(scoringService.calculateCurrentRank(14, puzzle.getMaxScore())).thenReturn(RankTier.BEGINNER);
+
             FoundWord fw1 = FoundWord.builder().id(new FoundWordId(session.getId(), "CASA")).build();
             FoundWord fw2 = FoundWord.builder().id(new FoundWordId(session.getId(), "ALBERO")).build();
             when(foundWordRepository.findByIdSessionId(session.getId())).thenReturn(List.of(fw1, fw2));
@@ -359,6 +372,7 @@ class GameServiceImplTest {
 
             verify(foundWordRepository, times(2)).save(any(FoundWord.class));
             verify(gameSessionRepository, times(1)).save(session);
+            verify(playerSeasonService, times(1)).updateSeasonProgress(user.getId(), 14, false);
         }
 
         @Test
