@@ -382,8 +382,7 @@ public class GameServiceImpl implements GameService {
                 .build();
         invalidWordAttemptRepository.save(attempt);
 
-        // Notify today's activity to PlayerSeasonService (0 points earned, but played
-        // day)
+        // Notify today's activity to PlayerSeasonService (0 points earned, but played day)
         playerSeasonService.updateSeasonProgress(session.getUser().getId(), 0, false);
     }
 
