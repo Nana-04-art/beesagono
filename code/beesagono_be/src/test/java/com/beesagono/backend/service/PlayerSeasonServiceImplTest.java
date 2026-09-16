@@ -1,6 +1,8 @@
 package com.beesagono.backend.service;
 
+import com.beesagono.backend.dto.stats.LeaderboardEntryDto;
 import com.beesagono.backend.dto.stats.PlayerSeasonResponse;
+import com.beesagono.backend.dto.stats.RankDistributionResponse;
 import com.beesagono.backend.entity.PlayerSeason;
 import com.beesagono.backend.entity.PlayerStats;
 import com.beesagono.backend.entity.User;
@@ -18,8 +20,10 @@ import org.mockito.Captor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.PageRequest;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -33,235 +37,304 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class PlayerSeasonServiceImplTest {
 
-    @Mock
-    private PlayerSeasonRepository playerSeasonRepository;
+        @Mock
+        private PlayerSeasonRepository playerSeasonRepository;
 
-    @Mock
-    private PlayerStatsRepository playerStatsRepository;
+        @Mock
+        private PlayerStatsRepository playerStatsRepository;
 
-    @Mock
-    private UserRepository userRepository;
+        @Mock
+        private UserRepository userRepository;
 
-    @InjectMocks
-    private PlayerSeasonServiceImpl playerSeasonService;
+        @InjectMocks
+        private PlayerSeasonServiceImpl playerSeasonService;
 
-    @Captor
-    private ArgumentCaptor<PlayerSeason> seasonCaptor;
+        @Captor
+        private ArgumentCaptor<PlayerSeason> seasonCaptor;
 
-    private User user;
-    private PlayerSeason season;
-    private PlayerStats stats;
-    private String userId;
-    private int currentYear;
+        @Captor
+        private ArgumentCaptor<PlayerStats> statsCaptor;
 
-    @BeforeEach
-    void setUp() {
-        userId = "user-123";
-        currentYear = LocalDate.now().getYear();
+        private User user;
+        private PlayerSeason season;
+        private PlayerStats stats;
+        private String userId;
+        private int currentYear;
 
-        user = User.builder()
-                .id(userId)
-                .username("testplayer")
-                .email("test@example.com")
-                .build();
+        @BeforeEach
+        void setUp() {
+                userId = "user-123";
+                currentYear = LocalDate.now().getYear();
 
-        PlayerSeasonId seasonId = new PlayerSeasonId(userId, currentYear);
+                user = User.builder()
+                                .id(userId)
+                                .username("testplayer")
+                                .email("test@example.com")
+                                .build();
 
-        season = PlayerSeason.builder()
-                .id(seasonId)
-                .user(user)
-                .basePoints(30)
-                .bonusPoints(10)
-                .totalPoints(40)
-                .highestTierAchieved("Uovo d'Ape")
-                .build();
+                PlayerSeasonId seasonId = new PlayerSeasonId(userId, currentYear);
 
-        stats = PlayerStats.builder()
-                .userId(userId)
-                .gamesPlayed(10)
-                .gamesCompleted(8)
-                .currentStreak(3)
-                .maxStreak(5)
-                .build();
-    }
+                season = PlayerSeason.builder()
+                                .id(seasonId)
+                                .user(user)
+                                .basePoints(30)
+                                .bonusPoints(10)
+                                .totalPoints(40)
+                                .highestTierAchieved("Uovo d'Ape")
+                                .build();
 
-    @Nested
-    @DisplayName("getCurrentSeasonStats Tests")
-    class GetCurrentSeasonStatsTests {
-
-        @Test
-        @DisplayName("Should return existing season stats and player stats successfully")
-        void shouldReturnExistingSeasonAndStats() {
-            when(playerSeasonRepository.findByIdUserIdAndIdSeasonYear(userId, currentYear))
-                    .thenReturn(Optional.of(season));
-            when(playerStatsRepository.findById(userId))
-                    .thenReturn(Optional.of(stats));
-
-            PlayerSeasonResponse response = playerSeasonService.getCurrentSeasonStats(userId);
-
-            assertThat(response).isNotNull();
-            assertThat(response.getYear()).isEqualTo(currentYear);
-            assertThat(response.getBasePoints()).isEqualTo(30);
-            assertThat(response.getBonusPoints()).isEqualTo(10);
-            assertThat(response.getTotalPoints()).isEqualTo(40);
-            assertThat(response.getHighestTierAchieved()).isEqualTo("Uovo d'Ape");
-            assertThat(response.getGamesPlayed()).isEqualTo(10);
-            assertThat(response.getGamesCompleted()).isEqualTo(8);
-            assertThat(response.getCurrentStreak()).isEqualTo(3);
-            assertThat(response.getMaxStreak()).isEqualTo(5);
-
-            verify(playerSeasonRepository, times(1)).findByIdUserIdAndIdSeasonYear(userId, currentYear);
-            verify(playerStatsRepository, times(1)).findById(userId);
-            verify(userRepository, never()).findById(any());
+                stats = PlayerStats.builder()
+                                .userId(userId)
+                                .currentStreak(5)
+                                .lastStreakMilestoneClaimed(0)
+                                .build();
         }
 
-        @Test
-        @DisplayName("Should create initial season if none exists and map stats correctly")
-        void shouldCreateInitialSeasonWhenNotPresent() {
-            when(playerSeasonRepository.findByIdUserIdAndIdSeasonYear(userId, currentYear))
-                    .thenReturn(Optional.empty());
-            when(userRepository.findById(userId))
-                    .thenReturn(Optional.of(user));
-            when(playerSeasonRepository.save(any(PlayerSeason.class)))
-                    .thenAnswer(invocation -> invocation.getArgument(0));
-            when(playerStatsRepository.findById(userId))
-                    .thenReturn(Optional.of(stats));
+        @Nested
+        @DisplayName("getCurrentSeasonStats Tests")
+        class GetCurrentSeasonStatsTests {
 
-            PlayerSeasonResponse response = playerSeasonService.getCurrentSeasonStats(userId);
+                @Test
+                @DisplayName("Should return existing season stats successfully")
+                void shouldReturnExistingSeasonStats() {
+                        when(playerSeasonRepository.findByIdUserIdAndIdSeasonYear(userId, currentYear))
+                                        .thenReturn(Optional.of(season));
 
-            assertThat(response).isNotNull();
-            assertThat(response.getYear()).isEqualTo(currentYear);
-            assertThat(response.getBasePoints()).isZero();
-            assertThat(response.getBonusPoints()).isZero();
-            assertThat(response.getTotalPoints()).isZero();
-            assertThat(response.getHighestTierAchieved()).isEqualTo("Uovo d'Ape");
+                        PlayerSeasonResponse response = playerSeasonService.getCurrentSeasonStats(userId);
 
-            verify(userRepository, times(1)).findById(userId);
-            verify(playerSeasonRepository, times(1)).save(any(PlayerSeason.class));
+                        assertThat(response).isNotNull();
+                        assertThat(response.getYear()).isEqualTo(currentYear);
+                        assertThat(response.getBasePoints()).isEqualTo(30);
+                        assertThat(response.getBonusPoints()).isEqualTo(10);
+                        assertThat(response.getTotalPoints()).isEqualTo(40);
+                        assertThat(response.getHighestTierAchieved()).isEqualTo("Uovo d'Ape");
+
+                        verify(playerSeasonRepository, times(1)).findByIdUserIdAndIdSeasonYear(userId, currentYear);
+                        verify(userRepository, never()).findById(any());
+                }
+
+                @Test
+                @DisplayName("Should create initial season if none exists")
+                void shouldCreateInitialSeasonWhenNotPresent() {
+                        when(playerSeasonRepository.findByIdUserIdAndIdSeasonYear(userId, currentYear))
+                                        .thenReturn(Optional.empty());
+                        when(userRepository.findById(userId))
+                                        .thenReturn(Optional.of(user));
+                        when(playerSeasonRepository.save(any(PlayerSeason.class)))
+                                        .thenAnswer(invocation -> invocation.getArgument(0));
+
+                        PlayerSeasonResponse response = playerSeasonService.getCurrentSeasonStats(userId);
+
+                        assertThat(response).isNotNull();
+                        assertThat(response.getYear()).isEqualTo(currentYear);
+                        assertThat(response.getBasePoints()).isZero();
+                        assertThat(response.getBonusPoints()).isZero();
+                        assertThat(response.getTotalPoints()).isZero();
+                        assertThat(response.getHighestTierAchieved()).isEqualTo("Uovo d'Ape");
+
+                        verify(userRepository, times(1)).findById(userId);
+                        verify(playerSeasonRepository, times(1)).save(any(PlayerSeason.class));
+                }
         }
 
-        @Test
-        @DisplayName("Should handle missing PlayerStats gracefully by setting default 0 values")
-        void shouldHandleMissingPlayerStatsGracefully() {
-            when(playerSeasonRepository.findByIdUserIdAndIdSeasonYear(userId, currentYear))
-                    .thenReturn(Optional.of(season));
-            when(playerStatsRepository.findById(userId))
-                    .thenReturn(Optional.empty());
+        @Nested
+        @DisplayName("updateSeasonProgress Tests")
+        class UpdateSeasonProgressTests {
 
-            PlayerSeasonResponse response = playerSeasonService.getCurrentSeasonStats(userId);
+                @Test
+                @DisplayName("Should update base points and maintain 'Uovo d'Ape' tier when total points < 50")
+                void shouldUpdatePointsAndKeepInitialTier() {
+                        when(playerSeasonRepository.findByIdUserIdAndIdSeasonYear(userId, currentYear))
+                                        .thenReturn(Optional.of(season));
+                        when(playerStatsRepository.findById(userId))
+                                        .thenReturn(Optional.of(stats));
 
-            assertThat(response).isNotNull();
-            assertThat(response.getGamesPlayed()).isZero();
-            assertThat(response.getGamesCompleted()).isZero();
-            assertThat(response.getCurrentStreak()).isZero();
-            assertThat(response.getMaxStreak()).isZero();
+                        playerSeasonService.updateSeasonProgress(userId, 5, false);
+
+                        verify(playerSeasonRepository).save(seasonCaptor.capture());
+                        PlayerSeason savedSeason = seasonCaptor.getValue();
+
+                        assertThat(savedSeason.getBasePoints()).isEqualTo(35); // 30 + 5
+                        assertThat(savedSeason.getBonusPoints()).isEqualTo(10);
+                        assertThat(savedSeason.getTotalPoints()).isEqualTo(45); // 35 base + 10 bonus
+                        assertThat(savedSeason.getHighestTierAchieved()).isEqualTo("Uovo d'Ape");
+                }
+
+                @Test
+                @DisplayName("Should apply streak bonus when milestone is reached and not claimed yet")
+                void shouldApplyStreakBonusWhenMilestoneReached() {
+                        stats.setCurrentStreak(3);
+                        stats.setLastStreakMilestoneClaimed(0);
+
+                        when(playerSeasonRepository.findByIdUserIdAndIdSeasonYear(userId, currentYear))
+                                        .thenReturn(Optional.of(season));
+                        when(playerStatsRepository.findById(userId))
+                                        .thenReturn(Optional.of(stats));
+
+                        playerSeasonService.updateSeasonProgress(userId, 10, true);
+
+                        verify(playerSeasonRepository).save(seasonCaptor.capture());
+                        verify(playerStatsRepository).save(statsCaptor.capture());
+
+                        PlayerSeason savedSeason = seasonCaptor.getValue();
+                        PlayerStats savedStats = statsCaptor.getValue();
+
+                        assertThat(savedStats.getLastStreakMilestoneClaimed()).isEqualTo(3);
+                        // Previous base points (30) + earned (10) = 40
+                        assertThat(savedSeason.getBasePoints()).isEqualTo(40);
+                        // Previous bonus points (10) + 3-day milestone bonus (50) = 60
+                        assertThat(savedSeason.getBonusPoints()).isEqualTo(60);
+                        // Total = 40 + 60 = 100
+                        assertThat(savedSeason.getTotalPoints()).isEqualTo(100);
+                }
+
+                @Test
+                @DisplayName("Should promote tier to 'Ape Esploratrice' when total points >= 50")
+                void shouldPromoteToApeEsploratrice() {
+                        when(playerSeasonRepository.findByIdUserIdAndIdSeasonYear(userId, currentYear))
+                                        .thenReturn(Optional.of(season));
+                        when(playerStatsRepository.findById(userId))
+                                        .thenReturn(Optional.of(stats));
+
+                        playerSeasonService.updateSeasonProgress(userId, 15, false); // 30+15=45 base + 10 bonus = 55
+                        // total
+
+                        verify(playerSeasonRepository).save(seasonCaptor.capture());
+                        PlayerSeason savedSeason = seasonCaptor.getValue();
+
+                        assertThat(savedSeason.getTotalPoints()).isEqualTo(55);
+                        assertThat(savedSeason.getHighestTierAchieved()).isEqualTo("Ape Esploratrice");
+                }
+
+                @Test
+                @DisplayName("Should promote tier to 'Ape Operosa' when total points >= 200")
+                void shouldPromoteToApeOperosa() {
+                        season.setBasePoints(180);
+                        season.setBonusPoints(10);
+                        when(playerSeasonRepository.findByIdUserIdAndIdSeasonYear(userId, currentYear))
+                                        .thenReturn(Optional.of(season));
+                        when(playerStatsRepository.findById(userId))
+                                        .thenReturn(Optional.of(stats));
+
+                        playerSeasonService.updateSeasonProgress(userId, 15, false); // 195 base + 10 bonus = 205 total
+
+                        verify(playerSeasonRepository).save(seasonCaptor.capture());
+                        PlayerSeason savedSeason = seasonCaptor.getValue();
+
+                        assertThat(savedSeason.getTotalPoints()).isEqualTo(205);
+                        assertThat(savedSeason.getHighestTierAchieved()).isEqualTo("Ape Operosa");
+                }
+
+                @Test
+                @DisplayName("Should promote tier to 'Regina' when total points >= 500")
+                void shouldPromoteToRegina() {
+                        season.setBasePoints(480);
+                        season.setBonusPoints(10);
+                        when(playerSeasonRepository.findByIdUserIdAndIdSeasonYear(userId, currentYear))
+                                        .thenReturn(Optional.of(season));
+                        when(playerStatsRepository.findById(userId))
+                                        .thenReturn(Optional.of(stats));
+
+                        playerSeasonService.updateSeasonProgress(userId, 20, true); // 500 base + 10 bonus = 510 total
+
+                        verify(playerSeasonRepository).save(seasonCaptor.capture());
+                        PlayerSeason savedSeason = seasonCaptor.getValue();
+
+                        assertThat(savedSeason.getTotalPoints()).isEqualTo(510);
+                        assertThat(savedSeason.getHighestTierAchieved()).isEqualTo("Regina");
+                }
+
+                @Test
+                @DisplayName("Should throw RuntimeException when user is not found during initial season creation")
+                void shouldThrowExceptionWhenUserNotFound() {
+                        when(playerSeasonRepository.findByIdUserIdAndIdSeasonYear(userId, currentYear))
+                                        .thenReturn(Optional.empty());
+                        when(userRepository.findById(userId))
+                                        .thenReturn(Optional.empty());
+
+                        assertThatThrownBy(() -> playerSeasonService.updateSeasonProgress(userId, 10, false))
+                                        .isInstanceOf(RuntimeException.class)
+                                        .hasMessageContaining("Utente non trovato con ID: " + userId);
+
+                        verify(playerSeasonRepository, never()).save(any());
+                }
         }
-    }
 
-    @Nested
-    @DisplayName("updateSeasonProgress Tests")
-    class UpdateSeasonProgressTests {
+        @Nested
+        @DisplayName("getPlayerSeasonHistory Tests")
+        class GetPlayerSeasonHistoryTests {
 
-        @Test
-        @DisplayName("Should update points and maintain tier when points are under 50")
-        void shouldUpdatePointsAndKeepInitialTier() {
-            when(playerSeasonRepository.findByIdUserIdAndIdSeasonYear(userId, currentYear))
-                    .thenReturn(Optional.of(season));
+                @Test
+                @DisplayName("Should return list of historical seasons for user")
+                void shouldReturnSeasonHistory() {
+                        PlayerSeason season2025 = PlayerSeason.builder()
+                                        .id(new PlayerSeasonId(userId, 2025))
+                                        .user(user)
+                                        .basePoints(100)
+                                        .bonusPoints(20)
+                                        .totalPoints(120)
+                                        .highestTierAchieved("Ape Esploratrice")
+                                        .build();
 
-            playerSeasonService.updateSeasonProgress(userId, 5, false);
+                        when(playerSeasonRepository.findByUserId(userId))
+                                        .thenReturn(List.of(season, season2025));
 
-            verify(playerSeasonRepository).save(seasonCaptor.capture());
-            PlayerSeason savedSeason = seasonCaptor.getValue();
+                        List<PlayerSeasonResponse> history = playerSeasonService.getPlayerSeasonHistory(userId);
 
-            assertThat(savedSeason.getBasePoints()).isEqualTo(35); // 30 + 5
-            assertThat(savedSeason.getTotalPoints()).isEqualTo(45); // 35 base + 10 bonus
-            assertThat(savedSeason.getHighestTierAchieved()).isEqualTo("Uovo d'Ape");
+                        assertThat(history).hasSize(2);
+                        assertThat(history.get(0).getYear()).isEqualTo(currentYear);
+                        assertThat(history.get(1).getYear()).isEqualTo(2025);
+
+                        verify(playerSeasonRepository, times(1)).findByUserId(userId);
+                }
         }
 
-        @Test
-        @DisplayName("Should promote tier to 'Ape Esploratrice' when total points >= 50")
-        void shouldPromoteToApeEsploratrice() {
-            when(playerSeasonRepository.findByIdUserIdAndIdSeasonYear(userId, currentYear))
-                    .thenReturn(Optional.of(season));
+        @Nested
+        @DisplayName("getRankDistribution Tests")
+        class GetRankDistributionTests {
 
-            playerSeasonService.updateSeasonProgress(userId, 15, false); // 30+15=45 base + 10 bonus = 55 total
+                @Test
+                @DisplayName("Should map tier count aggregate query results into RankDistributionResponse")
+                void shouldReturnRankDistribution() {
+                        List<Object[]> rawResults = List.<Object[]>of(
+                                        new Object[] { "Uovo d'Ape", 10L },
+                                        new Object[] { "Ape Operosa", 5L });
 
-            verify(playerSeasonRepository).save(seasonCaptor.capture());
-            PlayerSeason savedSeason = seasonCaptor.getValue();
+                        when(playerSeasonRepository.countPlayersByTierForYear(currentYear))
+                                        .thenReturn(rawResults);
 
-            assertThat(savedSeason.getTotalPoints()).isEqualTo(55);
-            assertThat(savedSeason.getHighestTierAchieved()).isEqualTo("Ape Esploratrice");
+                        RankDistributionResponse response = playerSeasonService.getRankDistribution();
+
+                        assertThat(response).isNotNull();
+                        assertThat(response.getSeasonYear()).isEqualTo(currentYear);
+                        assertThat(response.getTotalPlayers()).isEqualTo(15L);
+                        assertThat(response.getTierCounts()).containsEntry("Uovo d'Ape", 10L);
+                        assertThat(response.getTierCounts()).containsEntry("Ape Operosa", 5L);
+
+                        verify(playerSeasonRepository, times(1)).countPlayersByTierForYear(currentYear);
+                }
         }
 
-        @Test
-        @DisplayName("Should promote tier to 'Ape Operosa' when total points >= 200")
-        void shouldPromoteToApeOperosa() {
-            season.setBasePoints(180);
-            season.setBonusPoints(10);
-            when(playerSeasonRepository.findByIdUserIdAndIdSeasonYear(userId, currentYear))
-                    .thenReturn(Optional.of(season));
+        @Nested
+        @DisplayName("getTopLeaderboard Tests")
+        class GetTopLeaderboardTests {
 
-            playerSeasonService.updateSeasonProgress(userId, 15, false); // 195 base + 10 bonus = 205 total
+                @Test
+                @DisplayName("Should fetch top players and assign sequential rank positions")
+                void shouldReturnTopLeaderboardWithPositions() {
+                        when(playerSeasonRepository.findTopPlayersByYear(currentYear, PageRequest.of(0, 10)))
+                                        .thenReturn(List.of(season));
 
-            verify(playerSeasonRepository).save(seasonCaptor.capture());
-            PlayerSeason savedSeason = seasonCaptor.getValue();
+                        List<LeaderboardEntryDto> leaderboard = playerSeasonService.getTopLeaderboard(10);
 
-            assertThat(savedSeason.getTotalPoints()).isEqualTo(205);
-            assertThat(savedSeason.getHighestTierAchieved()).isEqualTo("Ape Operosa");
+                        assertThat(leaderboard).hasSize(1);
+                        assertThat(leaderboard.get(0).getUsername()).isEqualTo("testplayer");
+                        assertThat(leaderboard.get(0).getTotalPoints()).isEqualTo(40);
+                        assertThat(leaderboard.get(0).getHighestTierAchieved()).isEqualTo("Uovo d'Ape");
+                        assertThat(leaderboard.get(0).getRankPosition()).isEqualTo(1);
+
+                        verify(playerSeasonRepository, times(1)).findTopPlayersByYear(currentYear,
+                                        PageRequest.of(0, 10));
+                }
         }
-
-        @Test
-        @DisplayName("Should promote tier to 'Regina' when total points >= 500")
-        void shouldPromoteToRegina() {
-            season.setBasePoints(480);
-            season.setBonusPoints(10);
-            when(playerSeasonRepository.findByIdUserIdAndIdSeasonYear(userId, currentYear))
-                    .thenReturn(Optional.of(season));
-
-            playerSeasonService.updateSeasonProgress(userId, 20, true); // 500 base + 10 bonus = 510 total
-
-            verify(playerSeasonRepository).save(seasonCaptor.capture());
-            PlayerSeason savedSeason = seasonCaptor.getValue();
-
-            assertThat(savedSeason.getTotalPoints()).isEqualTo(510);
-            assertThat(savedSeason.getHighestTierAchieved()).isEqualTo("Regina");
-        }
-
-        @Test
-        @DisplayName("Should create new season before updating progress when season is missing")
-        void shouldCreateSeasonIfNotFoundDuringUpdate() {
-            when(playerSeasonRepository.findByIdUserIdAndIdSeasonYear(userId, currentYear))
-                    .thenReturn(Optional.empty());
-            when(userRepository.findById(userId))
-                    .thenReturn(Optional.of(user));
-
-            when(playerSeasonRepository.save(any(PlayerSeason.class)))
-                    .thenAnswer(invocation -> invocation.getArgument(0));
-
-            playerSeasonService.updateSeasonProgress(userId, 60, false);
-
-            verify(userRepository, times(1)).findById(userId);
-            verify(playerSeasonRepository, times(2)).save(seasonCaptor.capture());
-
-            PlayerSeason finalSavedSeason = seasonCaptor.getValue();
-            assertThat(finalSavedSeason.getBasePoints()).isEqualTo(60);
-            assertThat(finalSavedSeason.getTotalPoints()).isEqualTo(60);
-            assertThat(finalSavedSeason.getHighestTierAchieved()).isEqualTo("Ape Esploratrice");
-        }
-
-        @Test
-        @DisplayName("Should throw RuntimeException when user is not found during initial season creation")
-        void shouldThrowExceptionWhenUserNotFound() {
-            when(playerSeasonRepository.findByIdUserIdAndIdSeasonYear(userId, currentYear))
-                    .thenReturn(Optional.empty());
-            when(userRepository.findById(userId))
-                    .thenReturn(Optional.empty());
-
-            assertThatThrownBy(() -> playerSeasonService.updateSeasonProgress(userId, 10, false))
-                    .isInstanceOf(RuntimeException.class)
-                    .hasMessageContaining("Utente non trovato con ID: " + userId);
-
-            verify(playerSeasonRepository, never()).save(any());
-        }
-    }
 }
