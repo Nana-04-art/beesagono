@@ -66,4 +66,16 @@ public class PlayerStats {
 
     @Column(name = "last_played_date")
     private LocalDate lastPlayedDate;
+
+    @Column(name = "last_streak_milestone_claimed")
+    private Integer lastStreakMilestoneClaimed;
+
+    @Column(name = "longest_word_found")
+    private String longestWordFound;
+
+    @Column(name = "total_score_earned")
+    private Integer totalScoreEarned; // Utilizzato per calcolare la media punti
+
+    @Column(name = "total_puzzles_completed")
+    private Integer totalPuzzlesCompleted; // Contatore alveari completati al 100%
 }
