@@ -66,20 +66,22 @@ public class SecurityConfig {
 
     /**
      * Configures the main Spring Security filter chain, enabling CORS, disabling
-     * CSRF,
-     * setting session management to stateless, and mapping endpoint authorization
-     * rules.
-     *
-     * @param http the HTTP security builder
-     * @return the constructed {@link SecurityFilterChain}
-     * @throws Exception if a security configuration error occurs
+     * CSRF,setting session management to stateless, mapping endpoint authorization
+     * rules, and configuring Swagger UI public endpoints.
      */
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-        http.csrf(AbstractHttpConfigurer::disable)
+        http
+                .csrf(AbstractHttpConfigurer::disable)
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
+                        .requestMatchers(
+                                "/swagger-ui.html",
+                                "/swagger-ui/**",
+                                "/v1/api-docs/**",
+                                "/v1/api-docs.yaml")
+                        .permitAll()
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/api/puzzles/today").permitAll()
                         .anyRequest().authenticated())
