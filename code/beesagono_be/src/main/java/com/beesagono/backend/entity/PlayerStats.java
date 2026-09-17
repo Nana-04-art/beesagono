@@ -18,6 +18,10 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
 
+/**
+ * Entity storing aggregated career statistics, current streak counters, total
+ * overall score, and high-level milestones for a player across all seasons.
+ */
 @Getter
 @Setter
 @NoArgsConstructor
