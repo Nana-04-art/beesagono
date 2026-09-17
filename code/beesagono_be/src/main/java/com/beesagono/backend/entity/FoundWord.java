@@ -22,6 +22,12 @@ import lombok.ToString;
 import lombok.experimental.SuperBuilder;
 import org.hibernate.annotations.CreationTimestamp;
 
+/**
+ * Entity tracking words successfully found by a player within an active game
+ * session.
+ * Stores assigned scores and flags special occurrences like pangrams
+ * (mielegrammi).
+ */
 @Getter
 @Setter
 @NoArgsConstructor

@@ -19,6 +19,10 @@ import lombok.Setter;
 import lombok.ToString;
 import lombok.experimental.SuperBuilder;
 
+/**
+ * Lookup table entity defining validation failure reasons for submitted words
+ * (e.g., word too short, missing central letter, not in dictionary).
+ */
 @Getter
 @Setter
 @NoArgsConstructor

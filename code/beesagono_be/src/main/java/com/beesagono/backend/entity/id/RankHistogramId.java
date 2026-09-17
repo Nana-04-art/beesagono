@@ -7,6 +7,9 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+/**
+ * Composite primary key for mapping player distribution counts across distinct rank tier labels.
+ */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
