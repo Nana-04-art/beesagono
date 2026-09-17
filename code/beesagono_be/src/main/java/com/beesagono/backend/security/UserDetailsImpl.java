@@ -31,6 +31,13 @@ public class UserDetailsImpl implements UserDetails {
 
     private Collection<? extends GrantedAuthority> authorities;
 
+    /**
+     * Factory method that builds a {@link UserDetailsImpl} instance from a domain
+     * {@link User} entity.
+     *
+     * @param user the source user domain entity
+     * @return constructed UserDetailsImpl object
+     */
     public static UserDetailsImpl build(User user) {
         List<GrantedAuthority> authorities = user.getUserRoles().stream()
                 .filter(userRole -> userRole.getRole() != null && userRole.getRole().getName() != null)
