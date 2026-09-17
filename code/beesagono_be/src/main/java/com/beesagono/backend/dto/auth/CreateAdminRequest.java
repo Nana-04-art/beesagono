@@ -5,6 +5,9 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 
+/**
+ * Data Transfer Object representing the request payload for creating a new administrator account.
+ */
 @Data
 public class CreateAdminRequest {
 

@@ -5,6 +5,10 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+/**
+ * Data Transfer Object representing an individual entry within the seasonal leaderboard,
+ * containing player identity, total score, highest career tier, and current rank position.
+ */
 @Data
 @Builder
 @NoArgsConstructor

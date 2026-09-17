@@ -9,6 +9,9 @@ import lombok.Data;
 import java.time.LocalDate;
 import java.util.Set;
 
+/**
+ * Data Transfer Object representing administrative request parameters to manually construct and schedule a new daily puzzle instance.
+ */
 @Data
 public class CreatePuzzleRequest {
 
