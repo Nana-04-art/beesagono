@@ -8,6 +8,9 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+/**
+ * Composite primary key linking valid solution words to their corresponding daily puzzle.
+ */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor

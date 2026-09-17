@@ -20,6 +20,10 @@ import lombok.ToString;
 import lombok.experimental.SuperBuilder;
 import org.hibernate.annotations.UuidGenerator;
 
+/**
+ * Entity defining access roles within the system (e.g., ROLE_USER,
+ * ROLE_ADMIN).
+ */
 @Getter
 @Setter
 @NoArgsConstructor
