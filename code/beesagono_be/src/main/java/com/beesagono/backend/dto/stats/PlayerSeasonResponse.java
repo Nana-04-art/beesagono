@@ -5,6 +5,10 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+/**
+ * Data Transfer Object representing a player's performance breakdown for a specific season,
+ * detailing base points, bonus points, combined score, and current tier status.
+ */
 @Data
 @Builder
 @NoArgsConstructor
