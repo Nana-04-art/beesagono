@@ -5,6 +5,10 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+/**
+ * Data Transfer Object representing the response payload following successful authentication,
+ * including JWT access and refresh tokens along with core user profile details.
+ */
 @Data
 @Builder
 @NoArgsConstructor
