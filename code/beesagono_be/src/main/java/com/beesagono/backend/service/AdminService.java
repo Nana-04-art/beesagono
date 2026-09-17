@@ -36,6 +36,13 @@ public interface AdminService {
      * @param pageable pagination and sorting parameters
      * @return a {@link Page} of {@link UserResponse} items
      */
+    /**
+     * Retrieves a paginated list of system users, optionally filtered by username or email search term.
+     *
+     * @param search   optional search query to filter users
+     * @param pageable pagination and sorting parameters
+     * @return a {@link Page} of {@link UserResponse} items
+     */
     Page<UserResponse> getUsers(String search, Pageable pageable);
 
     // --- Puzzle Management & Inspection ---
@@ -44,8 +51,7 @@ public interface AdminService {
      * Generates or resets a future daily puzzle instance for a specified date.
      *
      * @param date target date for puzzle generation or reset
-     * @return {@link PuzzleAdminResponse} detailing the generated or updated puzzle
-     *         configuration
+     * @return {@link PuzzleAdminResponse} detailing the generated or updated puzzle configuration
      */
 
     /**
