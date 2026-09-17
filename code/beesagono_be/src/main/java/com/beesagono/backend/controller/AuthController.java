@@ -18,10 +18,11 @@ import com.beesagono.backend.dto.auth.LoginResponse;
 import com.beesagono.backend.dto.auth.RegisterRequest;
 import com.beesagono.backend.dto.auth.RegisterResponse;
 import com.beesagono.backend.service.AuthService;
+
+import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
-import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
