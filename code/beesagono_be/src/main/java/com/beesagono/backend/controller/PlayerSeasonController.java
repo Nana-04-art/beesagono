@@ -5,6 +5,8 @@ import com.beesagono.backend.dto.stats.PlayerSeasonResponse;
 import com.beesagono.backend.dto.stats.RankDistributionResponse;
 import com.beesagono.backend.security.UserDetailsImpl;
 import com.beesagono.backend.service.PlayerSeasonService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -18,31 +20,32 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/seasons")
 @RequiredArgsConstructor
+@Tag(name = "Player Season Controller", description = "Seasonal metrics, rank history, and global leaderboards")
 public class PlayerSeasonController {
 
     private final PlayerSeasonService playerSeasonService;
 
+    @Operation(summary = "Get current season statistics for the authenticated user")
     @GetMapping("/me")
     public ResponseEntity<PlayerSeasonResponse> getMySeasonStats(
             @AuthenticationPrincipal UserDetailsImpl userDetails) {
-
-        PlayerSeasonResponse response = playerSeasonService.getCurrentSeasonStats(userDetails.getId());
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(playerSeasonService.getCurrentSeasonStats(userDetails.getId()));
     }
 
+    @Operation(summary = "Get user performance history from past seasons")
     @GetMapping("/history")
     public ResponseEntity<List<PlayerSeasonResponse>> getMySeasonHistory(
             @AuthenticationPrincipal UserDetailsImpl userDetails) {
-
-        List<PlayerSeasonResponse> history = playerSeasonService.getPlayerSeasonHistory(userDetails.getId());
-        return ResponseEntity.ok(history);
+        return ResponseEntity.ok(playerSeasonService.getPlayerSeasonHistory(userDetails.getId()));
     }
 
+    @Operation(summary = "Get global player rank distribution")
     @GetMapping("/rank-distribution")
     public ResponseEntity<RankDistributionResponse> getRankDistribution() {
         return ResponseEntity.ok(playerSeasonService.getRankDistribution());
     }
 
+    @Operation(summary = "Get top player leaderboard for current season")
     @GetMapping("/leaderboard")
     public ResponseEntity<List<LeaderboardEntryDto>> getLeaderboard(
             @RequestParam(defaultValue = "10") int limit) {
