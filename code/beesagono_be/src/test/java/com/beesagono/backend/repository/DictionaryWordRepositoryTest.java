@@ -39,8 +39,8 @@ class DictionaryWordRepositoryTest {
     void shouldFindByWord() {
         DictionaryWord wordEntity = DictionaryWord.builder()
                 .word("AFISE")
-                .wordLength(5)
                 .uniqueLettersCount(5)
+                .letterMask(12345)
                 .isCandidatePangram(false)
                 .addedByUser(adminUser)
                 .addedAt(new Date())
@@ -52,7 +52,6 @@ class DictionaryWordRepositoryTest {
 
         assertThat(result).isPresent();
         assertThat(result.get().getWord()).isEqualTo("AFISE");
-        assertThat(result.get().getWordLength()).isEqualTo(5);
         assertThat(result.get().getAddedByUser().getId()).isEqualTo(adminUser.getId());
     }
 
@@ -69,8 +68,8 @@ class DictionaryWordRepositoryTest {
     void shouldReturnTrueWhenExistsByWord() {
         DictionaryWord wordEntity = DictionaryWord.builder()
                 .word("BEES")
-                .wordLength(4)
                 .uniqueLettersCount(3)
+                .letterMask(12345)
                 .isCandidatePangram(false)
                 .addedByUser(adminUser)
                 .addedAt(new Date())

@@ -39,7 +39,9 @@ import java.util.Set;
 import static org.hamcrest.Matchers.hasItem;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -150,7 +152,7 @@ class AdminUserControllerTest {
     }
 
     @Test
-    @DisplayName("POST /api/admin/users/admin - Success")
+    @DisplayName("POST /api/admin/users - Success")
     void createAdmin_Success() throws Exception {
         CreateAdminRequest request = new CreateAdminRequest();
         request.setUsername("newadmin");
@@ -166,7 +168,7 @@ class AdminUserControllerTest {
 
         when(adminService.createAdmin(any(CreateAdminRequest.class))).thenReturn(response);
 
-        mockMvc.perform(post("/api/admin/users/admin")
+        mockMvc.perform(post("/api/admin/users")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())

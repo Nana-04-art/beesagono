@@ -11,6 +11,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.EqualsAndHashCode;
@@ -21,6 +22,7 @@ import lombok.ToString;
 import lombok.experimental.SuperBuilder;
 
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.Generated;
 
 @Getter
 @Setter
@@ -46,6 +48,7 @@ public class DictionaryWord {
     @Column(name = "word", length = 100)
     private String word;
 
+    @Generated
     @ToString.Include
     @Column(name = "word_length", insertable = false, updatable = false)
     private Integer wordLength;

@@ -1,6 +1,10 @@
 package com.beesagono.backend.service;
 
-import com.beesagono.backend.dto.dictionary.*;
+import com.beesagono.backend.dto.dictionary.AddWordRequest;
+import com.beesagono.backend.dto.dictionary.BatchAddWordRequest;
+import com.beesagono.backend.dto.dictionary.BatchUploadResponse;
+import com.beesagono.backend.dto.dictionary.DictionaryFilterRequest;
+import com.beesagono.backend.dto.dictionary.DictionaryWordResponse;
 import com.beesagono.backend.entity.DictionaryWord;
 import com.beesagono.backend.entity.User;
 import com.beesagono.backend.mapper.DictionaryWordMapper;
@@ -25,7 +29,10 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.eq;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 
 @ExtendWith(MockitoExtension.class)
 class DictionaryServiceImplTest {
@@ -54,15 +61,14 @@ class DictionaryServiceImplTest {
 
         DictionaryWord savedWord = DictionaryWord.builder()
                 .word("ALBERO")
-                .wordLength(6)
                 .uniqueLettersCount(5)
+                .letterMask(17)
                 .isCandidatePangram(false)
                 .addedByUser(adminUser)
                 .build();
 
         DictionaryWordResponse expectedResponse = DictionaryWordResponse.builder()
                 .word("ALBERO")
-                .wordLength(6)
                 .uniqueLettersCount(5)
                 .isCandidatePangram(false)
                 .build();
@@ -120,8 +126,7 @@ class DictionaryServiceImplTest {
         request.setWords(List.of("casa", "albero", "duplicata"));
 
         when(dictionaryWordRepository.findAllById(any())).thenReturn(List.of(
-                DictionaryWord.builder().word("DUPLICATA").build()
-        ));
+                DictionaryWord.builder().word("DUPLICATA").build()));
 
         BatchUploadResponse response = dictionaryService.addBatchWords(request, adminUser);
 
@@ -138,8 +143,7 @@ class DictionaryServiceImplTest {
                 "file",
                 "test.txt",
                 "text/plain",
-                "casa, albero\nfiore".getBytes()
-        );
+                "casa, albero\nfiore".getBytes());
 
         when(dictionaryWordRepository.findAllById(any())).thenReturn(Collections.emptyList());
 
