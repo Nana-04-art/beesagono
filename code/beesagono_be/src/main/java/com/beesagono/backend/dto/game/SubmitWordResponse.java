@@ -6,6 +6,9 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+/**
+ * Data Transfer Object representing the validation result and updated score metrics after a word submission attempt.
+ */
 @Data
 @Builder
 @NoArgsConstructor

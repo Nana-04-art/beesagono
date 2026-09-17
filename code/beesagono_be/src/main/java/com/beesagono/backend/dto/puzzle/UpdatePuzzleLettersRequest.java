@@ -7,6 +7,9 @@ import lombok.Data;
 
 import java.util.Set;
 
+/**
+ * Data Transfer Object representing administrative requests to update the central and outer letter configurations of a daily puzzle.
+ */
 @Data
 public class UpdatePuzzleLettersRequest {
     @NotBlank

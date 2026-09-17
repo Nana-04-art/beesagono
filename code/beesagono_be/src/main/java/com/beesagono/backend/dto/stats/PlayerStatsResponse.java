@@ -5,6 +5,10 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+/**
+ * Data Transfer Object representing aggregated career statistics for a player,
+ * including streak metrics, word achievements, average scores, and completion rates.
+ */
 @Data
 @Builder
 @NoArgsConstructor

@@ -7,6 +7,10 @@ import lombok.NoArgsConstructor;
 
 import java.util.Map;
 
+/**
+ * Data Transfer Object representing community rank distribution data for a specific season,
+ * mapping tier labels to player counts for statistical insights.
+ */
 @Data
 @Builder
 @NoArgsConstructor
