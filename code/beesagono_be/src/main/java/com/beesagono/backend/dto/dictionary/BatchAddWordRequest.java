@@ -5,6 +5,9 @@ import lombok.Data;
 
 import java.util.List;
 
+/**
+ * Data Transfer Object representing the request payload for bulk adding multiple words to the dictionary.
+ */
 @Data
 public class BatchAddWordRequest {
 
