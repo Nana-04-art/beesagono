@@ -1,16 +1,13 @@
 package com.beesagono.backend.controller;
 
-import com.beesagono.backend.dto.dictionary.AddWordRequest;
-import com.beesagono.backend.dto.dictionary.BatchAddWordRequest;
-import com.beesagono.backend.dto.dictionary.BatchUploadResponse;
-import com.beesagono.backend.dto.dictionary.DictionaryFilterRequest;
-import com.beesagono.backend.dto.dictionary.DictionaryWordResponse;
-import com.beesagono.backend.dto.dictionary.InvalidWordAttemptStatResponse;
+import com.beesagono.backend.dto.dictionary.*;
 import com.beesagono.backend.entity.User;
 import com.beesagono.backend.repository.UserRepository;
 import com.beesagono.backend.security.UserDetailsImpl;
 import com.beesagono.backend.service.AdminService;
 import com.beesagono.backend.service.DictionaryService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -22,15 +19,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.ModelAttribute;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -40,55 +29,55 @@ import java.util.List;
 @RequestMapping("/api/admin/dictionary")
 @RequiredArgsConstructor
 @PreAuthorize("hasRole('ADMIN')")
+@Tag(name = "Dictionary Controller", description = "Dictionary management, batch imports, and invalid attempt audits")
 public class DictionaryController {
 
     private final DictionaryService dictionaryService;
     private final UserRepository userRepository;
     private final AdminService adminService;
 
+    @Operation(summary = "Add a single word to the dictionary")
     @PostMapping("/word")
     public ResponseEntity<DictionaryWordResponse> addWordToDictionary(
             @RequestBody @Valid AddWordRequest request,
             @AuthenticationPrincipal UserDetailsImpl userDetails) {
-
         User admin = getAdminUser(userDetails);
-        DictionaryWordResponse response = dictionaryService.addSingleWord(request, admin);
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        return ResponseEntity.status(HttpStatus.CREATED).body(dictionaryService.addSingleWord(request, admin));
     }
 
+    @Operation(summary = "Insert a list of words in batch mode")
     @PostMapping("/words/batch")
     public ResponseEntity<BatchUploadResponse> addBatchWords(
             @Valid @RequestBody BatchAddWordRequest request,
             @AuthenticationPrincipal UserDetailsImpl userDetails) {
-
         User admin = getAdminUser(userDetails);
         return ResponseEntity.status(HttpStatus.CREATED).body(dictionaryService.addBatchWords(request, admin));
     }
 
+    @Operation(summary = "Upload and import words from a text file")
     @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<BatchUploadResponse> uploadFromFile(
             @RequestParam("file") MultipartFile file,
             @AuthenticationPrincipal UserDetailsImpl userDetails) {
-
         User admin = getAdminUser(userDetails);
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(dictionaryService.uploadWordsFromFile(file, admin));
+        return ResponseEntity.status(HttpStatus.CREATED).body(dictionaryService.uploadWordsFromFile(file, admin));
     }
 
+    @Operation(summary = "Retrieve a paginated and filtered list of dictionary words")
     @GetMapping
     public ResponseEntity<Page<DictionaryWordResponse>> getWords(
             @ModelAttribute DictionaryFilterRequest filterRequest,
             @PageableDefault(size = 20, sort = "word", direction = Sort.Direction.ASC) Pageable pageable) {
-
-        Page<DictionaryWordResponse> page = dictionaryService.getWords(filterRequest, pageable);
-        return ResponseEntity.ok(page);
+        return ResponseEntity.ok(dictionaryService.getWords(filterRequest, pageable));
     }
 
+    @Operation(summary = "Statistics on the most played invalid words by users")
     @GetMapping("/invalid-attempts")
     public ResponseEntity<List<InvalidWordAttemptStatResponse>> getTopSuggestedWords() {
         return ResponseEntity.ok(adminService.getTopSuggestedWordsFromAttempts());
     }
 
+    @Operation(summary = "Permanently remove a word from the dictionary")
     @DeleteMapping("/word/{word}")
     public ResponseEntity<Void> removeWordFromDictionary(@PathVariable String word) {
         adminService.removeWordFromDictionary(word);
