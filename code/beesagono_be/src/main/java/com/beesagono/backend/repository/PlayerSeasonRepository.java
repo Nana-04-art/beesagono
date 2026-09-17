@@ -15,13 +15,21 @@ public interface PlayerSeasonRepository extends JpaRepository<PlayerSeason, Play
 
     List<PlayerSeason> findByUserId(String userId);
 
+    /**
+     * Retrieves a user's specific season using the composite key fields
+     */
     Optional<PlayerSeason> findByIdUserIdAndIdSeasonYear(String userId, Integer seasonYear);
 
-    // Top Leaderboard
+    /**
+     * Retrieves top players for the year ordered by total points
+     */
     @Query("SELECT ps FROM PlayerSeason ps WHERE ps.id.seasonYear = :year ORDER BY ps.totalPoints DESC")
     List<PlayerSeason> findTopPlayersByYear(@Param("year") int year, Pageable pageable);
 
-    // Aggregate rank count
+    /**
+     * Calculates the total number of players belonging to each rank tier for the
+     * specified year
+     */
     @Query("SELECT ps.highestTierAchieved, COUNT(ps) FROM PlayerSeason ps WHERE ps.id.seasonYear = :year GROUP BY ps.highestTierAchieved")
     List<Object[]> countPlayersByTierForYear(@Param("year") int year);
 }
