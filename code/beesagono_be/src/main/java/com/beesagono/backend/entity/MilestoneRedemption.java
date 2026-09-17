@@ -22,6 +22,11 @@ import lombok.ToString;
 import lombok.experimental.SuperBuilder;
 import org.hibernate.annotations.CreationTimestamp;
 
+/**
+ * Entity tracking the historical redemption of streak milestone bonus rewards.
+ * Serves as an immutable record to prevent duplicate bonus claims for specific
+ * player streaks within a seasonal timeframe.
+ */
 @Getter
 @Setter
 @NoArgsConstructor

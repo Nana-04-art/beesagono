@@ -7,6 +7,9 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+/**
+ * Composite primary key identifying a player's seasonal record for a specific calendar year.
+ */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor

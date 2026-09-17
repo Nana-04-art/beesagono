@@ -7,6 +7,9 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+/**
+ * Composite primary key for identifying a specific word found within a game session.
+ */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor

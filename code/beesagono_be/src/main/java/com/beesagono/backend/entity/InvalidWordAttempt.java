@@ -23,6 +23,12 @@ import org.hibernate.annotations.UuidGenerator;
 
 import com.beesagono.backend.enums.ErrorTypeCode;
 
+/**
+ * Entity representing an invalid word submission attempt by a player during a
+ * game session.
+ * Tracks rejected words alongside their specific validation error reasons for
+ * analytics and security auditing.
+ */
 @Getter
 @Setter
 @NoArgsConstructor
