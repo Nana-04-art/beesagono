@@ -7,6 +7,10 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.List;
 
 public interface MilestoneRedemptionRepository extends JpaRepository<MilestoneRedemption, MilestoneRedemptionId> {
-    // Navigation of the id.userId and id.seasonYear fields of the composite key
+
+    /**
+     * Navigates the composite primary key (userId + seasonYear) to retrieve user
+     * milestones
+     */
     List<MilestoneRedemption> findByIdUserIdAndIdSeasonYear(String userId, Integer seasonYear);
 }

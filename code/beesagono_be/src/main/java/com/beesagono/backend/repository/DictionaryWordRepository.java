@@ -16,6 +16,9 @@ public interface DictionaryWordRepository
 
         Boolean existsByWord(String word);
 
+        /**
+         * Retrieves all words flagged as candidate pangrams (mielegrammi)
+         */
         @Query("SELECT dw.word FROM DictionaryWord dw WHERE dw.isCandidatePangram = true")
         List<String> findCandidatePangrams();
 
