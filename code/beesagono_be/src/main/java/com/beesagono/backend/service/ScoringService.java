@@ -4,8 +4,7 @@ import com.beesagono.backend.enums.CareerTier;
 import com.beesagono.backend.enums.RankTier;
 
 /**
- * Utility service interface defining business rules for word validation
- * scoring,
+ * Utility service interface defining business rules for word validation scoring,
  * daily rank tier assignments, and seasonal career tier calculations.
  */
 public interface ScoringService {
