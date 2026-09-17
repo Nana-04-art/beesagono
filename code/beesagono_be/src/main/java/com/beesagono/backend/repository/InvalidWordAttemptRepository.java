@@ -14,9 +14,13 @@ public interface InvalidWordAttemptRepository extends JpaRepository<InvalidWordA
 
     List<InvalidWordAttempt> findBySessionId(String sessionId);
 
+    /**
+     * Groups and counts the frequency of each invalid word for a specific error
+     * type
+     */
     @Query("SELECT i.attemptedWord AS attemptedWord, COUNT(i) AS attemptCount " +
-           "FROM InvalidWordAttempt i " +
-           "WHERE i.errorReason = :errorReason " +
-           "GROUP BY i.attemptedWord")
+            "FROM InvalidWordAttempt i " +
+            "WHERE i.errorReason = :errorReason " +
+            "GROUP BY i.attemptedWord")
     List<InvalidWordAttemptStat> findByErrorReason(@Param("errorReason") ErrorTypeCode errorReason);
 }
