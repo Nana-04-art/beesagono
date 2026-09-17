@@ -22,6 +22,10 @@ import lombok.Setter;
 import lombok.ToString;
 import lombok.experimental.SuperBuilder;
 
+/**
+ * Entity representing a player's performance, score progression, and career
+ * tier rank for a specific seasonal year.
+ */
 @Getter
 @Setter
 @NoArgsConstructor

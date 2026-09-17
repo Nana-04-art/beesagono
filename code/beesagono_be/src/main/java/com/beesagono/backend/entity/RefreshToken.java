@@ -20,6 +20,12 @@ import lombok.experimental.SuperBuilder;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UuidGenerator;
 
+/**
+ * Entity managing JWT refresh tokens for user authentication
+ * sessions.
+ * Used for issuing new access tokens and handling secure session
+ * revocatio.
+ */
 @Getter
 @Setter
 @NoArgsConstructor
