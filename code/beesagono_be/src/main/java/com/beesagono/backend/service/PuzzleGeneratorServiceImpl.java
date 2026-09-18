@@ -124,7 +124,9 @@ public class PuzzleGeneratorServiceImpl implements PuzzleGeneratorService {
                 break;
             }
 
-            if (attempt == MAX_GENERATION_ATTEMPTS - 1) {
+            // If no board passes the Quality Gate within 50 attempts, fallbackBoard will
+            // always contain the best option found during the entire process
+            if (fallbackBoard == null || currentBoard.words().size() > fallbackBoard.words().size()) {
                 fallbackBoard = currentBoard;
             }
         }

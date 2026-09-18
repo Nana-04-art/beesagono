@@ -6,5 +6,5 @@ import com.beesagono.backend.dto.puzzle.WordSubmissionResponse;
 public interface PuzzleService {
     DailyPuzzleResponse getTodayPuzzle();
 
-    WordSubmissionResponse validateAndScoreWord(String puzzleId, String word);
+    WordSubmissionResponse validateAndScoreWord(String userId, String puzzleId, String rawWord);
 }
