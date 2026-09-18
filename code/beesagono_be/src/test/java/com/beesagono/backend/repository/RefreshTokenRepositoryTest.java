@@ -22,6 +22,8 @@ class RefreshTokenRepositoryTest {
     @Autowired
     private TestEntityManager entityManager;
 
+    // --- findByTokenHash ---
+
     @Test
     @DisplayName("findByTokenHash - Should return RefreshToken when tokenHash exists")
     void shouldFindByTokenHash() {
@@ -44,6 +46,16 @@ class RefreshTokenRepositoryTest {
         assertThat(found).isPresent();
         assertThat(found.get().getUser().getUsername()).isEqualTo("tokenUser");
     }
+
+    @Test
+    @DisplayName("findByTokenHash - Should return empty Optional when tokenHash does not exist")
+    void shouldReturnEmptyWhenTokenHashNotFound() {
+        Optional<RefreshToken> found = refreshTokenRepository.findByTokenHash("nonexistent-hash");
+
+        assertThat(found).isEmpty();
+    }
+
+    // --- deleteByUser ---
 
     @Test
     @DisplayName("deleteByUser - Should delete all refresh tokens for a given user")

@@ -4,6 +4,7 @@ import com.beesagono.backend.entity.PlayerSeason;
 import com.beesagono.backend.entity.User;
 import com.beesagono.backend.entity.id.PlayerSeasonId;
 import com.beesagono.backend.testsupport.H2DataJpaTest;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,56 +18,75 @@ import static org.assertj.core.api.Assertions.assertThat;
 @H2DataJpaTest
 class PlayerSeasonRepositoryTest {
 
-    @Autowired
-    private PlayerSeasonRepository playerSeasonRepository;
+        @Autowired
+        private PlayerSeasonRepository playerSeasonRepository;
 
-    @Autowired
-    private TestEntityManager entityManager;
+        @Autowired
+        private TestEntityManager entityManager;
 
-    @Test
-    @DisplayName("findByUserId - Should return list of seasons for a given userId")
-    void shouldFindByUserId() {
-        User user = entityManager.persist(User.builder()
-                .username("seasonPlayer1")
-                .email("season1@example.com")
-                .passwordHash("pwd")
-                .build());
+        private User user;
 
-        PlayerSeasonId id = new PlayerSeasonId(user.getId(), 2026);
-        PlayerSeason season = PlayerSeason.builder()
-                .id(id)
-                .user(user)
-                .totalPoints(100)
-                .build();
+        @BeforeEach
+        void setUp() {
+                user = entityManager.persist(User.builder()
+                                .username("seasonPlayer")
+                                .email("season@example.com")
+                                .passwordHash("pwd")
+                                .build());
+        }
 
-        entityManager.persistAndFlush(season);
+        // --- findByUserId ---
 
-        List<PlayerSeason> seasons = playerSeasonRepository.findByUserId(user.getId());
+        @Test
+        @DisplayName("findByUserId - Should return list of seasons for a given userId")
+        void shouldFindByUserId() {
+                PlayerSeasonId id = new PlayerSeasonId(user.getId(), 2026);
+                PlayerSeason season = PlayerSeason.builder()
+                                .id(id)
+                                .user(user)
+                                .totalPoints(100)
+                                .build();
 
-        assertThat(seasons).hasSize(1);
-    }
+                entityManager.persistAndFlush(season);
 
-    @Test
-    @DisplayName("findByIdUserIdAndIdYear - Should return PlayerSeason by composite key attributes")
-    void shouldFindByIdUserIdAndIdYear() {
-        User user = entityManager.persist(User.builder()
-                .username("seasonPlayer2")
-                .email("season2@example.com")
-                .passwordHash("pwd")
-                .build());
+                List<PlayerSeason> seasons = playerSeasonRepository.findByUserId(user.getId());
 
-        PlayerSeasonId id = new PlayerSeasonId(user.getId(), 2026);
-        PlayerSeason season = PlayerSeason.builder()
-                .id(id)
-                .user(user)
-                .totalPoints(200)
-                .build();
+                assertThat(seasons).hasSize(1);
+        }
 
-        entityManager.persistAndFlush(season);
+        @Test
+        @DisplayName("findByUserId - Should return empty list when user has no seasons")
+        void shouldReturnEmptyWhenUserHasNoSeasons() {
+                List<PlayerSeason> seasons = playerSeasonRepository.findByUserId("nonexistent-user");
 
-        Optional<PlayerSeason> found = playerSeasonRepository.findByIdUserIdAndIdSeasonYear(user.getId(), 2026);
+                assertThat(seasons).isEmpty();
+        }
 
-        assertThat(found).isPresent();
-        assertThat(found.get().getTotalPoints()).isEqualTo(200);
-    }
+        // --- findByIdUserIdAndIdSeasonYear ---
+
+        @Test
+        @DisplayName("findByIdUserIdAndIdSeasonYear - Should return PlayerSeason by composite key attributes")
+        void shouldFindByIdUserIdAndIdSeasonYear() {
+                PlayerSeasonId id = new PlayerSeasonId(user.getId(), 2026);
+                PlayerSeason season = PlayerSeason.builder()
+                                .id(id)
+                                .user(user)
+                                .totalPoints(200)
+                                .build();
+
+                entityManager.persistAndFlush(season);
+
+                Optional<PlayerSeason> found = playerSeasonRepository.findByIdUserIdAndIdSeasonYear(user.getId(), 2026);
+
+                assertThat(found).isPresent();
+                assertThat(found.get().getTotalPoints()).isEqualTo(200);
+        }
+
+        @Test
+        @DisplayName("findByIdUserIdAndIdSeasonYear - Should return empty Optional when season not found")
+        void shouldReturnEmptyWhenSeasonNotFound() {
+                Optional<PlayerSeason> found = playerSeasonRepository.findByIdUserIdAndIdSeasonYear(user.getId(), 2099);
+
+                assertThat(found).isEmpty();
+        }
 }

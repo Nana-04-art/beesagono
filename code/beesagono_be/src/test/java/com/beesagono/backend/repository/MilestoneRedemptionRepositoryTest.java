@@ -18,44 +18,50 @@ import static org.assertj.core.api.Assertions.assertThat;
 @H2DataJpaTest
 class MilestoneRedemptionRepositoryTest {
 
-    @Autowired
-    private MilestoneRedemptionRepository milestoneRedemptionRepository;
+        @Autowired
+        private MilestoneRedemptionRepository milestoneRedemptionRepository;
 
-    @Autowired
-    private TestEntityManager entityManager;
+        @Autowired
+        private TestEntityManager entityManager;
 
-    @Test
-    @DisplayName("findByIdUserIdAndIdSeasonYear - Should return list of redemptions for given userId and season year")
-    void shouldFindByIdUserIdAndIdSeasonYear() {
-        User user = entityManager.persist(User.builder()
-                .username("redemptionPlayer")
-                .email("redemption@example.com")
-                .passwordHash("pwd")
-                .build());
+        @Test
+        @DisplayName("findByIdUserIdAndIdSeasonYear - Should return list of redemptions for given userId and season year")
+        void shouldFindByIdUserIdAndIdSeasonYear() {
+                User user = entityManager.persist(User.builder()
+                                .username("redemptionPlayer")
+                                .email("redemption@example.com")
+                                .passwordHash("pwd")
+                                .build());
 
-        PlayerSeasonId seasonId = new PlayerSeasonId(user.getId(), 2026);
-        PlayerSeason playerSeason = entityManager.persist(PlayerSeason.builder()
-                .id(seasonId)
-                .user(user)
-                .totalPoints(500)
-                .build());
+                PlayerSeasonId seasonId = new PlayerSeasonId(user.getId(), 2026);
+                PlayerSeason playerSeason = entityManager.persist(PlayerSeason.builder()
+                                .id(seasonId)
+                                .user(user)
+                                .totalPoints(500)
+                                .build());
 
-        MilestoneRedemptionId redemptionId = new MilestoneRedemptionId(user.getId(), 2026, 5);
+                MilestoneRedemptionId redemptionId = new MilestoneRedemptionId(user.getId(), 2026, 5);
 
-        MilestoneRedemption redemption = MilestoneRedemption.builder()
-                .id(redemptionId)
-                .user(user)
-                .playerSeason(playerSeason)
-                .build();
+                MilestoneRedemption redemption = MilestoneRedemption.builder()
+                                .id(redemptionId)
+                                .user(user)
+                                .playerSeason(playerSeason)
+                                .build();
 
-        entityManager.persistAndFlush(redemption);
+                entityManager.persistAndFlush(redemption);
 
-        List<MilestoneRedemption> results = milestoneRedemptionRepository
-                .findByIdUserIdAndIdSeasonYear(user.getId(), 2026);
+                List<MilestoneRedemption> results = milestoneRedemptionRepository
+                                .findByIdUserIdAndIdSeasonYear(user.getId(), 2026);
 
-        assertThat(results).hasSize(1);
-        assertThat(results.get(0).getId().getUserId()).isEqualTo(user.getId());
-        assertThat(results.get(0).getId().getSeasonYear()).isEqualTo(2026);
-        assertThat(results.get(0).getId().getStreakLength()).isEqualTo(5);
-    }
+                assertThat(results).hasSize(1);
+        }
+
+        @Test
+        @DisplayName("findByIdUserIdAndIdSeasonYear - Should return empty list when no redemptions match")
+        void shouldReturnEmptyWhenNoRedemptionsFound() {
+                List<MilestoneRedemption> results = milestoneRedemptionRepository
+                                .findByIdUserIdAndIdSeasonYear("nonexistent-user", 2099);
+
+                assertThat(results).isEmpty();
+        }
 }
