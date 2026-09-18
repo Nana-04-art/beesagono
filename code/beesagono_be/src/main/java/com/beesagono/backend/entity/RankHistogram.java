@@ -19,6 +19,10 @@ import lombok.Setter;
 import lombok.ToString;
 import lombok.experimental.SuperBuilder;
 
+/**
+ * Entity tracking the frequency/count of rank tiers achieved by a specific user
+ * for seasonal histogram and rank distribution analytics.
+ */
 @Getter
 @Setter
 @NoArgsConstructor

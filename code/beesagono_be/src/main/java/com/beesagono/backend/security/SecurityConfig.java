@@ -21,6 +21,10 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.List;
 
+/**
+ * Spring Security configuration class responsible for HTTP security rules, CORS
+ * policies, stateless JWT filter chain setup, and password encoder definitions.
+ */
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
@@ -35,22 +39,47 @@ public class SecurityConfig {
     @Value("${cors.allowed-methods}")
     private List<String> allowedMethods;
 
+    /**
+     * Exposes the Spring {@link AuthenticationManager} bean from authentication
+     * configuration.
+     *
+     * @param authConfig the Spring authentication configuration
+     * @return the configured authentication manager
+     * @throws Exception if an error occurs while retrieving the manager
+     */
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration authConfig) throws Exception {
         return authConfig.getAuthenticationManager();
     }
 
+    /**
+     * Defines the password encoder implementation for the application using BCrypt.
+     *
+     * @return a {@link PasswordEncoder} instance
+     */
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
 
+    /**
+     * Configures the main Spring Security filter chain, enabling CORS, disabling
+     * CSRF,setting session management to stateless, mapping endpoint authorization
+     * rules, and configuring Swagger UI public endpoints.
+     */
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-        http.csrf(AbstractHttpConfigurer::disable)
+        http
+                .csrf(AbstractHttpConfigurer::disable)
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
+                        .requestMatchers(
+                                "/swagger-ui.html",
+                                "/swagger-ui/**",
+                                "/v1/api-docs/**",
+                                "/v1/api-docs.yaml")
+                        .permitAll()
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/api/puzzles/today").permitAll()
                         .anyRequest().authenticated())
@@ -59,6 +88,12 @@ public class SecurityConfig {
         return http.build();
     }
 
+    /**
+     * Configures global Cross-Origin Resource Sharing (CORS) rules based on
+     * application settings.
+     *
+     * @return the CORS configuration source
+     */
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();

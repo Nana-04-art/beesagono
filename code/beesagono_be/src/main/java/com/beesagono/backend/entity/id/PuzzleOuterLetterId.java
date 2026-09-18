@@ -8,6 +8,9 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+/**
+ * Composite primary key mapping allowable outer letters to a specific daily puzzle instance.
+ */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor

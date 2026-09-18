@@ -25,6 +25,12 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 import org.hibernate.annotations.UuidGenerator;
 
+/**
+ * Entity representing an individual player's gameplay session for a specific
+ * daily puzzle.
+ * Tracks total current score, current rank tier achieved, completion status,
+ * and active timestamps.
+ */
 @Getter
 @Setter
 @NoArgsConstructor

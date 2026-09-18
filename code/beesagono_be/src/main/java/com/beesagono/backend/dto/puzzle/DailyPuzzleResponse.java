@@ -8,6 +8,9 @@ import lombok.NoArgsConstructor;
 import java.time.LocalDate;
 import java.util.Set;
 
+/**
+ * Data Transfer Object representing the public configuration details of a daily puzzle for player clients.
+ */
 @Data
 @Builder
 @NoArgsConstructor

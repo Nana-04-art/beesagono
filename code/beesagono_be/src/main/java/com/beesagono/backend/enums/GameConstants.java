@@ -2,6 +2,9 @@ package com.beesagono.backend.enums;
 
 import java.util.Map;
 
+/**
+ * Utility class holding immutable configuration constants and streak milestone reward definitions for the game.
+ */
 public final class GameConstants {
 
     private GameConstants() {

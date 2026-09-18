@@ -12,7 +12,6 @@ import com.beesagono.backend.service.PuzzleService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.TestConfiguration;
@@ -26,7 +25,6 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.bind.support.WebDataBinderFactory;
@@ -48,7 +46,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(PuzzleController.class)
-@Import({ GlobalExceptionHandler.class, PuzzleControllerTest.TestConfig.class })
+@Import(GlobalExceptionHandler.class)
 @AutoConfigureMockMvc(addFilters = false)
 class PuzzleControllerTest {
 
@@ -75,66 +73,89 @@ class PuzzleControllerTest {
 
     @BeforeEach
     void setUp() {
-        testUser = User.builder()
-                .id("user-1")
-                .username("testuser")
-                .email("user@example.com")
-                .build();
-
-        principal = new UserDetailsImpl(
-                testUser.getId(),
-                testUser.getUsername(),
-                testUser.getEmail(),
-                "pwd",
-                List.of(new SimpleGrantedAuthority("ROLE_USER")));
+        testUser = createTestUser("user-1", "testuser", "user@example.com");
+        principal = createTestPrincipal(testUser);
 
         UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
-                principal, null, principal.getAuthorities());
+                principal, null, principal.getAuthorities()
+        );
         SecurityContextHolder.getContext().setAuthentication(auth);
     }
 
     // --- GET /api/puzzles/today ---
 
-    @Nested
-    @DisplayName("GET /api/puzzles/today Tests")
-    @ContextConfiguration(classes = TestConfig.class)
-    class GetTodayPuzzleTests {
+    @Test
+    @DisplayName("GET /api/puzzles/today - Success")
+    void getTodayPuzzle_Success() throws Exception {
+        DailyPuzzleResponse response = createDailyPuzzleResponse("puz-1", LocalDate.now(), "A", 100);
 
-        @Test
-        @DisplayName("GET /api/puzzles/today - Success")
-        void getTodayPuzzle_Success() throws Exception {
-            DailyPuzzleResponse response = DailyPuzzleResponse.builder()
-                    .id("puz-1")
-                    .puzzleDate(LocalDate.now())
-                    .centerLetter("A")
-                    .maxScore(100)
-                    .outerLetters(Set.of("B", "C", "D", "E", "F", "G"))
-                    .build();
+        when(puzzleService.getTodayPuzzle()).thenReturn(response);
 
-            when(puzzleService.getTodayPuzzle()).thenReturn(response);
+        mockMvc.perform(get("/api/puzzles/today"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value("puz-1"))
+                .andExpect(jsonPath("$.centerLetter").value("A"))
+                .andExpect(jsonPath("$.maxScore").value(100));
 
-            mockMvc.perform(get("/api/puzzles/today"))
-                    .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.id").value("puz-1"))
-                    .andExpect(jsonPath("$.centerLetter").value("A"))
-                    .andExpect(jsonPath("$.maxScore").value(100));
+        verify(puzzleService, times(1)).getTodayPuzzle();
+    }
 
-            verify(puzzleService, times(1)).getTodayPuzzle();
-        }
+    @Test
+    @DisplayName("GET /api/puzzles/today - Puzzle Not Found Throws 404")
+    void getTodayPuzzle_NotFound() throws Exception {
+        when(puzzleService.getTodayPuzzle())
+                .thenThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "Puzzle del giorno non trovato"));
 
-        @Test
-        @DisplayName("GET /api/puzzles/today - Not Found 404")
-        void getTodayPuzzle_NotFound() throws Exception {
-            when(puzzleService.getTodayPuzzle())
-                    .thenThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "Puzzle del giorno non trovato"));
+        mockMvc.perform(get("/api/puzzles/today"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status").value(404))
+                .andExpect(jsonPath("$.message").value("Puzzle del giorno non trovato"));
 
-            mockMvc.perform(get("/api/puzzles/today"))
-                    .andExpect(status().isNotFound())
-                    .andExpect(jsonPath("$.status").value(404))
-                    .andExpect(jsonPath("$.message").value("Puzzle del giorno non trovato"));
+        verify(puzzleService, times(1)).getTodayPuzzle();
+    }
 
-            verify(puzzleService, times(1)).getTodayPuzzle();
-        }
+    @Test
+    @DisplayName("GET /api/puzzles/today - Generic Internal Server Error Throws 500")
+    void getTodayPuzzle_InternalServerError() throws Exception {
+        when(puzzleService.getTodayPuzzle())
+                .thenThrow(new RuntimeException("Database connection failure"));
+
+        mockMvc.perform(get("/api/puzzles/today"))
+                .andExpect(status().isInternalServerError())
+                .andExpect(jsonPath("$.status").value(500))
+                .andExpect(jsonPath("$.message").value("Si è verificato un errore interno al server."));
+
+        verify(puzzleService, times(1)).getTodayPuzzle();
+    }
+
+    // --- Private Helper Methods ---
+
+    private User createTestUser(String id, String username, String email) {
+        return User.builder()
+                .id(id)
+                .username(username)
+                .email(email)
+                .build();
+    }
+
+    private UserDetailsImpl createTestPrincipal(User user) {
+        return new UserDetailsImpl(
+                user.getId(),
+                user.getUsername(),
+                user.getEmail(),
+                "pwd",
+                List.of(new SimpleGrantedAuthority("ROLE_USER"))
+        );
+    }
+
+    private DailyPuzzleResponse createDailyPuzzleResponse(String id, LocalDate date, String centerLetter, int maxScore) {
+        return DailyPuzzleResponse.builder()
+                .id(id)
+                .puzzleDate(date)
+                .centerLetter(centerLetter)
+                .maxScore(maxScore)
+                .outerLetters(Set.of("B", "C", "D", "E", "F", "G"))
+                .build();
     }
 
     @TestConfiguration

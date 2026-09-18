@@ -19,6 +19,11 @@ import lombok.experimental.SuperBuilder;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UuidGenerator;
 
+/**
+ * Core entity representing a registered player account in the system.
+ * Serves as the primary anchor for game sessions, statistics, refresh tokens,
+ * and roles.
+ */
 @Getter
 @Setter
 @NoArgsConstructor

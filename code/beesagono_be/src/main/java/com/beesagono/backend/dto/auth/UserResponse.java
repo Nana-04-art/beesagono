@@ -8,6 +8,9 @@ import lombok.NoArgsConstructor;
 import java.util.Date;
 import java.util.Set;
 
+/**
+ * Data Transfer Object representing detailed public and administrative user account information.
+ */
 @Data
 @Builder
 @NoArgsConstructor

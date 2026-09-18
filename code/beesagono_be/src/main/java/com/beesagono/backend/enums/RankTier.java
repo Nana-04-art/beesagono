@@ -6,6 +6,9 @@ import lombok.RequiredArgsConstructor;
 import java.util.Arrays;
 import java.util.Comparator;
 
+/**
+ * Enum representing daily puzzle completion ranks based on score percentage achieved within a single game session.
+ */
 @Getter
 @RequiredArgsConstructor
 public enum RankTier {

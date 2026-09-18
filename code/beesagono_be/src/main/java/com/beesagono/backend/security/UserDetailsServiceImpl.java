@@ -12,9 +12,9 @@ import com.beesagono.backend.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 
 /**
- * Implements Spring Security's UserDetails to encapsulate information
- * about the authenticated user (ID, username, email, password, and
- * authorities).
+ * Service implementation of {@link UserDetailsService} for loading user
+ * credentials
+ * and granted authorities from the database by username or email.
  */
 @Service
 @RequiredArgsConstructor
@@ -22,6 +22,13 @@ public class UserDetailsServiceImpl implements UserDetailsService {
 
     private final UserRepository userRepository;
 
+    /**
+     * Locates a user based on their username or email address.
+     *
+     * @param usernameOrEmail the identifier to search for
+     * @return a fully populated {@link UserDetails} object
+     * @throws UsernameNotFoundException if no user matching the identifier is found
+     */
     @Override
     @Transactional(readOnly = true)
     public UserDetails loadUserByUsername(String usernameOrEmail) throws UsernameNotFoundException {

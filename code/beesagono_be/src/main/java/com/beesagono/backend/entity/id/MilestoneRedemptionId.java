@@ -7,6 +7,9 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+/**
+ * Composite primary key for tracking streak milestone reward redemptions per user, season, and streak milestone length.
+ */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
