@@ -1,8 +1,10 @@
 package com.beesagono.backend.repository;
 
 import com.beesagono.backend.entity.DailyPuzzle;
+import com.beesagono.backend.entity.FoundWord;
 import com.beesagono.backend.entity.GameSession;
 import com.beesagono.backend.entity.User;
+import com.beesagono.backend.entity.id.FoundWordId;
 import com.beesagono.backend.testsupport.H2DataJpaTest;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -103,5 +105,45 @@ class GameSessionRepositoryTest {
                 List<GameSession> sessions = gameSessionRepository.findByUserId("nonexistent-user");
 
                 assertThat(sessions).isEmpty();
+        }
+
+        @Test
+        @DisplayName("existsByUserIdAndPuzzleIdAndFoundWordsContaining - Should return true when word is present")
+        void shouldReturnTrueWhenWordIsFoundInSession() {
+                User user = entityManager.persist(User.builder()
+                                .username("player3")
+                                .email("player3@example.com")
+                                .passwordHash("pwd")
+                                .build());
+
+                DailyPuzzle puzzle = entityManager.persist(DailyPuzzle.builder()
+                                .puzzleDate(LocalDate.now())
+                                .centerLetter("C")
+                                .maxScore(50)
+                                .seed("seed3")
+                                .build());
+
+                GameSession session = entityManager.persist(GameSession.builder()
+                                .user(user)
+                                .puzzle(puzzle)
+                                .currentScore(5)
+                                .currentRankLabel("Beginner")
+                                .startTime(new Date())
+                                .build());
+
+                // Creation of the composite primary key for FoundWord
+                FoundWordId foundWordId = new FoundWordId(session.getId(), "CASA");
+
+                entityManager.persist(FoundWord.builder()
+                                .id(foundWordId)
+                                .session(session)
+                                .build());
+
+                entityManager.flush();
+
+                boolean exists = gameSessionRepository.existsByUserIdAndPuzzleIdAndFoundWordsContaining(
+                                user.getId(), puzzle.getId(), "CASA");
+
+                assertThat(exists).isTrue();
         }
 }

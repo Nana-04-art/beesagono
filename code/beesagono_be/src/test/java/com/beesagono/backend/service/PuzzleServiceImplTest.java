@@ -7,6 +7,7 @@ import com.beesagono.backend.entity.PuzzleWord;
 import com.beesagono.backend.enums.ErrorTypeCode;
 import com.beesagono.backend.mapper.DailyPuzzleMapper;
 import com.beesagono.backend.repository.DailyPuzzleRepository;
+import com.beesagono.backend.repository.GameSessionRepository;
 import com.beesagono.backend.repository.PuzzleWordRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -15,6 +16,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
 import java.util.Optional;
@@ -22,7 +24,11 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class PuzzleServiceImplTest {
@@ -32,6 +38,9 @@ class PuzzleServiceImplTest {
 
     @Mock
     private PuzzleWordRepository puzzleWordRepository;
+
+    @Mock
+    private GameSessionRepository gameSessionRepository;
 
     @Mock
     private PuzzleGeneratorService puzzleGeneratorService;
@@ -44,6 +53,7 @@ class PuzzleServiceImplTest {
 
     private DailyPuzzle samplePuzzle;
     private DailyPuzzleResponse sampleResponse;
+    private final String userId = "user-123";
 
     @BeforeEach
     void setUp() {
@@ -103,8 +113,8 @@ class PuzzleServiceImplTest {
         when(dailyPuzzleRepository.findByPuzzleDate(today)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> puzzleService.getTodayPuzzle())
-                .isInstanceOf(RuntimeException.class)
-                .hasMessage("Puzzle del giorno non trovato");
+                .isInstanceOf(ResponseStatusException.class)
+                .hasMessageContaining("Puzzle del giorno non trovato");
     }
 
     // --- validateAndScoreWord ---
@@ -112,9 +122,11 @@ class PuzzleServiceImplTest {
     @Test
     @DisplayName("validateAndScoreWord - Reject null, blank or short words (<4 chars)")
     void shouldRejectShortOrNullWords() {
-        WordSubmissionResponse nullRes = puzzleService.validateAndScoreWord("puz-123", null);
-        WordSubmissionResponse shortRes = puzzleService.validateAndScoreWord("puz-123", "   ");
-        WordSubmissionResponse threeCharRes = puzzleService.validateAndScoreWord("puz-123", "APE");
+        when(dailyPuzzleRepository.findById("puz-123")).thenReturn(Optional.of(samplePuzzle));
+
+        WordSubmissionResponse nullRes = puzzleService.validateAndScoreWord(userId, "puz-123", null);
+        WordSubmissionResponse shortRes = puzzleService.validateAndScoreWord(userId, "puz-123", "   ");
+        WordSubmissionResponse threeCharRes = puzzleService.validateAndScoreWord(userId, "puz-123", "APE");
 
         assertThat(nullRes.valid()).isFalse();
         assertThat(nullRes.errorCode()).isEqualTo(ErrorTypeCode.TOO_SHORT);
@@ -124,11 +136,28 @@ class PuzzleServiceImplTest {
     }
 
     @Test
+    @DisplayName("validateAndScoreWord - Reject word already found by user")
+    void shouldRejectAlreadyFoundWord() {
+        when(dailyPuzzleRepository.findById("puz-123")).thenReturn(Optional.of(samplePuzzle));
+        when(gameSessionRepository.existsByUserIdAndPuzzleIdAndFoundWordsContaining(userId, "puz-123", "CASA"))
+                .thenReturn(true);
+
+        WordSubmissionResponse response = puzzleService.validateAndScoreWord(userId, "puz-123", "CASA");
+
+        assertThat(response.valid()).isFalse();
+        assertThat(response.errorCode()).isEqualTo(ErrorTypeCode.ALREADY_FOUND);
+        assertThat(response.errorMessage()).isEqualTo("Hai già trovato questa parola.");
+    }
+
+    @Test
     @DisplayName("validateAndScoreWord - Reject word missing center letter")
     void shouldRejectWordMissingCenterLetter() {
         when(dailyPuzzleRepository.findById("puz-123")).thenReturn(Optional.of(samplePuzzle));
+        when(gameSessionRepository.existsByUserIdAndPuzzleIdAndFoundWordsContaining(anyString(), anyString(),
+                anyString()))
+                .thenReturn(false);
 
-        WordSubmissionResponse response = puzzleService.validateAndScoreWord("puz-123", "ROBO");
+        WordSubmissionResponse response = puzzleService.validateAndScoreWord(userId, "puz-123", "ROBO");
 
         assertThat(response.valid()).isFalse();
         assertThat(response.errorCode()).isEqualTo(ErrorTypeCode.MISSING_CENTER);
@@ -140,9 +169,12 @@ class PuzzleServiceImplTest {
         PuzzleWord pw = PuzzleWord.builder().isMielegramma(false).build();
 
         when(dailyPuzzleRepository.findById("puz-123")).thenReturn(Optional.of(samplePuzzle));
+        when(gameSessionRepository.existsByUserIdAndPuzzleIdAndFoundWordsContaining(anyString(), anyString(),
+                anyString()))
+                .thenReturn(false);
         when(puzzleWordRepository.findByIdPuzzleIdAndIdWord("puz-123", "CASA")).thenReturn(Optional.of(pw));
 
-        WordSubmissionResponse response = puzzleService.validateAndScoreWord("puz-123", "casa");
+        WordSubmissionResponse response = puzzleService.validateAndScoreWord(userId, "puz-123", "casa");
 
         assertThat(response.valid()).isTrue();
         assertThat(response.word()).isEqualTo("CASA");
@@ -156,9 +188,12 @@ class PuzzleServiceImplTest {
         PuzzleWord pw = PuzzleWord.builder().isMielegramma(true).build();
 
         when(dailyPuzzleRepository.findById("puz-123")).thenReturn(Optional.of(samplePuzzle));
+        when(gameSessionRepository.existsByUserIdAndPuzzleIdAndFoundWordsContaining(anyString(), anyString(),
+                anyString()))
+                .thenReturn(false);
         when(puzzleWordRepository.findByIdPuzzleIdAndIdWord("puz-123", "ALBERGO")).thenReturn(Optional.of(pw));
 
-        WordSubmissionResponse response = puzzleService.validateAndScoreWord("puz-123", "ALBERGO");
+        WordSubmissionResponse response = puzzleService.validateAndScoreWord(userId, "puz-123", "ALBERGO");
 
         assertThat(response.valid()).isTrue();
         assertThat(response.score()).isEqualTo(14);
@@ -169,9 +204,12 @@ class PuzzleServiceImplTest {
     @DisplayName("validateAndScoreWord - Reject word not present in dictionary")
     void shouldRejectWordNotInDictionary() {
         when(dailyPuzzleRepository.findById("puz-123")).thenReturn(Optional.of(samplePuzzle));
+        when(gameSessionRepository.existsByUserIdAndPuzzleIdAndFoundWordsContaining(anyString(), anyString(),
+                anyString()))
+                .thenReturn(false);
         when(puzzleWordRepository.findByIdPuzzleIdAndIdWord("puz-123", "AMARONE")).thenReturn(Optional.empty());
 
-        WordSubmissionResponse response = puzzleService.validateAndScoreWord("puz-123", "AMARONE");
+        WordSubmissionResponse response = puzzleService.validateAndScoreWord(userId, "puz-123", "AMARONE");
 
         assertThat(response.valid()).isFalse();
         assertThat(response.errorCode()).isEqualTo(ErrorTypeCode.NOT_IN_DICTIONARY);
