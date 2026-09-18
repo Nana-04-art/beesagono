@@ -29,6 +29,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
 import java.util.Collections;
@@ -157,32 +158,32 @@ class GameServiceImplTest {
                     .hasMessageContaining("Puzzle per la data " + today + " non trovato.");
         }
     }
-    
+
     @Nested
     @DisplayName("validateAndScoreWord Tests")
     class ValidateAndScoreWordTests {
 
         @Test
-        @DisplayName("Should throw exception when session does not exist")
+        @DisplayName("Should throw ResponseStatusException NOT_FOUND when session does not exist")
         void shouldThrowExceptionWhenSessionNotFound() {
             SubmitWordRequest request = new SubmitWordRequest("non-existent-session", "CASA");
 
             when(gameSessionRepository.findById(request.getSessionId())).thenReturn(Optional.empty());
 
             assertThatThrownBy(() -> gameService.validateAndScoreWord(request, user.getId()))
-                    .isInstanceOf(RuntimeException.class)
+                    .isInstanceOf(ResponseStatusException.class)
                     .hasMessageContaining("Sessione di gioco non trovata");
         }
 
         @Test
-        @DisplayName("Should throw IllegalArgumentException when user is unauthorized")
+        @DisplayName("Should throw ResponseStatusException FORBIDDEN when user is unauthorized")
         void shouldThrowExceptionWhenUserUnauthorized() {
             SubmitWordRequest request = new SubmitWordRequest(session.getId(), "CASA");
 
             when(gameSessionRepository.findById(session.getId())).thenReturn(Optional.of(session));
 
             assertThatThrownBy(() -> gameService.validateAndScoreWord(request, "different-user-id"))
-                    .isInstanceOf(IllegalArgumentException.class)
+                    .isInstanceOf(ResponseStatusException.class)
                     .hasMessageContaining("Non sei autorizzato");
         }
 
