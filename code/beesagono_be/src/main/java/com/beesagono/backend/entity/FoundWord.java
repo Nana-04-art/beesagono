@@ -13,13 +13,13 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.MapsId;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
 import lombok.experimental.SuperBuilder;
-
 import org.hibernate.annotations.CreationTimestamp;
 
 @Getter
@@ -42,6 +42,13 @@ public class FoundWord {
     @MapsId("sessionId")
     @JoinColumn(name = "session_id", nullable = false)
     private GameSession session;
+
+    @Column(name = "score_assigned", nullable = false)
+    private Integer scoreAssigned;
+
+    @Builder.Default
+    @Column(name = "is_mielegramma", nullable = false)
+    private Boolean isMielegramma = false;
 
     @CreationTimestamp
     @ToString.Include
