@@ -6,6 +6,8 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.jpa.test.autoconfigure.TestEntityManager;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 
 import java.util.Optional;
 
@@ -28,7 +30,7 @@ class UserRepositoryTest {
                 .email("mario@example.com")
                 .passwordHash("secret")
                 .build();
-        userRepository.save(user);
+        entityManager.persistAndFlush(user);
 
         Optional<User> found = userRepository.findByUsername("mario");
 
@@ -44,7 +46,7 @@ class UserRepositoryTest {
                 .email("luigi@example.com")
                 .passwordHash("secret")
                 .build();
-        userRepository.save(user);
+        entityManager.persistAndFlush(user);
 
         Optional<User> found = userRepository.findByEmail("luigi@example.com");
 
@@ -60,7 +62,7 @@ class UserRepositoryTest {
                 .email("peach@example.com")
                 .passwordHash("secret")
                 .build();
-        userRepository.save(user);
+        entityManager.persistAndFlush(user);
 
         Optional<User> foundByUsername = userRepository.findByUsernameOrEmail("peach", "other@example.com");
         Optional<User> foundByEmail = userRepository.findByUsernameOrEmail("wrong", "peach@example.com");
@@ -113,5 +115,31 @@ class UserRepositoryTest {
         Boolean exists = userRepository.existsByEmail("unknown@example.com");
 
         assertThat(exists).isFalse();
+    }
+
+    @Test
+    @DisplayName("findByUsernameContainingIgnoreCaseOrEmailContainingIgnoreCase - Should find users matching search filter")
+    void shouldFindUsersBySearchQuery() {
+        User user1 = User.builder()
+                .username("toad_admin")
+                .email("toad@example.com")
+                .passwordHash("secret")
+                .build();
+
+        User user2 = User.builder()
+                .username("donkey_kong")
+                .email("dk@kong.com")
+                .passwordHash("secret")
+                .build();
+
+        entityManager.persist(user1);
+        entityManager.persist(user2);
+        entityManager.flush();
+
+        Page<User> result = userRepository.findByUsernameContainingIgnoreCaseOrEmailContainingIgnoreCase(
+                "TOAD", "TOAD", PageRequest.of(0, 10));
+
+        assertThat(result.getContent()).hasSize(1);
+        assertThat(result.getContent().get(0).getUsername()).isEqualTo("toad_admin");
     }
 }
