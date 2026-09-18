@@ -11,6 +11,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
@@ -39,68 +40,76 @@ class PuzzleServiceImplTest {
     @InjectMocks
     private PuzzleServiceImpl puzzleService;
 
-    private DailyPuzzle samplePuzzle;
-    private DailyPuzzleResponse sampleResponse;
+    private DailyPuzzle mockPuzzle;
+    private DailyPuzzleResponse mockResponse;
 
     @BeforeEach
     void setUp() {
-        samplePuzzle = DailyPuzzle.builder()
-                .id("puz-123")
-                .puzzleDate(LocalDate.now())
+        LocalDate today = LocalDate.now();
+        mockPuzzle = DailyPuzzle.builder()
+                .id("puzzle-today")
+                .puzzleDate(today)
                 .centerLetter("A")
-                .maxScore(100)
                 .build();
 
-        sampleResponse = DailyPuzzleResponse.builder()
-                .id("puz-123")
-                .puzzleDate(LocalDate.now())
+        mockResponse = DailyPuzzleResponse.builder()
+                .id("puzzle-today")
+                .puzzleDate(today)
                 .centerLetter("A")
-                .maxScore(100)
                 .build();
     }
 
     // --- getTodayPuzzle ---
 
     @Test
-    @DisplayName("getTodayPuzzle - Generates puzzle if missing and returns mapped DTO")
-    void shouldGeneratePuzzleIfNotExistsAndReturnResponse() {
-        LocalDate today = LocalDate.now();
-
-        when(dailyPuzzleRepository.existsByPuzzleDate(today)).thenReturn(false);
-        when(dailyPuzzleRepository.findByPuzzleDate(today)).thenReturn(Optional.of(samplePuzzle));
-        when(dailyPuzzleMapper.toDailyPuzzleResponse(samplePuzzle)).thenReturn(sampleResponse);
-
-        DailyPuzzleResponse response = puzzleService.getTodayPuzzle();
-
-        verify(puzzleGeneratorService, times(1)).generateAndSavePuzzleForDate(today);
-        assertThat(response).isNotNull();
-        assertThat(response.getId()).isEqualTo("puz-123");
-    }
-
-    @Test
-    @DisplayName("getTodayPuzzle - Uses existing puzzle without triggering generation")
-    void shouldReturnExistingPuzzleWithoutGeneration() {
+    @DisplayName("getTodayPuzzle - Success when puzzle already exists")
+    void shouldReturnTodayPuzzleWhenAlreadyExists() {
         LocalDate today = LocalDate.now();
 
         when(dailyPuzzleRepository.existsByPuzzleDate(today)).thenReturn(true);
-        when(dailyPuzzleRepository.findByPuzzleDate(today)).thenReturn(Optional.of(samplePuzzle));
-        when(dailyPuzzleMapper.toDailyPuzzleResponse(samplePuzzle)).thenReturn(sampleResponse);
+        when(dailyPuzzleRepository.findByPuzzleDate(today)).thenReturn(Optional.of(mockPuzzle));
+        when(dailyPuzzleMapper.toDailyPuzzleResponse(mockPuzzle)).thenReturn(mockResponse);
 
         DailyPuzzleResponse response = puzzleService.getTodayPuzzle();
 
+        assertThat(response).isNotNull();
+        assertThat(response.getId()).isEqualTo("puzzle-today");
+
         verify(puzzleGeneratorService, never()).generateAndSavePuzzleForDate(any());
-        assertThat(response).isEqualTo(sampleResponse);
+        verify(dailyPuzzleRepository, times(1)).findByPuzzleDate(today);
     }
 
     @Test
-    @DisplayName("getTodayPuzzle - Throws exception when puzzle cannot be found after generation attempt")
+    @DisplayName("getTodayPuzzle - Generates puzzle if not existing then returns it")
+    void shouldGeneratePuzzleIfNotExistingAndReturnIt() {
+        LocalDate today = LocalDate.now();
+
+        when(dailyPuzzleRepository.existsByPuzzleDate(today)).thenReturn(false);
+        when(dailyPuzzleRepository.findByPuzzleDate(today)).thenReturn(Optional.of(mockPuzzle));
+        when(dailyPuzzleMapper.toDailyPuzzleResponse(mockPuzzle)).thenReturn(mockResponse);
+
+        DailyPuzzleResponse response = puzzleService.getTodayPuzzle();
+
+        assertThat(response).isNotNull();
+        assertThat(response.getId()).isEqualTo("puzzle-today");
+
+        verify(puzzleGeneratorService, times(1)).generateAndSavePuzzleForDate(today);
+        verify(dailyPuzzleRepository, times(1)).findByPuzzleDate(today);
+    }
+
+    @Test
+    @DisplayName("getTodayPuzzle - Throws ResponseStatusException when puzzle not found")
     void shouldThrowExceptionWhenPuzzleNotFound() {
         LocalDate today = LocalDate.now();
+
         when(dailyPuzzleRepository.existsByPuzzleDate(today)).thenReturn(false);
         when(dailyPuzzleRepository.findByPuzzleDate(today)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> puzzleService.getTodayPuzzle())
                 .isInstanceOf(ResponseStatusException.class)
-                .hasMessageContaining("Puzzle del giorno non trovato");
+                .isInstanceOfSatisfying(ResponseStatusException.class, ex -> {
+                    assertThat(ex.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+                    assertThat(ex.getReason()).isEqualTo("Puzzle del giorno non trovato");
+                });
     }
 }
