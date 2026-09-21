@@ -31,36 +31,36 @@ import java.util.List;
 @RequestMapping("/api/admin/puzzle")
 @RequiredArgsConstructor
 @PreAuthorize("hasRole('ADMIN')")
-@Tag(name = "Admin Puzzle Controller", description = "Endpoints amministrativi per generazione e modifica puzzle")
+@Tag(name = "Admin Puzzle Controller", description = "Administrative endpoints for generating and modifying puzzles")
 public class AdminPuzzleController {
 
     private final AdminService adminService;
 
-    @Operation(summary = "Genera o resetta il puzzle per una data futura")
+    @Operation(summary = "Generate or reset puzzle for a future date")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Puzzle generato con successo"),
-            @ApiResponse(responseCode = "403", description = "Accesso negato - Richiesto ruolo ADMIN")
+            @ApiResponse(responseCode = "200", description = "Puzzle generated successfully"),
+            @ApiResponse(responseCode = "403", description = "Access denied - ADMIN role required")
     })
     @PostMapping("/generate")
     public ResponseEntity<PuzzleAdminResponse> generatePuzzle(
-            @Parameter(description = "Data per cui generare il puzzle (YYYY-MM-DD)") @RequestParam("date") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+            @Parameter(description = "Date to generate the puzzle for (YYYY-MM-DD)") @RequestParam("date") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
         return ResponseEntity.ok(adminService.generateOrResetFuturePuzzle(date));
     }
 
-    @Operation(summary = "Ottieni dettagli amministrativi di un puzzle tramite data")
+    @Operation(summary = "Get administrative puzzle details by date")
     @GetMapping
     public ResponseEntity<PuzzleAdminResponse> getPuzzleByDate(
             @RequestParam("date") @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
         return ResponseEntity.ok(adminService.getPuzzleDetailsByDate(date));
     }
 
-    @Operation(summary = "Ottieni la panoramica di tutti i puzzle a sistema")
+    @Operation(summary = "Get an overview of all system puzzles")
     @GetMapping("/all")
     public ResponseEntity<List<PuzzleAdminResponse>> getAllPuzzles() {
         return ResponseEntity.ok(adminService.getAllPuzzlesOverview());
     }
 
-    @Operation(summary = "Aggiorna le parole valide associate a un puzzle")
+    @Operation(summary = "Update valid words associated with a puzzle")
     @PatchMapping("/{puzzleId}/words")
     public ResponseEntity<PuzzleAdminResponse> updatePuzzleWords(
             @PathVariable String puzzleId,
@@ -68,7 +68,7 @@ public class AdminPuzzleController {
         return ResponseEntity.ok(adminService.updatePuzzleWords(puzzleId, request));
     }
 
-    @Operation(summary = "Aggiorna le lettere di un puzzle")
+    @Operation(summary = "Update puzzle letters")
     @PutMapping("/{puzzleId}")
     public ResponseEntity<PuzzleAdminResponse> updatePuzzleLetters(
             @PathVariable String puzzleId,
