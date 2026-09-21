@@ -224,7 +224,7 @@ public class GameServiceImpl implements GameService {
             GameSession session = gameSessionRepository.findByUserIdAndPuzzleId(userId, puzzle.getId())
                     .orElseGet(() -> createNewSession(userId, puzzle));
 
-            int newPointsEarnedInSession = 0;
+            int newPointsEarnedInSync = 0;
 
             // CASE 1: Multi-Device Sync with compatible dictionary (Merge unique words)
             // Process and merge VALID found words
@@ -246,7 +246,7 @@ public class GameServiceImpl implements GameService {
                             boolean isMiele = Boolean.TRUE.equals(pw.getIsMielegramma());
                             int pointsEarned = scoringService.calculateWordScore(word, isMiele);
 
-                            newPointsEarnedInSession += pointsEarned;
+                            newPointsEarnedInSync += pointsEarned;
 
                             // Track the longest word found across the entire batch
                             if (longestWordInBulk == null || word.length() > longestWordInBulk.length()) {
@@ -294,8 +294,8 @@ public class GameServiceImpl implements GameService {
             }
 
             // Update current session if new progress was made
-            if (newPointsEarnedInSession > 0) {
-                int updatedSessionScore = session.getCurrentScore() + newPointsEarnedInSession;
+            if (newPointsEarnedInSync > 0) {
+                int updatedSessionScore = session.getCurrentScore() + newPointsEarnedInSync;
                 session.setCurrentScore(updatedSessionScore);
 
                 boolean isCompletedNow = !Boolean.TRUE.equals(session.getIsCompleted())
@@ -304,7 +304,7 @@ public class GameServiceImpl implements GameService {
                 updateSessionRankAndCompletion(session, updatedSessionScore);
                 gameSessionRepository.save(session);
 
-                totalNewPointsInBulk += newPointsEarnedInSession;
+                totalNewPointsInBulk += newPointsEarnedInSync;
                 if (isCompletedNow) {
                     anyCompletedInBulk = true;
                 }
