@@ -97,16 +97,14 @@ public class GameServiceImpl implements GameService {
         if (!session.getUser().getId().equals(userId)) {
             throw new ResponseStatusException(
                     HttpStatus.FORBIDDEN, "Non sei autorizzato a modificare questa sessione di gioco.");
-                    
         }
 
-        // Every word submission attempt (valid or invalid) records today's play for the
-        // streak
+        // Every word submission attempt (valid or invalid) records today's play for the streak
         session.setLastUpdated(new Date());
         gameSessionRepository.save(session);
 
         String rawWord = request.getWord();
-        
+
         // Minimum Length Validation
         if (rawWord == null || rawWord.isBlank() || rawWord.trim().length() < 4) {
             recordInvalidAttempt(session, rawWord, ErrorTypeCode.TOO_SHORT);
@@ -115,7 +113,8 @@ public class GameServiceImpl implements GameService {
         }
 
         String word = rawWord.trim().toUpperCase();
-        // Duplicate word check in session (Prevents invalid points accumulation)
+
+        // Duplicate word check in session
         if (foundWordRepository.existsByIdSessionIdAndIdWord(session.getId(), word)) {
             recordInvalidAttempt(session, word, ErrorTypeCode.ALREADY_FOUND);
             return buildErrorResponse(word, session, ErrorTypeCode.ALREADY_FOUND, "Hai già trovato questa parola!");
@@ -136,7 +135,6 @@ public class GameServiceImpl implements GameService {
             PuzzleWord pw = puzzleWord.get();
             boolean isMiele = Boolean.TRUE.equals(pw.getIsMielegramma());
 
-            // Centralized scoring calculation using ScoringService
             int pointsEarned = scoringService.calculateWordScore(word, isMiele);
 
             FoundWord foundWord = FoundWord.builder()
@@ -198,40 +196,33 @@ public class GameServiceImpl implements GameService {
         }
 
         // ASCENDING CHRONOLOGICAL ORDER (CRUCIAL FOR STREAK TRACKING)
-        // Sort sessions from oldest to newest before processing
         List<GameSyncRequest> sortedGames = request.getGames().stream()
                 .filter(g -> g.getPuzzleDate() != null)
                 .sorted(Comparator.comparing(GameSyncRequest::getPuzzleDate))
                 .toList();
 
-        // Accumulators for global side-effects (executed once at the end of the batch)
         int totalNewPointsInBulk = 0;
         String longestWordInBulk = null;
         boolean anyCompletedInBulk = false;
 
         for (GameSyncRequest singleSync : sortedGames) {
 
-            // Retrieve or generate the official BE puzzle for that date
             puzzleService.generateAndSavePuzzleForDate(singleSync.getPuzzleDate());
             DailyPuzzle puzzle = dailyPuzzleRepository.findByPuzzleDate(singleSync.getPuzzleDate())
                     .orElseThrow(() -> new ResponseStatusException(
                             HttpStatus.NOT_FOUND,
                             "Errore nel recupero del puzzle per la data: " + singleSync.getPuzzleDate()));
 
-            // Check Inconsistencies
             if (StringUtils.hasText(singleSync.getCenterLetter()) &&
                     !singleSync.getCenterLetter().trim().equalsIgnoreCase(puzzle.getCenterLetter())) {
                 continue;
             }
 
-            // Retrieve or create user session in DB
             GameSession session = gameSessionRepository.findByUserIdAndPuzzleId(userId, puzzle.getId())
                     .orElseGet(() -> createNewSession(userId, puzzle));
 
             int newPointsEarnedInSession = 0;
 
-            // CASE 1: Multi-Device Sync with compatible dictionary (Merge unique words)
-            // Process and merge VALID found words
             if (singleSync.getFoundWords() != null && !singleSync.getFoundWords().isEmpty()) {
                 for (String rawWord : singleSync.getFoundWords()) {
                     if (!StringUtils.hasText(rawWord)) {
@@ -239,12 +230,10 @@ public class GameServiceImpl implements GameService {
                     }
                     String word = rawWord.trim().toUpperCase();
 
-                    // If the word has not been saved in this session yet
                     if (!foundWordRepository.existsByIdSessionIdAndIdWord(session.getId(), word)) {
                         Optional<PuzzleWord> pwOpt = puzzleWordRepository.findByIdPuzzleIdAndIdWord(puzzle.getId(),
                                 word);
 
-                        // Verify that the word officially exists in the DB for this puzzle
                         if (pwOpt.isPresent()) {
                             PuzzleWord pw = pwOpt.get();
                             boolean isMiele = Boolean.TRUE.equals(pw.getIsMielegramma());
@@ -252,7 +241,6 @@ public class GameServiceImpl implements GameService {
 
                             newPointsEarnedInSession += pointsEarned;
 
-                            // Track the longest word found across the entire batch
                             if (longestWordInBulk == null || word.length() > longestWordInBulk.length()) {
                                 longestWordInBulk = word;
                             }
@@ -269,7 +257,6 @@ public class GameServiceImpl implements GameService {
                 }
             }
 
-            // Process and save INVALID word attempts
             if (singleSync.getInvalidWords() != null && !singleSync.getInvalidWords().isEmpty()) {
                 List<String> existingInvalidWords = invalidWordAttemptRepository
                         .findDistinctAttemptedWordsBySessionId(session.getId());
@@ -297,7 +284,6 @@ public class GameServiceImpl implements GameService {
                 }
             }
 
-            // Update current session if new progress was made
             if (newPointsEarnedInSession > 0) {
                 int updatedSessionScore = session.getCurrentScore() + newPointsEarnedInSession;
                 session.setCurrentScore(updatedSessionScore);
@@ -317,13 +303,11 @@ public class GameServiceImpl implements GameService {
             responses.add(buildGameSessionResponse(session));
         }
 
-        // Global side effects executed ONLY ONCE at the end of the Bulk Sync
         if (totalNewPointsInBulk > 0 || anyCompletedInBulk) {
             playerSeasonService.updateSeasonProgress(userId, totalNewPointsInBulk, anyCompletedInBulk);
             playerStatsService.updatePlayerStatsAfterGame(userId, totalNewPointsInBulk, longestWordInBulk,
                     anyCompletedInBulk);
 
-            // Uniform badge calculation for the bulk request
             badgeService.evaluateAndAwardBadges(userId);
         }
 
@@ -348,6 +332,7 @@ public class GameServiceImpl implements GameService {
                 .currentScore(0)
                 .currentRankLabel(RankTier.INITIAL.getLabel())
                 .isCompleted(false)
+                .startTime(now)
                 .lastUpdated(now)
                 .build();
 
@@ -357,8 +342,6 @@ public class GameServiceImpl implements GameService {
     private void updateSessionRankAndCompletion(GameSession session, int newScore) {
         RankTier newRank = scoringService.calculateCurrentRank(newScore, session.getPuzzle().getMaxScore());
 
-        // If the user has moved up a rank (label different from the current one),
-        // increment the RankHistogram
         if (!newRank.getLabel().equals(session.getCurrentRankLabel())) {
             session.setCurrentRankLabel(newRank.getLabel());
 
@@ -387,8 +370,6 @@ public class GameServiceImpl implements GameService {
                 .build();
         invalidWordAttemptRepository.save(attempt);
 
-        // Notify today's activity to PlayerSeasonService (0 points earned, but played
-        // day)
         playerSeasonService.updateSeasonProgress(session.getUser().getId(), 0, false);
     }
 
@@ -407,20 +388,17 @@ public class GameServiceImpl implements GameService {
     }
 
     private GameSessionResponse buildGameSessionResponse(GameSession session) {
-        // Retrieve valid found words
         List<FoundWord> foundWordsEntities = foundWordRepository.findByIdSessionId(session.getId());
 
         Set<String> foundWords = foundWordsEntities.stream()
                 .map(fw -> fw.getId().getWord())
                 .collect(Collectors.toSet());
 
-        // Retrieve found Mielegrammi
         Set<String> foundMielegrammi = foundWordsEntities.stream()
                 .filter(fw -> Boolean.TRUE.equals(fw.getIsMielegramma()))
                 .map(fw -> fw.getId().getWord())
                 .collect(Collectors.toSet());
 
-        // Retrieve session's invalid word attempts
         List<String> invalidWordsList = invalidWordAttemptRepository
                 .findDistinctAttemptedWordsBySessionId(session.getId());
         Set<String> invalidWords = invalidWordsList != null ? Set.copyOf(invalidWordsList) : Set.of();
@@ -447,18 +425,15 @@ public class GameServiceImpl implements GameService {
 
         String normalizedWord = word.trim().toUpperCase();
 
-        // Check minimum length (e.g., 4 characters)
         if (normalizedWord.length() < 4) {
             return ErrorTypeCode.TOO_SHORT;
         }
 
-        // Check presence of the mandatory center letter
         String center = puzzle.getCenterLetter().toUpperCase();
         if (!normalizedWord.contains(center)) {
             return ErrorTypeCode.MISSING_CENTER;
         }
 
-        // Extract all valid letters (Center + Outer Letters from EmbeddedId)
         Set<Character> allowedChars = new HashSet<>();
         allowedChars.add(center.charAt(0));
 
@@ -473,14 +448,12 @@ public class GameServiceImpl implements GameService {
             }
         }
 
-        // Verify that the word contains only allowed characters
         for (char c : normalizedWord.toCharArray()) {
             if (!allowedChars.contains(c)) {
                 return ErrorTypeCode.INVALID_LETTERS;
             }
         }
 
-        // If it satisfies all composition rules but is not in the dictionary
         return ErrorTypeCode.NOT_IN_DICTIONARY;
     }
 }
