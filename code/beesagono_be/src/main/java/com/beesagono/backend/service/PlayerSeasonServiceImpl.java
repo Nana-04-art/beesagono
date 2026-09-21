@@ -3,11 +3,15 @@ package com.beesagono.backend.service;
 import com.beesagono.backend.dto.stats.LeaderboardEntryDto;
 import com.beesagono.backend.dto.stats.PlayerSeasonResponse;
 import com.beesagono.backend.dto.stats.RankDistributionResponse;
+import com.beesagono.backend.entity.MilestoneRedemption;
 import com.beesagono.backend.entity.PlayerSeason;
 import com.beesagono.backend.entity.PlayerStats;
 import com.beesagono.backend.entity.User;
+import com.beesagono.backend.entity.id.MilestoneRedemptionId;
 import com.beesagono.backend.entity.id.PlayerSeasonId;
+import com.beesagono.backend.enums.CareerTier;
 import com.beesagono.backend.enums.GameConstants;
+import com.beesagono.backend.repository.MilestoneRedemptionRepository;
 import com.beesagono.backend.repository.PlayerSeasonRepository;
 import com.beesagono.backend.repository.PlayerStatsRepository;
 import com.beesagono.backend.repository.UserRepository;
@@ -18,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -29,7 +34,12 @@ public class PlayerSeasonServiceImpl implements PlayerSeasonService {
 
     private final PlayerSeasonRepository playerSeasonRepository;
     private final PlayerStatsRepository playerStatsRepository;
+    private final MilestoneRedemptionRepository milestoneRedemptionRepository;
     private final UserRepository userRepository;
+    private final ScoringService scoringService;
+
+    // Target annuale di punti stimato per la percentuale di CareerTier
+    private static final int ANNUAL_TARGET_POINTS = 5000;
 
     @Override
     @Transactional(readOnly = true)
@@ -51,7 +61,7 @@ public class PlayerSeasonServiceImpl implements PlayerSeasonService {
                 .orElseGet(() -> createInitialSeason(userId, currentYear));
 
         PlayerStats stats = playerStatsRepository.findById(userId)
-                .orElseGet(() -> PlayerStats.builder().build());
+                .orElseGet(() -> PlayerStats.builder().userId(userId).build());
 
         // Update base points
         season.setBasePoints(season.getBasePoints() + pointsEarned);
@@ -63,14 +73,24 @@ public class PlayerSeasonServiceImpl implements PlayerSeasonService {
         if (streakBonus > 0 && shouldApplyStreakBonus(stats, currentStreak)) {
             season.setBonusPoints(season.getBonusPoints() + streakBonus);
 
-            // Update the player's status to mark the milestone as redeemed
+            MilestoneRedemption redemption = MilestoneRedemption.builder()
+                    .id(new MilestoneRedemptionId(userId, currentYear, currentStreak))
+                    .user(season.getUser())
+                    .playerSeason(season)
+                    .redeemedAt(new Date())
+                    .build();
+            milestoneRedemptionRepository.save(redemption);
+
+            // Update the status of redeemed milestones in the user statistics
             stats.setLastStreakMilestoneClaimed(currentStreak);
             playerStatsRepository.save(stats);
         }
 
         // Recalculate total and Tier
         season.setTotalPoints(season.getBasePoints() + season.getBonusPoints());
-        season.setHighestTierAchieved(calculateTier(season.getTotalPoints()));
+
+        CareerTier tier = scoringService.calculateCareerTier(season.getTotalPoints(), ANNUAL_TARGET_POINTS);
+        season.setHighestTierAchieved(tier.getName());
 
         playerSeasonRepository.save(season);
     }
@@ -147,20 +167,10 @@ public class PlayerSeasonServiceImpl implements PlayerSeasonService {
                 .basePoints(0)
                 .bonusPoints(0)
                 .totalPoints(0)
-                .highestTierAchieved("Uovo d'Ape")
+                .highestTierAchieved(CareerTier.EGG.getName())
                 .build();
 
         return playerSeasonRepository.save(season);
-    }
-
-    private String calculateTier(int totalPoints) {
-        if (totalPoints >= 500)
-            return "Regina";
-        if (totalPoints >= 200)
-            return "Ape Operosa";
-        if (totalPoints >= 50)
-            return "Ape Esploratrice";
-        return "Uovo d'Ape";
     }
 
     private PlayerSeasonResponse mapToResponse(PlayerSeason season) {
