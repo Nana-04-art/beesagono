@@ -57,6 +57,7 @@ public class GameServiceImpl implements GameService {
     private final PuzzleGeneratorService puzzleService;
     private final ScoringService scoringService;
     private final PlayerSeasonService playerSeasonService;
+    private final BadgeService badgeService;
 
     @Override
     @Transactional
@@ -148,6 +149,9 @@ public class GameServiceImpl implements GameService {
             // Atomic season update (annual career, streak, points, and completion)
             playerSeasonService.updateSeasonProgress(userId, pointsEarned, isCompletedNow);
             playerStatsService.updatePlayerStatsAfterGame(userId, pointsEarned, word, isCompletedNow);
+
+            // Automatic badge evaluation and awarding
+            badgeService.evaluateAndAwardBadges(userId);
 
             return SubmitWordResponse.builder()
                     .success(true)
@@ -255,6 +259,9 @@ public class GameServiceImpl implements GameService {
                     playerSeasonService.updateSeasonProgress(userId, newPointsEarnedInSync, isCompletedNow);
                     playerStatsService.updatePlayerStatsAfterGame(userId, newPointsEarnedInSync, longestWordInSync,
                             isCompletedNow);
+
+                    // Badge evaluation following synchronization
+                    badgeService.evaluateAndAwardBadges(userId);
                 }
             }
 
