@@ -30,17 +30,6 @@ public class PlayerStatsServiceImpl implements PlayerStatsService {
         refreshStreak(stats, userId);
         playerStatsRepository.save(stats);
 
-        // Recalculates the streak on the fly whenever stats are requested
-        int calculatedStreak = calculateCurrentStreak(userId);
-        stats.setCurrentStreak(calculatedStreak);
-
-        int maxStreak = stats.getMaxStreak() != null ? stats.getMaxStreak() : 0;
-        if (calculatedStreak > maxStreak) {
-            stats.setMaxStreak(calculatedStreak);
-        }
-
-        playerStatsRepository.save(stats);
-
         return mapToResponse(stats);
     }
 
@@ -67,7 +56,29 @@ public class PlayerStatsServiceImpl implements PlayerStatsService {
             }
         }
 
-        // Dynamic Streak Recalculation
+        refreshStreak(stats, userId);
+        playerStatsRepository.save(stats);
+    }
+
+    // --- Private Helper Methods ---
+
+    private PlayerStats getOrCreatePlayerStats(String userId) {
+        return playerStatsRepository.findById(userId)
+                .orElseGet(() -> {
+                    User userReference = userRepository.getReferenceById(userId);
+                    return PlayerStats.builder()
+                            .userId(userId)
+                            .user(userReference)
+                            .gamesPlayed(0)
+                            .gamesCompleted(0)
+                            .currentStreak(0)
+                            .maxStreak(0)
+                            .totalScoreEarned(0)
+                            .build();
+                });
+    }
+
+    private void refreshStreak(PlayerStats stats, String userId) {
         int calculatedStreak = calculateCurrentStreak(userId);
         stats.setCurrentStreak(calculatedStreak);
 
@@ -75,12 +86,7 @@ public class PlayerStatsServiceImpl implements PlayerStatsService {
         if (calculatedStreak > maxStreak) {
             stats.setMaxStreak(calculatedStreak);
         }
-
-        refreshStreak(stats, userId);
-        playerStatsRepository.save(stats);
     }
-
-    // -- Private Helper Methods --
 
     /**
      * Calculates the streak of consecutive days based on the dates of played
@@ -98,8 +104,7 @@ public class PlayerStatsServiceImpl implements PlayerStatsService {
 
         LocalDate mostRecentDate = playedDates.get(0);
 
-        // If the user has not played today's or yesterday's puzzle, the streak resets
-        // to 0
+        // If the user has not played today's or yesterday's puzzle, the streak resets to 0
         if (!mostRecentDate.equals(today) && !mostRecentDate.equals(yesterday)) {
             return 0;
         }
@@ -144,31 +149,5 @@ public class PlayerStatsServiceImpl implements PlayerStatsService {
                 .averageScorePerGame(Math.round(averageScore * 100.0) / 100.0)
                 .completionRate(Math.round(completionRate * 100.0) / 100.0)
                 .build();
-    }
-
-    private PlayerStats getOrCreatePlayerStats(String userId) {
-        return playerStatsRepository.findById(userId)
-                .orElseGet(() -> {
-                    User userReference = userRepository.getReferenceById(userId);
-                    return PlayerStats.builder()
-                            .userId(userId)
-                            .user(userReference)
-                            .gamesPlayed(0)
-                            .gamesCompleted(0)
-                            .currentStreak(0)
-                            .maxStreak(0)
-                            .totalScoreEarned(0)
-                            .build();
-                });
-    }
-
-    private void refreshStreak(PlayerStats stats, String userId) {
-        int calculatedStreak = calculateCurrentStreak(userId);
-        stats.setCurrentStreak(calculatedStreak);
-
-        int maxStreak = stats.getMaxStreak() != null ? stats.getMaxStreak() : 0;
-        if (calculatedStreak > maxStreak) {
-            stats.setMaxStreak(calculatedStreak);
-        }
     }
 }
