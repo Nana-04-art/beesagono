@@ -370,6 +370,8 @@ public class GameServiceImpl implements GameService {
                 .build();
         invalidWordAttemptRepository.save(attempt);
 
+        // Notify today's activity to PlayerSeasonService (0 points earned, but played
+        // day)
         playerSeasonService.updateSeasonProgress(session.getUser().getId(), 0, false);
     }
 
@@ -388,17 +390,20 @@ public class GameServiceImpl implements GameService {
     }
 
     private GameSessionResponse buildGameSessionResponse(GameSession session) {
+        // Retrieve valid found words
         List<FoundWord> foundWordsEntities = foundWordRepository.findByIdSessionId(session.getId());
 
         Set<String> foundWords = foundWordsEntities.stream()
                 .map(fw -> fw.getId().getWord())
                 .collect(Collectors.toSet());
 
+        // Retrieve found Mielegrammi
         Set<String> foundMielegrammi = foundWordsEntities.stream()
                 .filter(fw -> Boolean.TRUE.equals(fw.getIsMielegramma()))
                 .map(fw -> fw.getId().getWord())
                 .collect(Collectors.toSet());
 
+        // Retrieve session's invalid word attempts
         List<String> invalidWordsList = invalidWordAttemptRepository
                 .findDistinctAttemptedWordsBySessionId(session.getId());
         Set<String> invalidWords = invalidWordsList != null ? Set.copyOf(invalidWordsList) : Set.of();

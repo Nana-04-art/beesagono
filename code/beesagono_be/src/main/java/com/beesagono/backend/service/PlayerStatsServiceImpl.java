@@ -30,6 +30,17 @@ public class PlayerStatsServiceImpl implements PlayerStatsService {
         refreshStreak(stats, userId);
         playerStatsRepository.save(stats);
 
+        // Recalculates the streak on the fly whenever stats are requested
+        int calculatedStreak = calculateCurrentStreak(userId);
+        stats.setCurrentStreak(calculatedStreak);
+
+        int maxStreak = stats.getMaxStreak() != null ? stats.getMaxStreak() : 0;
+        if (calculatedStreak > maxStreak) {
+            stats.setMaxStreak(calculatedStreak);
+        }
+
+        playerStatsRepository.save(stats);
+
         return mapToResponse(stats);
     }
 
@@ -54,6 +65,15 @@ public class PlayerStatsServiceImpl implements PlayerStatsService {
             if (currentLongest == null || bestWordFound.length() > currentLongest.length()) {
                 stats.setLongestWordFound(bestWordFound);
             }
+        }
+
+        // Dynamic Streak Recalculation
+        int calculatedStreak = calculateCurrentStreak(userId);
+        stats.setCurrentStreak(calculatedStreak);
+
+        int maxStreak = stats.getMaxStreak() != null ? stats.getMaxStreak() : 0;
+        if (calculatedStreak > maxStreak) {
+            stats.setMaxStreak(calculatedStreak);
         }
 
         refreshStreak(stats, userId);
