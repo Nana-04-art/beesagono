@@ -95,6 +95,11 @@ public class GameServiceImpl implements GameService {
                     HttpStatus.FORBIDDEN, "Non sei autorizzato a modificare questa sessione di gioco.");
         }
 
+        // Every word submission attempt (valid or invalid) records today's play for the
+        // streak
+        session.setLastUpdated(new Date());
+        gameSessionRepository.save(session);
+
         String rawWord = request.getWord();
 
         // Syntactic input validation (Minimum length)
@@ -327,6 +332,10 @@ public class GameServiceImpl implements GameService {
                 .errorReason(reason)
                 .build();
         invalidWordAttemptRepository.save(attempt);
+
+        // Notify today's activity to PlayerSeasonService (0 points earned, but played
+        // day)
+        playerSeasonService.updateSeasonProgress(session.getUser().getId(), 0, false);
     }
 
     private SubmitWordResponse buildErrorResponse(String word, GameSession session, ErrorTypeCode code,
@@ -344,19 +353,34 @@ public class GameServiceImpl implements GameService {
     }
 
     private GameSessionResponse buildGameSessionResponse(GameSession session) {
-        List<FoundWord> foundWords = foundWordRepository.findByIdSessionId(session.getId());
-        Set<String> wordsSet = foundWords.stream()
+        // Retrieve valid found words
+        List<FoundWord> foundWordsEntities = foundWordRepository.findByIdSessionId(session.getId());
+
+        Set<String> foundWords = foundWordsEntities.stream()
                 .map(fw -> fw.getId().getWord())
                 .collect(Collectors.toSet());
 
+        // Retrieve found Mielegrammi
+        Set<String> foundMielegrammi = foundWordsEntities.stream()
+                .filter(fw -> Boolean.TRUE.equals(fw.getIsMielegramma()))
+                .map(fw -> fw.getId().getWord())
+                .collect(Collectors.toSet());
+
+        // Retrieve session's invalid word attempts
+        List<String> invalidWordsList = invalidWordAttemptRepository
+                .findDistinctAttemptedWordsBySessionId(session.getId());
+        Set<String> invalidWords = invalidWordsList != null ? Set.copyOf(invalidWordsList) : Set.of();
+
         return GameSessionResponse.builder()
                 .id(session.getId())
-                .puzzleId(session.getPuzzle().getId())
-                .userId(session.getUser().getId())
+                .puzzleId(session.getPuzzle() != null ? session.getPuzzle().getId() : null)
+                .userId(session.getUser() != null ? session.getUser().getId() : null)
                 .currentScore(session.getCurrentScore())
                 .currentRankLabel(session.getCurrentRankLabel())
                 .isCompleted(session.getIsCompleted())
-                .foundWords(wordsSet)
+                .foundWords(foundWords)
+                .invalidWords(invalidWords)
+                .foundMielegrammi(foundMielegrammi)
                 .startTime(session.getStartTime())
                 .lastUpdated(session.getLastUpdated())
                 .build();
