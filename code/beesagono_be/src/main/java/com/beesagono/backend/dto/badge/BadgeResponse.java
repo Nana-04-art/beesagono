@@ -9,7 +9,7 @@ import java.time.Instant;
 
 /**
  * Data Transfer Object representing the response payload for a badge,
- * including its metadata and the user's unlock status and timestamp.
+ * including its metadata, unlock status, timestamp, and progress metrics
  */
 @Data
 @Builder
@@ -23,4 +23,7 @@ public class BadgeResponse {
     private String category;
     private boolean unlocked;
     private Instant unlockedAt;
+    private Integer currentProgress;
+    private Integer targetValue;
+    private Double progressPercentage;
 }
