@@ -23,4 +23,7 @@ public interface InvalidWordAttemptRepository extends JpaRepository<InvalidWordA
             "WHERE i.errorReason = :errorReason " +
             "GROUP BY i.attemptedWord")
     List<InvalidWordAttemptStat> findByErrorReason(@Param("errorReason") ErrorTypeCode errorReason);
+
+    @Query("SELECT DISTINCT i.attemptedWord FROM InvalidWordAttempt i WHERE i.session.id = :sessionId")
+    List<String> findDistinctAttemptedWordsBySessionId(@Param("sessionId") String sessionId);
 }
