@@ -2,19 +2,24 @@ package com.beesagono.backend.service;
 
 import com.beesagono.backend.dto.stats.PlayerStatsResponse;
 import com.beesagono.backend.entity.PlayerStats;
+import com.beesagono.backend.repository.GameSessionRepository;
 import com.beesagono.backend.repository.PlayerStatsRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDate;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
 public class PlayerStatsServiceImpl implements PlayerStatsService {
 
     private final PlayerStatsRepository playerStatsRepository;
+    private final GameSessionRepository gameSessionRepository;
 
     @Override
-    @Transactional(readOnly = true)
+    @Transactional
     public PlayerStatsResponse getPlayerStats(String userId) {
         PlayerStats stats = playerStatsRepository.findById(userId)
                 .orElseGet(() -> PlayerStats.builder()
@@ -25,6 +30,17 @@ public class PlayerStatsServiceImpl implements PlayerStatsService {
                         .maxStreak(0)
                         .totalScoreEarned(0)
                         .build());
+
+        // Recalculates the streak on the fly whenever stats are requested
+        int calculatedStreak = calculateCurrentStreak(userId);
+        stats.setCurrentStreak(calculatedStreak);
+
+        int maxStreak = stats.getMaxStreak() != null ? stats.getMaxStreak() : 0;
+        if (calculatedStreak > maxStreak) {
+            stats.setMaxStreak(calculatedStreak);
+        }
+
+        playerStatsRepository.save(stats);
 
         return mapToResponse(stats);
     }
@@ -59,7 +75,59 @@ public class PlayerStatsServiceImpl implements PlayerStatsService {
             }
         }
 
+        // Dynamic Streak Recalculation
+        int calculatedStreak = calculateCurrentStreak(userId);
+        stats.setCurrentStreak(calculatedStreak);
+
+        int maxStreak = stats.getMaxStreak() != null ? stats.getMaxStreak() : 0;
+        if (calculatedStreak > maxStreak) {
+            stats.setMaxStreak(calculatedStreak);
+        }
+
         playerStatsRepository.save(stats);
+    }
+
+    /**
+     * Calculates the streak of consecutive days based on the dates of played
+     * puzzles.
+     */
+    private int calculateCurrentStreak(String userId) {
+        List<LocalDate> playedDates = gameSessionRepository.findDistinctPlayedPuzzleDatesByUserId(userId);
+
+        if (playedDates == null || playedDates.isEmpty()) {
+            return 0;
+        }
+
+        LocalDate today = LocalDate.now();
+        LocalDate yesterday = today.minusDays(1);
+
+        LocalDate mostRecentDate = playedDates.get(0);
+
+        // If the user has not played today's or yesterday's puzzle, the streak resets
+        // to 0
+        if (!mostRecentDate.equals(today) && !mostRecentDate.equals(yesterday)) {
+            return 0;
+        }
+
+        int streak = 1;
+        LocalDate previousDate = mostRecentDate;
+
+        for (int i = 1; i < playedDates.size(); i++) {
+            LocalDate currentDate = playedDates.get(i);
+            // Check if the previous puzzle date is exactly consecutive
+            if (currentDate.equals(previousDate.minusDays(1))) {
+                streak++;
+                previousDate = currentDate;
+            } else if (currentDate.equals(previousDate)) {
+                // Skip duplicate dates
+                continue;
+            } else {
+                // Found a break in day continuity
+                break;
+            }
+        }
+
+        return streak;
     }
 
     private PlayerStatsResponse mapToResponse(PlayerStats stats) {
