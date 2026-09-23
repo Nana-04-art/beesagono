@@ -222,13 +222,19 @@ public class GameServiceImpl implements GameService {
                     .orElseGet(() -> createNewSession(userId, puzzle));
 
             int newPointsEarnedInSession = 0;
+            boolean centerLetterMatches = !StringUtils.hasText(singleSync.getCenterLetter())
+                    || singleSync.getCenterLetter().trim().equalsIgnoreCase(puzzle.getCenterLetter());
 
-            if (singleSync.getFoundWords() != null && !singleSync.getFoundWords().isEmpty()) {
-                for (String rawWord : singleSync.getFoundWords()) {
-                    if (!StringUtils.hasText(rawWord)) {
-                        continue;
-                    }
-                    String word = rawWord.trim().toUpperCase();
+            // CASE 1: Multi-Device Sync with compatible dictionary (Merge unique words)
+            if (centerLetterMatches) {
+
+                // Process and merge VALID found words
+                if (singleSync.getFoundWords() != null && !singleSync.getFoundWords().isEmpty()) {
+                    for (String rawWord : singleSync.getFoundWords()) {
+                        if (rawWord == null || rawWord.isBlank()) {
+                            continue;
+                        }
+                        String word = rawWord.trim().toUpperCase();
 
                     if (!foundWordRepository.existsByIdSessionIdAndIdWord(session.getId(), word)) {
                         Optional<PuzzleWord> pwOpt = puzzleWordRepository.findByIdPuzzleIdAndIdWord(puzzle.getId(),
@@ -245,45 +251,61 @@ public class GameServiceImpl implements GameService {
                                 longestWordInBulk = word;
                             }
 
-                            FoundWord foundWord = FoundWord.builder()
-                                    .id(new FoundWordId(session.getId(), word))
+                                FoundWord foundWord = FoundWord.builder()
+                                        .id(new FoundWordId(session.getId(), word))
+                                        .session(session)
+                                        .scoreAssigned(pointsEarned)
+                                        .isMielegramma(isMiele)
+                                        .build();
+                                foundWordRepository.save(foundWord);
+                            }
+                        }
+                    }
+                }
+
+                // Process and save INVALID word attempts
+                if (singleSync.getInvalidWords() != null && !singleSync.getInvalidWords().isEmpty()) {
+                    List<String> existingInvalidWords = invalidWordAttemptRepository
+                            .findDistinctAttemptedWordsBySessionId(session.getId());
+
+                    Set<String> existingSet = new HashSet<>(existingInvalidWords);
+
+                    for (String rawInvalidWord : singleSync.getInvalidWords()) {
+                        if (rawInvalidWord == null || rawInvalidWord.isBlank()) {
+                            continue;
+                        }
+                        String invalidWord = rawInvalidWord.trim().toUpperCase();
+
+                        if (!existingSet.contains(invalidWord)) {
+                            ErrorTypeCode reason = determineErrorReason(invalidWord, puzzle);
+
+                            InvalidWordAttempt attempt = InvalidWordAttempt.builder()
                                     .session(session)
-                                    .scoreAssigned(pointsEarned)
-                                    .isMielegramma(isMiele)
+                                    .attemptedWord(invalidWord)
+                                    .errorReason(reason)
                                     .build();
-                            foundWordRepository.save(foundWord);
+
+                            invalidWordAttemptRepository.save(attempt);
+                            existingSet.add(invalidWord);
                         }
                     }
                 }
             }
 
-            if (singleSync.getInvalidWords() != null && !singleSync.getInvalidWords().isEmpty()) {
-                List<String> existingInvalidWords = invalidWordAttemptRepository
-                        .findDistinctAttemptedWordsBySessionId(session.getId());
+            // CASE 2: Guest -> Account Migration (Proportional fallback)
+            // If percentage indicates more progress than what word-matching granted, make
+            // up the difference
+            if (singleSync.getCompletionPercentage() != null && singleSync.getCompletionPercentage() > 0) {
+                int expectedTargetScore = (int) Math
+                        .round(puzzle.getMaxScore() * Math.min(1.0, singleSync.getCompletionPercentage()));
+                int potentialScoreAfterWords = session.getCurrentScore() + newPointsEarnedInSession;
 
-                Set<String> existingSet = new HashSet<>(existingInvalidWords);
-
-                for (String rawInvalidWord : singleSync.getInvalidWords()) {
-                    if (!StringUtils.hasText(rawInvalidWord)) {
-                        continue;
-                    }
-                    String invalidWord = rawInvalidWord.trim().toUpperCase();
-
-                    if (!existingSet.contains(invalidWord)) {
-                        ErrorTypeCode reason = determineErrorReason(invalidWord, puzzle);
-
-                        InvalidWordAttempt attempt = InvalidWordAttempt.builder()
-                                .session(session)
-                                .attemptedWord(invalidWord)
-                                .errorReason(reason)
-                                .build();
-
-                        invalidWordAttemptRepository.save(attempt);
-                        existingSet.add(invalidWord);
-                    }
+                if (expectedTargetScore > potentialScoreAfterWords) {
+                    newPointsEarnedInSession += (expectedTargetScore - potentialScoreAfterWords);
                 }
             }
 
+            // Update current session if new progress was made
             if (newPointsEarnedInSession > 0) {
                 int updatedSessionScore = session.getCurrentScore() + newPointsEarnedInSession;
                 session.setCurrentScore(updatedSessionScore);
@@ -303,11 +325,13 @@ public class GameServiceImpl implements GameService {
             responses.add(buildGameSessionResponse(session));
         }
 
+        // Global side effects executed ONLY ONCE at the end of the Bulk Sync
         if (totalNewPointsInBulk > 0 || anyCompletedInBulk) {
             playerSeasonService.updateSeasonProgress(userId, totalNewPointsInBulk, anyCompletedInBulk);
             playerStatsService.updatePlayerStatsAfterGame(userId, totalNewPointsInBulk, longestWordInBulk,
                     anyCompletedInBulk);
 
+            // Uniform badge calculation for the bulk request
             badgeService.evaluateAndAwardBadges(userId);
         }
 
@@ -430,15 +454,18 @@ public class GameServiceImpl implements GameService {
 
         String normalizedWord = word.trim().toUpperCase();
 
+        // Check minimum length (e.g., 4 characters)
         if (normalizedWord.length() < 4) {
             return ErrorTypeCode.TOO_SHORT;
         }
 
+        // Check presence of the mandatory center letter
         String center = puzzle.getCenterLetter().toUpperCase();
         if (!normalizedWord.contains(center)) {
             return ErrorTypeCode.MISSING_CENTER;
         }
 
+        // Extract all valid letters (Center + Outer Letters from EmbeddedId)
         Set<Character> allowedChars = new HashSet<>();
         allowedChars.add(center.charAt(0));
 
@@ -453,12 +480,14 @@ public class GameServiceImpl implements GameService {
             }
         }
 
+        // Verify that the word contains only allowed characters
         for (char c : normalizedWord.toCharArray()) {
             if (!allowedChars.contains(c)) {
                 return ErrorTypeCode.INVALID_LETTERS;
             }
         }
 
+        // If it satisfies all composition rules but is not in the dictionary
         return ErrorTypeCode.NOT_IN_DICTIONARY;
     }
 }
