@@ -47,10 +47,10 @@ class PlayerSeasonServiceImplTest {
         private PlayerStatsRepository playerStatsRepository;
 
         @Mock
-        private UserRepository userRepository;
+        private MilestoneRedemptionRepository milestoneRedemptionRepository;
 
         @Mock
-        private MilestoneRedemptionRepository milestoneRedemptionRepository;
+        private UserRepository userRepository;
 
         @Mock
         private ScoringService scoringService;
@@ -188,6 +188,7 @@ class PlayerSeasonServiceImplTest {
 
                         verify(playerSeasonRepository).save(seasonCaptor.capture());
                         verify(playerStatsRepository).save(statsCaptor.capture());
+                        verify(milestoneRedemptionRepository).save(any());
 
                         PlayerSeason savedSeason = seasonCaptor.getValue();
                         PlayerStats savedStats = statsCaptor.getValue();
