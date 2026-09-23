@@ -58,8 +58,7 @@ public class AdminUserController {
             @ApiResponse(responseCode = "500", description = "Internal server error during admin creation", content = @Content)
     })
     @PostMapping
-    public ResponseEntity<UserResponse> createAdmin(
-            @Valid @RequestBody CreateAdminRequest request) {
+    public ResponseEntity<UserResponse> createAdmin(@Valid @RequestBody CreateAdminRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(adminService.createAdmin(request));
     }
 }
