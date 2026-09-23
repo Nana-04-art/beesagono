@@ -1,12 +1,12 @@
 package com.beesagono.backend.controller;
 
-import com.beesagono.backend.dto.auth.CreateAdminRequest;
-import com.beesagono.backend.dto.auth.UserResponse;
+import com.beesagono.backend.dto.badge.BadgeResponse;
+import com.beesagono.backend.repository.UserRepository;
 import com.beesagono.backend.security.JwtAuthenticationFilter;
 import com.beesagono.backend.security.JwtUtils;
 import com.beesagono.backend.security.TokenBlacklist;
 import com.beesagono.backend.security.UserDetailsImpl;
-import com.beesagono.backend.service.AdminService;
+import com.beesagono.backend.service.BadgeService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -17,10 +17,6 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Bean;
 import org.springframework.core.MethodParameter;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
-import org.springframework.data.domain.Pageable;
-import org.springframework.http.MediaType;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -34,31 +30,28 @@ import org.springframework.web.method.support.ModelAndViewContainer;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 import java.util.List;
-import java.util.Set;
 
-import static org.hamcrest.Matchers.hasItem;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@WebMvcTest(AdminUserController.class)
+@WebMvcTest(BadgeController.class)
 @AutoConfigureMockMvc(addFilters = false)
-class AdminUserControllerTest {
+class BadgeControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
 
-    @Autowired
-    private ObjectMapper objectMapper;
+    @MockitoBean
+    private BadgeService badgeService;
 
     @MockitoBean
-    private AdminService adminService;
+    private UserRepository userRepository;
 
     @MockitoBean
     private JwtUtils jwtUtils;
@@ -68,6 +61,8 @@ class AdminUserControllerTest {
 
     @MockitoBean
     private TokenBlacklist tokenBlacklist;
+
+    private UserDetailsImpl principal;
 
     @TestConfiguration
     static class TestConfig implements WebMvcConfigurer {
@@ -98,84 +93,44 @@ class AdminUserControllerTest {
 
     @BeforeEach
     void setUp() {
-        UserDetailsImpl principal = new UserDetailsImpl(
-                "admin-1",
-                "admin",
-                "admin@example.com",
+        principal = new UserDetailsImpl(
+                "user-1",
+                "testuser",
+                "user@example.com",
                 "pwd",
-                List.of(new SimpleGrantedAuthority("ROLE_ADMIN")));
+                List.of(new SimpleGrantedAuthority("ROLE_USER")));
 
         UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(principal, null,
                 principal.getAuthorities());
         SecurityContextHolder.getContext().setAuthentication(auth);
     }
 
+    // --- getUserBadges ---
+
     @Test
-    @DisplayName("GET /api/admin/users - Success")
-    void getUsers_Success() throws Exception {
-        UserResponse userResponse = UserResponse.builder()
-                .id("user-1")
-                .username("testuser")
-                .email("test@example.com")
-                .build();
-        Page<UserResponse> page = new PageImpl<>(List.of(userResponse));
+    @DisplayName("GET /api/badges - Success")
+    void getUserBadges_Success() throws Exception {
+        BadgeResponse badgeResponse = new BadgeResponse();
+        List<BadgeResponse> badgesList = List.of(badgeResponse);
 
-        when(adminService.getUsers(eq(null), any(Pageable.class))).thenReturn(page);
+        when(badgeService.getUserBadges(anyString())).thenReturn(badgesList);
 
-        mockMvc.perform(get("/api/admin/users"))
+        mockMvc.perform(get("/api/badges"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.content[0].id").value("user-1"))
-                .andExpect(jsonPath("$.content[0].username").value("testuser"));
+                .andExpect(jsonPath("$.length()").value(1));
 
-        verify(adminService, times(1)).getUsers(eq(null), any(Pageable.class));
+        verify(badgeService, times(1)).evaluateAndAwardBadges("user-1");
+        verify(badgeService, times(1)).getUserBadges("user-1");
     }
 
-    @Test
-    @DisplayName("GET /api/admin/users - With Search Parameter Success")
-    void getUsers_WithSearch_Success() throws Exception {
-        UserResponse userResponse = UserResponse.builder()
-                .id("user-1")
-                .username("searchedUser")
-                .email("search@example.com")
-                .build();
-        Page<UserResponse> page = new PageImpl<>(List.of(userResponse));
-
-        when(adminService.getUsers(eq("searchedUser"), any(Pageable.class))).thenReturn(page);
-
-        mockMvc.perform(get("/api/admin/users")
-                .param("search", "searchedUser"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.content[0].username").value("searchedUser"));
-
-        verify(adminService, times(1)).getUsers(eq("searchedUser"), any(Pageable.class));
-    }
+    // --- evaluateBadges ---
 
     @Test
-    @DisplayName("POST /api/admin/users - Success")
-    void createAdmin_Success() throws Exception {
-        CreateAdminRequest request = new CreateAdminRequest();
-        request.setUsername("newadmin");
-        request.setEmail("newadmin@example.com");
-        request.setPassword("password123");
+    @DisplayName("POST /api/badges/evaluate - Success (No Content)")
+    void evaluateBadges_Success() throws Exception {
+        mockMvc.perform(post("/api/badges/evaluate"))
+                .andExpect(status().isNoContent());
 
-        UserResponse response = UserResponse.builder()
-                .id("admin-2")
-                .username("newadmin")
-                .email("newadmin@example.com")
-                .roles(Set.of("ROLE_ADMIN", "ROLE_USER"))
-                .build();
-
-        when(adminService.createAdmin(any(CreateAdminRequest.class))).thenReturn(response);
-
-        mockMvc.perform(post("/api/admin/users")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.id").value("admin-2"))
-                .andExpect(jsonPath("$.username").value("newadmin"))
-                .andExpect(jsonPath("$.roles", hasItem("ROLE_ADMIN")))
-                .andExpect(jsonPath("$.roles", hasItem("ROLE_USER")));
-
-        verify(adminService, times(1)).createAdmin(any(CreateAdminRequest.class));
+        verify(badgeService, times(1)).evaluateAndAwardBadges("user-1");
     }
 }

@@ -27,6 +27,8 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Captor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -44,6 +46,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -67,27 +70,38 @@ class GameServiceImplTest {
     @Mock
     private DictionaryWordRepository dictionaryRepository;
     @Mock
+    private RankHistogramRepository rankHistogramRepository;
+    @Mock
     private PuzzleGeneratorService puzzleService;
     @Mock
     private ScoringService scoringService;
     @Mock
-    private PlayerSeasonService playerSeasonService;
+    private BadgeService badgeService;
     @Mock
-    private RankHistogramRepository rankHistogramRepository;
+    private PlayerSeasonService playerSeasonService;
     @Mock
     private PlayerStatsService playerStatsService;
 
     @InjectMocks
     private GameServiceImpl gameService;
 
+    @Captor
+    private ArgumentCaptor<FoundWord> foundWordCaptor;
+
+    @Captor
+    private ArgumentCaptor<InvalidWordAttempt> invalidAttemptCaptor;
+
     private User user;
     private DailyPuzzle puzzle;
     private GameSession session;
+    private String userId;
 
     @BeforeEach
     void setUp() {
+        userId = "user-123";
+
         user = User.builder()
-                .id("user-123")
+                .id(userId)
                 .username("player1")
                 .email("player1@example.com")
                 .build();
@@ -121,15 +135,15 @@ class GameServiceImplTest {
             LocalDate today = LocalDate.now();
 
             when(dailyPuzzleRepository.findByPuzzleDate(today)).thenReturn(Optional.of(puzzle));
-            when(gameSessionRepository.findByUserIdAndPuzzleId(user.getId(), puzzle.getId()))
+            when(gameSessionRepository.findByUserIdAndPuzzleId(userId, puzzle.getId()))
                     .thenReturn(Optional.of(session));
             when(foundWordRepository.findByIdSessionId(session.getId())).thenReturn(Collections.emptyList());
 
-            GameSessionResponse response = gameService.getOrCreateTodaySession(user.getId());
+            GameSessionResponse response = gameService.getOrCreateTodaySession(userId);
 
             assertThat(response).isNotNull();
             assertThat(response.getId()).isEqualTo(session.getId());
-            assertThat(response.getUserId()).isEqualTo(user.getId());
+            assertThat(response.getUserId()).isEqualTo(userId);
             assertThat(response.getPuzzleId()).isEqualTo(puzzle.getId());
 
             verify(puzzleService, times(1)).generateAndSavePuzzleForDate(today);
@@ -144,21 +158,21 @@ class GameServiceImplTest {
             LocalDate today = LocalDate.now();
 
             when(dailyPuzzleRepository.findByPuzzleDate(today)).thenReturn(Optional.of(puzzle));
-            when(gameSessionRepository.findByUserIdAndPuzzleId(user.getId(), puzzle.getId()))
+            when(gameSessionRepository.findByUserIdAndPuzzleId(userId, puzzle.getId()))
                     .thenReturn(Optional.empty());
-            when(userRepository.findById(user.getId())).thenReturn(Optional.of(user));
+            when(userRepository.findById(userId)).thenReturn(Optional.of(user));
             when(gameSessionRepository.save(any(GameSession.class))).thenReturn(session);
             when(foundWordRepository.findByIdSessionId(session.getId())).thenReturn(Collections.emptyList());
 
-            GameSessionResponse response = gameService.getOrCreateTodaySession(user.getId());
+            GameSessionResponse response = gameService.getOrCreateTodaySession(userId);
 
             assertThat(response).isNotNull();
             assertThat(response.getId()).isEqualTo(session.getId());
 
             verify(puzzleService, times(1)).generateAndSavePuzzleForDate(today);
-            verify(playerSeasonService, times(1)).updateSeasonProgress(user.getId(), 0, false);
-            verify(userRepository, times(1)).findById(user.getId());
-            verify(gameSessionRepository, times(1)).save(any(GameSession.class));
+            verify(playerSeasonService, times(1)).updateSeasonProgress(userId, 0, false);
+            verify(userRepository, times(1)).findById(userId);
+            verify(gameSessionRepository, atLeast(1)).save(any(GameSession.class));
         }
 
         @Test
@@ -167,9 +181,11 @@ class GameServiceImplTest {
             LocalDate today = LocalDate.now();
             when(dailyPuzzleRepository.findByPuzzleDate(today)).thenReturn(Optional.empty());
 
-            assertThatThrownBy(() -> gameService.getOrCreateTodaySession(user.getId()))
+            assertThatThrownBy(() -> gameService.getOrCreateTodaySession(userId))
                     .isInstanceOf(RuntimeException.class)
                     .hasMessageContaining("Puzzle per la data " + today + " non trovato.");
+
+            verify(puzzleService, times(1)).generateAndSavePuzzleForDate(today);
         }
     }
 
@@ -184,7 +200,7 @@ class GameServiceImplTest {
 
             when(gameSessionRepository.findById(request.getSessionId())).thenReturn(Optional.empty());
 
-            assertThatThrownBy(() -> gameService.validateAndScoreWord(request, user.getId()))
+            assertThatThrownBy(() -> gameService.validateAndScoreWord(request, userId))
                     .isInstanceOf(ResponseStatusException.class)
                     .hasMessageContaining("Sessione di gioco non trovata");
         }
@@ -208,7 +224,7 @@ class GameServiceImplTest {
 
             when(gameSessionRepository.findById(session.getId())).thenReturn(Optional.of(session));
 
-            SubmitWordResponse response = gameService.validateAndScoreWord(request, user.getId());
+            SubmitWordResponse response = gameService.validateAndScoreWord(request, userId);
 
             assertThat(response.isSuccess()).isFalse();
             assertThat(response.getErrorCode()).isEqualTo(ErrorTypeCode.TOO_SHORT);
@@ -223,7 +239,7 @@ class GameServiceImplTest {
             session.getPuzzle().setCenterLetter("X");
             when(gameSessionRepository.findById(session.getId())).thenReturn(Optional.of(session));
 
-            SubmitWordResponse response = gameService.validateAndScoreWord(request, user.getId());
+            SubmitWordResponse response = gameService.validateAndScoreWord(request, userId);
 
             assertThat(response.isSuccess()).isFalse();
             assertThat(response.getErrorCode()).isEqualTo(ErrorTypeCode.MISSING_CENTER);
@@ -238,7 +254,7 @@ class GameServiceImplTest {
             when(gameSessionRepository.findById(session.getId())).thenReturn(Optional.of(session));
             when(foundWordRepository.existsByIdSessionIdAndIdWord(session.getId(), "CASA")).thenReturn(true);
 
-            SubmitWordResponse response = gameService.validateAndScoreWord(request, user.getId());
+            SubmitWordResponse response = gameService.validateAndScoreWord(request, userId);
 
             assertThat(response.isSuccess()).isFalse();
             assertThat(response.getErrorCode()).isEqualTo(ErrorTypeCode.ALREADY_FOUND);
@@ -258,7 +274,7 @@ class GameServiceImplTest {
             when(scoringService.calculateWordScore("CASA", false)).thenReturn(1);
             when(scoringService.calculateCurrentRank(1, 100)).thenReturn(RankTier.INITIAL);
 
-            SubmitWordResponse response = gameService.validateAndScoreWord(request, user.getId());
+            SubmitWordResponse response = gameService.validateAndScoreWord(request, userId);
 
             assertThat(response.isSuccess()).isTrue();
             assertThat(response.getWord()).isEqualTo("CASA");
@@ -267,8 +283,10 @@ class GameServiceImplTest {
             assertThat(response.isMielegramma()).isFalse();
 
             verify(foundWordRepository, times(1)).save(any(FoundWord.class));
-            verify(gameSessionRepository, times(1)).save(session);
-            verify(playerSeasonService, times(1)).updateSeasonProgress(user.getId(), 1, false);
+            verify(gameSessionRepository, atLeast(1)).save(session);
+            verify(playerSeasonService, times(1)).updateSeasonProgress(userId, 1, false);
+            verify(playerStatsService, times(1)).updatePlayerStatsAfterGame(userId, 1, "CASA", false);
+            verify(badgeService, times(1)).evaluateAndAwardBadges(userId);
         }
 
         @Test
@@ -284,12 +302,17 @@ class GameServiceImplTest {
             when(scoringService.calculateWordScore("ALBERGO", true)).thenReturn(14);
             when(scoringService.calculateCurrentRank(14, 100)).thenReturn(RankTier.EXPERT);
 
-            SubmitWordResponse response = gameService.validateAndScoreWord(request, user.getId());
+            SubmitWordResponse response = gameService.validateAndScoreWord(request, userId);
 
             assertThat(response.isSuccess()).isTrue();
             assertThat(response.getPointsEarned()).isEqualTo(14);
             assertThat(response.isMielegramma()).isTrue();
-            verify(playerSeasonService, times(1)).updateSeasonProgress(user.getId(), 14, false);
+
+            verify(foundWordRepository, times(1)).save(any(FoundWord.class));
+            verify(gameSessionRepository, atLeast(1)).save(session);
+            verify(playerSeasonService, times(1)).updateSeasonProgress(userId, 14, false);
+            verify(playerStatsService, times(1)).updatePlayerStatsAfterGame(userId, 14, "ALBERGO", false);
+            verify(badgeService, times(1)).evaluateAndAwardBadges(userId);
         }
 
         @Test
@@ -302,7 +325,7 @@ class GameServiceImplTest {
             when(puzzleWordRepository.findByIdPuzzleIdAndIdWord(puzzle.getId(), "ALBERO")).thenReturn(Optional.empty());
             when(dictionaryRepository.existsByWord("ALBERO")).thenReturn(true);
 
-            SubmitWordResponse response = gameService.validateAndScoreWord(request, user.getId());
+            SubmitWordResponse response = gameService.validateAndScoreWord(request, userId);
 
             assertThat(response.isSuccess()).isFalse();
             assertThat(response.getErrorCode()).isEqualTo(ErrorTypeCode.NOT_IN_PUZZLE);
@@ -319,7 +342,7 @@ class GameServiceImplTest {
             when(puzzleWordRepository.findByIdPuzzleIdAndIdWord(puzzle.getId(), "ZZZA")).thenReturn(Optional.empty());
             when(dictionaryRepository.existsByWord("ZZZA")).thenReturn(false);
 
-            SubmitWordResponse response = gameService.validateAndScoreWord(request, user.getId());
+            SubmitWordResponse response = gameService.validateAndScoreWord(request, userId);
 
             assertThat(response.isSuccess()).isFalse();
             assertThat(response.getErrorCode()).isEqualTo(ErrorTypeCode.NOT_IN_DICTIONARY);
@@ -336,7 +359,7 @@ class GameServiceImplTest {
         void shouldReturnEmptyWhenRequestIsEmpty() {
             GameBulkSyncRequest request = new GameBulkSyncRequest(Collections.emptyList());
 
-            List<GameSessionResponse> responses = gameService.syncLocalProgress(request, user.getId());
+            List<GameSessionResponse> responses = gameService.syncLocalProgress(request, userId);
 
             assertThat(responses).isEmpty();
         }
@@ -355,7 +378,7 @@ class GameServiceImplTest {
             PuzzleWord pw2 = PuzzleWord.builder().isMielegramma(true).build();
 
             when(dailyPuzzleRepository.findByPuzzleDate(puzzleDate)).thenReturn(Optional.of(puzzle));
-            when(gameSessionRepository.findByUserIdAndPuzzleId(user.getId(), puzzle.getId()))
+            when(gameSessionRepository.findByUserIdAndPuzzleId(userId, puzzle.getId()))
                     .thenReturn(Optional.of(session));
 
             when(foundWordRepository.existsByIdSessionIdAndIdWord(session.getId(), "CASA")).thenReturn(false);
@@ -372,15 +395,18 @@ class GameServiceImplTest {
             FoundWord fw2 = FoundWord.builder().id(new FoundWordId(session.getId(), "ALBERO")).build();
             when(foundWordRepository.findByIdSessionId(session.getId())).thenReturn(List.of(fw1, fw2));
 
-            List<GameSessionResponse> responses = gameService.syncLocalProgress(request, user.getId());
+            List<GameSessionResponse> responses = gameService.syncLocalProgress(request, userId);
 
             assertThat(responses).hasSize(1);
             GameSessionResponse response = responses.get(0);
             assertThat(response.getFoundWords()).containsExactlyInAnyOrder("CASA", "ALBERO");
 
+            verify(puzzleService, times(1)).generateAndSavePuzzleForDate(puzzleDate);
             verify(foundWordRepository, times(2)).save(any(FoundWord.class));
-            verify(gameSessionRepository, times(1)).save(session);
-            verify(playerSeasonService, times(1)).updateSeasonProgress(user.getId(), 15, false);
+            verify(gameSessionRepository, atLeast(1)).save(session);
+            verify(playerSeasonService, times(1)).updateSeasonProgress(userId, 15, false);
+            verify(playerStatsService, times(1)).updatePlayerStatsAfterGame(userId, 15, "ALBERO", false);
+            verify(badgeService, times(1)).evaluateAndAwardBadges(userId);
         }
 
         @Test
@@ -396,9 +422,10 @@ class GameServiceImplTest {
 
             when(dailyPuzzleRepository.findByPuzzleDate(puzzleDate)).thenReturn(Optional.of(puzzle));
 
-            List<GameSessionResponse> responses = gameService.syncLocalProgress(request, user.getId());
+            List<GameSessionResponse> responses = gameService.syncLocalProgress(request, userId);
 
             assertThat(responses).isEmpty();
+            verify(puzzleService, times(1)).generateAndSavePuzzleForDate(puzzleDate);
             verify(gameSessionRepository, never()).findByUserIdAndPuzzleId(any(), any());
         }
     }

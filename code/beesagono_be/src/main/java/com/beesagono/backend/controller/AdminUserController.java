@@ -50,7 +50,7 @@ public class AdminUserController {
             @ApiResponse(responseCode = "409", description = "Username or Email already in use"),
             @ApiResponse(responseCode = "500", description = "Internal server error")
     })
-    @PostMapping("/admin")
+    @PostMapping
     public ResponseEntity<UserResponse> createAdmin(@Valid @RequestBody CreateAdminRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(adminService.createAdmin(request));
     }
