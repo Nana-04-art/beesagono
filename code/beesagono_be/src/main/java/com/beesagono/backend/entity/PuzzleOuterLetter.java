@@ -17,6 +17,12 @@ import lombok.Setter;
 import lombok.ToString;
 import lombok.experimental.SuperBuilder;
 
+/**
+ * Entity representing an allowable outer letter associated with a specific
+ * daily puzzle.
+ * Part of the puzzle configuration constraints required to construct valid
+ * words.
+ */
 @Getter
 @Setter
 @NoArgsConstructor

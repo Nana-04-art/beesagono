@@ -19,6 +19,11 @@ import lombok.Setter;
 import lombok.ToString;
 import lombok.experimental.SuperBuilder;
 
+/**
+ * Entity mapping the complete set of valid solution words available for a
+ * specific daily puzzle, including flags for special word types such as
+ * mielegrammi (pangrams).
+ */
 @Getter
 @Setter
 @NoArgsConstructor

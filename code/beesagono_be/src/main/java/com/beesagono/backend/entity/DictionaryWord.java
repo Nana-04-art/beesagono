@@ -24,6 +24,11 @@ import lombok.experimental.SuperBuilder;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.Generated;
 
+/**
+ * Entity representing a master dictionary word accepted by the game engine.
+ * Stores word metadata such as length, unique character bitmasks, and candidate
+ * pangram flags.
+ */
 @Getter
 @Setter
 @NoArgsConstructor

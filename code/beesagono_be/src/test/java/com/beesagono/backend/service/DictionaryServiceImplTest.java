@@ -32,9 +32,9 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.eq;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.never;
 
 @ExtendWith(MockitoExtension.class)
 class DictionaryServiceImplTest {
@@ -194,8 +194,7 @@ class DictionaryServiceImplTest {
         return request;
     }
 
-    private DictionaryWord createDictionaryWord(String word, int length, int uniqueLetters, boolean isPangram,
-            User user) {
+    private DictionaryWord createDictionaryWord(String word, int length, int uniqueLetters, boolean isPangram, User user) {
         return DictionaryWord.builder()
                 .word(word)
                 .wordLength(length)
@@ -205,8 +204,7 @@ class DictionaryServiceImplTest {
                 .build();
     }
 
-    private DictionaryWordResponse createDictionaryWordResponse(String word, int length, int uniqueLetters,
-            boolean isPangram) {
+    private DictionaryWordResponse createDictionaryWordResponse(String word, int length, int uniqueLetters, boolean isPangram) {
         return DictionaryWordResponse.builder()
                 .word(word)
                 .wordLength(length)

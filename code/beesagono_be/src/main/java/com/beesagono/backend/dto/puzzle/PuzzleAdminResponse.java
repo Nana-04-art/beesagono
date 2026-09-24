@@ -7,6 +7,9 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Set;
 
+/**
+ * Data Transfer Object containing detailed administration insights, valid solution sets, and active session statistics for a daily puzzle.
+ */
 @Data
 @Builder
 public class PuzzleAdminResponse {

@@ -5,6 +5,10 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+/**
+ * Data Transfer Object representing the execution summary after a bulk dictionary upload operation,
+ * including processed, added, and skipped item counts.
+ */
 @Data
 @Builder
 @NoArgsConstructor

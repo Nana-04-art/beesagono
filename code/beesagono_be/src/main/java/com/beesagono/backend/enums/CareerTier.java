@@ -6,6 +6,9 @@ import lombok.RequiredArgsConstructor;
 import java.util.Arrays;
 import java.util.Comparator;
 
+/**
+ * Enum representing annual career tier ranks based on total seasonal score progress percentage.
+ */
 @Getter
 @RequiredArgsConstructor
 public enum CareerTier {
