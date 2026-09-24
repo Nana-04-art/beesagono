@@ -7,6 +7,8 @@ import com.beesagono.backend.entity.PlayerSeason;
 import com.beesagono.backend.entity.PlayerStats;
 import com.beesagono.backend.entity.User;
 import com.beesagono.backend.entity.id.PlayerSeasonId;
+import com.beesagono.backend.enums.CareerTier;
+import com.beesagono.backend.repository.MilestoneRedemptionRepository;
 import com.beesagono.backend.repository.PlayerSeasonRepository;
 import com.beesagono.backend.repository.PlayerStatsRepository;
 import com.beesagono.backend.repository.UserRepository;
@@ -29,6 +31,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -45,6 +48,12 @@ class PlayerSeasonServiceImplTest {
 
         @Mock
         private UserRepository userRepository;
+
+        @Mock
+        private MilestoneRedemptionRepository milestoneRedemptionRepository;
+
+        @Mock
+        private ScoringService scoringService;
 
         @InjectMocks
         private PlayerSeasonServiceImpl playerSeasonService;
@@ -80,7 +89,7 @@ class PlayerSeasonServiceImplTest {
                                 .basePoints(30)
                                 .bonusPoints(10)
                                 .totalPoints(40)
-                                .highestTierAchieved("Uovo d'Ape")
+                                .highestTierAchieved(CareerTier.EGG.getName())
                                 .build();
 
                 stats = PlayerStats.builder()
@@ -107,7 +116,7 @@ class PlayerSeasonServiceImplTest {
                         assertThat(response.getBasePoints()).isEqualTo(30);
                         assertThat(response.getBonusPoints()).isEqualTo(10);
                         assertThat(response.getTotalPoints()).isEqualTo(40);
-                        assertThat(response.getHighestTierAchieved()).isEqualTo("Uovo d'Ape");
+                        assertThat(response.getHighestTierAchieved()).isEqualTo(CareerTier.EGG.getName());
 
                         verify(playerSeasonRepository, times(1)).findByIdUserIdAndIdSeasonYear(userId, currentYear);
                         verify(userRepository, never()).findById(any());
@@ -130,7 +139,7 @@ class PlayerSeasonServiceImplTest {
                         assertThat(response.getBasePoints()).isZero();
                         assertThat(response.getBonusPoints()).isZero();
                         assertThat(response.getTotalPoints()).isZero();
-                        assertThat(response.getHighestTierAchieved()).isEqualTo("Uovo d'Ape");
+                        assertThat(response.getHighestTierAchieved()).isEqualTo(CareerTier.EGG.getName());
 
                         verify(userRepository, times(1)).findById(userId);
                         verify(playerSeasonRepository, times(1)).save(any(PlayerSeason.class));
@@ -142,22 +151,24 @@ class PlayerSeasonServiceImplTest {
         class UpdateSeasonProgressTests {
 
                 @Test
-                @DisplayName("Should update base points and maintain 'Uovo d'Ape' tier when total points < 50")
+                @DisplayName("Should update base points and maintain EGG tier when total points < 50")
                 void shouldUpdatePointsAndKeepInitialTier() {
                         when(playerSeasonRepository.findByIdUserIdAndIdSeasonYear(userId, currentYear))
                                         .thenReturn(Optional.of(season));
                         when(playerStatsRepository.findById(userId))
                                         .thenReturn(Optional.of(stats));
+                        when(scoringService.calculateCareerTier(anyInt(), anyInt()))
+                                        .thenReturn(CareerTier.EGG);
 
                         playerSeasonService.updateSeasonProgress(userId, 5, false);
 
                         verify(playerSeasonRepository).save(seasonCaptor.capture());
                         PlayerSeason savedSeason = seasonCaptor.getValue();
 
-                        assertThat(savedSeason.getBasePoints()).isEqualTo(35); // 30 + 5
+                        assertThat(savedSeason.getBasePoints()).isEqualTo(35);
                         assertThat(savedSeason.getBonusPoints()).isEqualTo(10);
-                        assertThat(savedSeason.getTotalPoints()).isEqualTo(45); // 35 base + 10 bonus
-                        assertThat(savedSeason.getHighestTierAchieved()).isEqualTo("Uovo d'Ape");
+                        assertThat(savedSeason.getTotalPoints()).isEqualTo(45);
+                        assertThat(savedSeason.getHighestTierAchieved()).isEqualTo(CareerTier.EGG.getName());
                 }
 
                 @Test
@@ -170,6 +181,8 @@ class PlayerSeasonServiceImplTest {
                                         .thenReturn(Optional.of(season));
                         when(playerStatsRepository.findById(userId))
                                         .thenReturn(Optional.of(stats));
+                        when(scoringService.calculateCareerTier(anyInt(), anyInt()))
+                                        .thenReturn(CareerTier.EGG);
 
                         playerSeasonService.updateSeasonProgress(userId, 10, true);
 
@@ -180,34 +193,32 @@ class PlayerSeasonServiceImplTest {
                         PlayerStats savedStats = statsCaptor.getValue();
 
                         assertThat(savedStats.getLastStreakMilestoneClaimed()).isEqualTo(3);
-                        // Previous base points (30) + earned (10) = 40
                         assertThat(savedSeason.getBasePoints()).isEqualTo(40);
-                        // Previous bonus points (10) + 3-day milestone bonus (50) = 60
                         assertThat(savedSeason.getBonusPoints()).isEqualTo(60);
-                        // Total = 40 + 60 = 100
                         assertThat(savedSeason.getTotalPoints()).isEqualTo(100);
                 }
 
                 @Test
-                @DisplayName("Should promote tier to 'Ape Esploratrice' when total points >= 50")
+                @DisplayName("Should promote tier to FORAGER_BEE when total points threshold is met")
                 void shouldPromoteToApeEsploratrice() {
                         when(playerSeasonRepository.findByIdUserIdAndIdSeasonYear(userId, currentYear))
                                         .thenReturn(Optional.of(season));
                         when(playerStatsRepository.findById(userId))
                                         .thenReturn(Optional.of(stats));
+                        when(scoringService.calculateCareerTier(anyInt(), anyInt()))
+                                        .thenReturn(CareerTier.FORAGER_BEE);
 
-                        playerSeasonService.updateSeasonProgress(userId, 15, false); // 30+15=45 base + 10 bonus = 55
-                        // total
+                        playerSeasonService.updateSeasonProgress(userId, 15, false);
 
                         verify(playerSeasonRepository).save(seasonCaptor.capture());
                         PlayerSeason savedSeason = seasonCaptor.getValue();
 
                         assertThat(savedSeason.getTotalPoints()).isEqualTo(55);
-                        assertThat(savedSeason.getHighestTierAchieved()).isEqualTo("Ape Esploratrice");
+                        assertThat(savedSeason.getHighestTierAchieved()).isEqualTo(CareerTier.FORAGER_BEE.getName());
                 }
 
                 @Test
-                @DisplayName("Should promote tier to 'Ape Operosa' when total points >= 200")
+                @DisplayName("Should promote tier to WORKER_BEE when total points threshold is met")
                 void shouldPromoteToApeOperosa() {
                         season.setBasePoints(180);
                         season.setBonusPoints(10);
@@ -215,18 +226,20 @@ class PlayerSeasonServiceImplTest {
                                         .thenReturn(Optional.of(season));
                         when(playerStatsRepository.findById(userId))
                                         .thenReturn(Optional.of(stats));
+                        when(scoringService.calculateCareerTier(anyInt(), anyInt()))
+                                        .thenReturn(CareerTier.WORKER_BEE);
 
-                        playerSeasonService.updateSeasonProgress(userId, 15, false); // 195 base + 10 bonus = 205 total
+                        playerSeasonService.updateSeasonProgress(userId, 15, false);
 
                         verify(playerSeasonRepository).save(seasonCaptor.capture());
                         PlayerSeason savedSeason = seasonCaptor.getValue();
 
                         assertThat(savedSeason.getTotalPoints()).isEqualTo(205);
-                        assertThat(savedSeason.getHighestTierAchieved()).isEqualTo("Ape Operosa");
+                        assertThat(savedSeason.getHighestTierAchieved()).isEqualTo(CareerTier.WORKER_BEE.getName());
                 }
 
                 @Test
-                @DisplayName("Should promote tier to 'Regina' when total points >= 500")
+                @DisplayName("Should promote tier to SEASON_QUEEN when total points threshold is met")
                 void shouldPromoteToRegina() {
                         season.setBasePoints(480);
                         season.setBonusPoints(10);
@@ -234,14 +247,16 @@ class PlayerSeasonServiceImplTest {
                                         .thenReturn(Optional.of(season));
                         when(playerStatsRepository.findById(userId))
                                         .thenReturn(Optional.of(stats));
+                        when(scoringService.calculateCareerTier(anyInt(), anyInt()))
+                                        .thenReturn(CareerTier.SEASON_QUEEN);
 
-                        playerSeasonService.updateSeasonProgress(userId, 20, true); // 500 base + 10 bonus = 510 total
+                        playerSeasonService.updateSeasonProgress(userId, 20, true);
 
                         verify(playerSeasonRepository).save(seasonCaptor.capture());
                         PlayerSeason savedSeason = seasonCaptor.getValue();
 
                         assertThat(savedSeason.getTotalPoints()).isEqualTo(510);
-                        assertThat(savedSeason.getHighestTierAchieved()).isEqualTo("Regina");
+                        assertThat(savedSeason.getHighestTierAchieved()).isEqualTo(CareerTier.SEASON_QUEEN.getName());
                 }
 
                 @Test
@@ -273,7 +288,7 @@ class PlayerSeasonServiceImplTest {
                                         .basePoints(100)
                                         .bonusPoints(20)
                                         .totalPoints(120)
-                                        .highestTierAchieved("Ape Esploratrice")
+                                        .highestTierAchieved(CareerTier.FORAGER_BEE.getName())
                                         .build();
 
                         when(playerSeasonRepository.findByUserId(userId))
@@ -297,8 +312,8 @@ class PlayerSeasonServiceImplTest {
                 @DisplayName("Should map tier count aggregate query results into RankDistributionResponse")
                 void shouldReturnRankDistribution() {
                         List<Object[]> rawResults = List.<Object[]>of(
-                                        new Object[] { "Uovo d'Ape", 10L },
-                                        new Object[] { "Ape Operosa", 5L });
+                                        new Object[] { CareerTier.EGG.getName(), 10L },
+                                        new Object[] { CareerTier.WORKER_BEE.getName(), 5L });
 
                         when(playerSeasonRepository.countPlayersByTierForYear(currentYear))
                                         .thenReturn(rawResults);
@@ -308,8 +323,8 @@ class PlayerSeasonServiceImplTest {
                         assertThat(response).isNotNull();
                         assertThat(response.getSeasonYear()).isEqualTo(currentYear);
                         assertThat(response.getTotalPlayers()).isEqualTo(15L);
-                        assertThat(response.getTierCounts()).containsEntry("Uovo d'Ape", 10L);
-                        assertThat(response.getTierCounts()).containsEntry("Ape Operosa", 5L);
+                        assertThat(response.getTierCounts()).containsEntry(CareerTier.EGG.getName(), 10L);
+                        assertThat(response.getTierCounts()).containsEntry(CareerTier.WORKER_BEE.getName(), 5L);
 
                         verify(playerSeasonRepository, times(1)).countPlayersByTierForYear(currentYear);
                 }
@@ -330,7 +345,7 @@ class PlayerSeasonServiceImplTest {
                         assertThat(leaderboard).hasSize(1);
                         assertThat(leaderboard.get(0).getUsername()).isEqualTo("testplayer");
                         assertThat(leaderboard.get(0).getTotalPoints()).isEqualTo(40);
-                        assertThat(leaderboard.get(0).getHighestTierAchieved()).isEqualTo("Uovo d'Ape");
+                        assertThat(leaderboard.get(0).getHighestTierAchieved()).isEqualTo(CareerTier.EGG.getName());
                         assertThat(leaderboard.get(0).getRankPosition()).isEqualTo(1);
 
                         verify(playerSeasonRepository, times(1)).findTopPlayersByYear(currentYear,
