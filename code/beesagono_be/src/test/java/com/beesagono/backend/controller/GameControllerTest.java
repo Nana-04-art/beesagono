@@ -1,63 +1,62 @@
 package com.beesagono.backend.controller;
 
-import com.beesagono.backend.dto.puzzle.DailyPuzzleResponse;
-import com.beesagono.backend.entity.User;
+import com.beesagono.backend.dto.game.GameBulkSyncRequest;
+import com.beesagono.backend.dto.game.GameSessionResponse;
+import com.beesagono.backend.dto.game.GameSyncRequest;
+import com.beesagono.backend.dto.game.SubmitWordRequest;
+import com.beesagono.backend.dto.game.SubmitWordResponse;
 import com.beesagono.backend.repository.UserRepository;
-import com.beesagono.backend.security.GlobalExceptionHandler;
 import com.beesagono.backend.security.JwtAuthenticationFilter;
 import com.beesagono.backend.security.JwtUtils;
 import com.beesagono.backend.security.TokenBlacklist;
 import com.beesagono.backend.security.UserDetailsImpl;
-import com.beesagono.backend.service.PuzzleService;
+import com.beesagono.backend.service.GameService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Import;
 import org.springframework.core.MethodParameter;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.bind.support.WebDataBinderFactory;
 import org.springframework.web.context.request.NativeWebRequest;
 import org.springframework.web.method.support.HandlerMethodArgumentResolver;
 import org.springframework.web.method.support.ModelAndViewContainer;
-import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
-import java.time.LocalDate;
 import java.util.List;
-import java.util.Set;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@WebMvcTest(PuzzleController.class)
-@Import({ GlobalExceptionHandler.class, PuzzleControllerTest.TestConfig.class })
+@WebMvcTest(GameController.class)
 @AutoConfigureMockMvc(addFilters = false)
-class PuzzleControllerTest {
+class GameControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
 
+    @Autowired
+    private ObjectMapper objectMapper;
+
     @MockitoBean
-    private PuzzleService puzzleService;
+    private GameService gameService;
 
     @MockitoBean
     private UserRepository userRepository;
@@ -71,74 +70,7 @@ class PuzzleControllerTest {
     @MockitoBean
     private TokenBlacklist tokenBlacklist;
 
-    private User testUser;
     private UserDetailsImpl principal;
-
-    @BeforeEach
-    void setUp() {
-        testUser = User.builder()
-                .id("user-1")
-                .username("testuser")
-                .email("user@example.com")
-                .build();
-
-        principal = new UserDetailsImpl(
-                testUser.getId(),
-                testUser.getUsername(),
-                testUser.getEmail(),
-                "pwd",
-                List.of(new SimpleGrantedAuthority("ROLE_USER")));
-
-        UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
-                principal, null, principal.getAuthorities());
-        SecurityContextHolder.getContext().setAuthentication(auth);
-    }
-
-    // --- GET /api/puzzles/today ---
-
-    @Nested
-    @DisplayName("GET /api/puzzles/today Tests")
-    @ContextConfiguration(classes = TestConfig.class)
-    class GetTodayPuzzleTests {
-
-        @Test
-        @DisplayName("Should return 200 OK with puzzle data when puzzle exists or is generated")
-        void shouldReturnOkWithPuzzleDataWhenPuzzleExists() throws Exception {
-            DailyPuzzleResponse response = DailyPuzzleResponse.builder()
-                    .id("puz-1")
-                    .puzzleDate(LocalDate.now())
-                    .centerLetter("A")
-                    .maxScore(100)
-                    .outerLetters(Set.of("B", "C", "D", "E", "F", "G"))
-                    .build();
-
-            when(puzzleService.getTodayPuzzle()).thenReturn(response);
-
-            mockMvc.perform(get("/api/puzzles/today")
-                    .contentType(MediaType.APPLICATION_JSON))
-                    .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.id").value("puz-1"))
-                    .andExpect(jsonPath("$.centerLetter").value("A"))
-                    .andExpect(jsonPath("$.maxScore").value(100));
-
-            verify(puzzleService, times(1)).getTodayPuzzle();
-        }
-
-        @Test
-        @DisplayName("Should return 404 Not Found when puzzle is missing")
-        void shouldReturnNotFoundWhenPuzzleDoesNotExist() throws Exception {
-            when(puzzleService.getTodayPuzzle())
-                    .thenThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "Puzzle del giorno non trovato"));
-
-            mockMvc.perform(get("/api/puzzles/today")
-                    .contentType(MediaType.APPLICATION_JSON))
-                    .andExpect(status().isNotFound())
-                    .andExpect(jsonPath("$.status").value(404))
-                    .andExpect(jsonPath("$.message").value("Puzzle del giorno non trovato"));
-
-            verify(puzzleService, times(1)).getTodayPuzzle();
-        }
-    }
 
     @TestConfiguration
     static class TestConfig implements WebMvcConfigurer {
@@ -165,5 +97,79 @@ class PuzzleControllerTest {
                 }
             });
         }
+    }
+
+    @BeforeEach
+    void setUp() {
+        principal = new UserDetailsImpl(
+                "user-1",
+                "testuser",
+                "user@example.com",
+                "pwd",
+                List.of(new SimpleGrantedAuthority("ROLE_USER")));
+
+        UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(principal, null,
+                principal.getAuthorities());
+        SecurityContextHolder.getContext().setAuthentication(auth);
+    }
+
+    // --- getTodaySession ---
+
+    @Test
+    @DisplayName("GET /api/game/session/today - Success")
+    void getTodaySession_Success() throws Exception {
+        GameSessionResponse response = new GameSessionResponse();
+
+        when(gameService.getOrCreateTodaySession(any())).thenReturn(response);
+
+        mockMvc.perform(get("/api/game/session/today"))
+                .andExpect(status().isOk());
+
+        verify(gameService, times(1)).getOrCreateTodaySession(any());
+    }
+
+    // --- submitWord ---
+
+    @Test
+    @DisplayName("POST /api/game/submit - Success")
+    void submitWord_Success() throws Exception {
+        SubmitWordRequest request = new SubmitWordRequest();
+        request.setSessionId("session-123");
+        request.setWord("CASA");
+
+        SubmitWordResponse response = new SubmitWordResponse();
+
+        when(gameService.validateAndScoreWord(any(SubmitWordRequest.class), any()))
+                .thenReturn(response);
+
+        mockMvc.perform(post("/api/game/submit")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk());
+
+        verify(gameService, times(1)).validateAndScoreWord(any(SubmitWordRequest.class), any());
+    }
+
+    // --- syncLocalProgress ---
+
+    @Test
+    @DisplayName("POST /api/game/sync - Success")
+    void syncLocalProgress_Success() throws Exception {
+        GameBulkSyncRequest request = new GameBulkSyncRequest();
+        request.setGames(List.of(new GameSyncRequest()));
+
+        GameSessionResponse sessionResponse = new GameSessionResponse();
+        List<GameSessionResponse> responseList = List.of(sessionResponse);
+
+        when(gameService.syncLocalProgress(any(GameBulkSyncRequest.class), any()))
+                .thenReturn(responseList);
+
+        mockMvc.perform(post("/api/game/sync")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1));
+
+        verify(gameService, times(1)).syncLocalProgress(any(GameBulkSyncRequest.class), any());
     }
 }
