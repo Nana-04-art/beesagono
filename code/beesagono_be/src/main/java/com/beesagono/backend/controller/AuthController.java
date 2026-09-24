@@ -10,6 +10,9 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.beesagono.backend.dto.auth.GoogleCheckResponse;
+import com.beesagono.backend.dto.auth.GoogleLoginRequest;
+import com.beesagono.backend.dto.auth.GoogleRegisterRequest;
 import com.beesagono.backend.dto.auth.LoginRequest;
 import com.beesagono.backend.dto.auth.LoginResponse;
 import com.beesagono.backend.dto.auth.RegisterRequest;
@@ -42,5 +45,17 @@ public class AuthController {
     public ResponseEntity<Map<String, String>> logout(@RequestHeader("Authorization") String token) {
         authService.logout(token);
         return ResponseEntity.ok(Map.of("message", "Logout effettuato con successo"));
+    }
+
+    @PostMapping("/google/check")
+    public ResponseEntity<GoogleCheckResponse> checkGoogleUser(@Valid @RequestBody GoogleLoginRequest request) {
+        GoogleCheckResponse response = authService.checkGoogleUser(request);
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/google/register")
+    public ResponseEntity<LoginResponse> registerGoogleUser(@Valid @RequestBody GoogleRegisterRequest request) {
+        LoginResponse response = authService.registerGoogleUser(request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 }

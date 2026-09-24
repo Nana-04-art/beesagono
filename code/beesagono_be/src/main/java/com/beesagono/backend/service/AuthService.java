@@ -1,5 +1,8 @@
 package com.beesagono.backend.service;
 
+import com.beesagono.backend.dto.auth.GoogleCheckResponse;
+import com.beesagono.backend.dto.auth.GoogleLoginRequest;
+import com.beesagono.backend.dto.auth.GoogleRegisterRequest;
 import com.beesagono.backend.dto.auth.LoginRequest;
 import com.beesagono.backend.dto.auth.LoginResponse;
 import com.beesagono.backend.dto.auth.RegisterRequest;
@@ -12,5 +15,9 @@ public interface AuthService {
     LoginResponse login(LoginRequest request);
 
     void logout(String token);
+
+    GoogleCheckResponse checkGoogleUser(GoogleLoginRequest request);
+
+    LoginResponse registerGoogleUser(GoogleRegisterRequest request);
 
 }
