@@ -151,7 +151,7 @@ class AdminUserControllerTest {
     }
 
     @Test
-    @DisplayName("POST /api/admin/users - Success")
+    @DisplayName("POST /api/admin/users/admin - Success")
     void createAdmin_Success() throws Exception {
         CreateAdminRequest request = new CreateAdminRequest();
         request.setUsername("newadmin");
@@ -167,7 +167,7 @@ class AdminUserControllerTest {
 
         when(adminService.createAdmin(any(CreateAdminRequest.class))).thenReturn(response);
 
-        mockMvc.perform(post("/api/admin/users")
+        mockMvc.perform(post("/api/admin/users/admin")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
