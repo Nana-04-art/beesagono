@@ -20,6 +20,7 @@ import com.beesagono.backend.repository.FoundWordRepository;
 import com.beesagono.backend.repository.GameSessionRepository;
 import com.beesagono.backend.repository.InvalidWordAttemptRepository;
 import com.beesagono.backend.repository.PuzzleWordRepository;
+import com.beesagono.backend.repository.RankHistogramRepository;
 import com.beesagono.backend.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -71,6 +72,10 @@ class GameServiceImplTest {
     private ScoringService scoringService;
     @Mock
     private PlayerSeasonService playerSeasonService;
+    @Mock
+    private RankHistogramRepository rankHistogramRepository;
+    @Mock
+    private PlayerStatsService playerStatsService;
 
     @InjectMocks
     private GameServiceImpl gameService;
