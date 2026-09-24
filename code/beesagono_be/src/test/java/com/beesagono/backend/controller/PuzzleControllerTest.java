@@ -27,7 +27,6 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.bind.support.WebDataBinderFactory;
@@ -98,7 +97,6 @@ class PuzzleControllerTest {
 
     @Nested
     @DisplayName("GET /api/puzzles/today Tests")
-    @ContextConfiguration(classes = TestConfig.class)
     class GetTodayPuzzleTests {
 
         @Test
