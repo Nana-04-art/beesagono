@@ -103,11 +103,10 @@ class AdminUserControllerTest {
                 "admin",
                 "admin@example.com",
                 "pwd",
-                List.of(new SimpleGrantedAuthority("ROLE_ADMIN"))
-        );
+                List.of(new SimpleGrantedAuthority("ROLE_ADMIN")));
 
-        UsernamePasswordAuthenticationToken auth =
-                new UsernamePasswordAuthenticationToken(principal, null, principal.getAuthorities());
+        UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(principal, null,
+                principal.getAuthorities());
         SecurityContextHolder.getContext().setAuthentication(auth);
     }
 
