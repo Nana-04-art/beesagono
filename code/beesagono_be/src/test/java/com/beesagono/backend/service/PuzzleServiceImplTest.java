@@ -4,7 +4,6 @@ import com.beesagono.backend.dto.puzzle.DailyPuzzleResponse;
 import com.beesagono.backend.entity.DailyPuzzle;
 import com.beesagono.backend.mapper.DailyPuzzleMapper;
 import com.beesagono.backend.repository.DailyPuzzleRepository;
-import com.beesagono.backend.repository.PuzzleWordRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -31,9 +30,6 @@ class PuzzleServiceImplTest {
 
     @Mock
     private DailyPuzzleRepository dailyPuzzleRepository;
-
-    @Mock
-    private PuzzleWordRepository puzzleWordRepository;
 
     @Mock
     private PuzzleGeneratorService puzzleGeneratorService;

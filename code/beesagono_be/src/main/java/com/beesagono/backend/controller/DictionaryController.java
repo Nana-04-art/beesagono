@@ -1,6 +1,11 @@
 package com.beesagono.backend.controller;
 
-import com.beesagono.backend.dto.dictionary.*;
+import com.beesagono.backend.dto.dictionary.AddWordRequest;
+import com.beesagono.backend.dto.dictionary.BatchAddWordRequest;
+import com.beesagono.backend.dto.dictionary.BatchUploadResponse;
+import com.beesagono.backend.dto.dictionary.DictionaryFilterRequest;
+import com.beesagono.backend.dto.dictionary.DictionaryWordResponse;
+import com.beesagono.backend.dto.dictionary.InvalidWordAttemptStatResponse;
 import com.beesagono.backend.entity.User;
 import com.beesagono.backend.repository.UserRepository;
 import com.beesagono.backend.security.UserDetailsImpl;
@@ -19,7 +24,15 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 

@@ -48,7 +48,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(PuzzleController.class)
-@Import({ GlobalExceptionHandler.class, PuzzleControllerTest.TestConfig.class })
+@Import(GlobalExceptionHandler.class)
 @AutoConfigureMockMvc(addFilters = false)
 class PuzzleControllerTest {
 
@@ -79,13 +79,14 @@ class PuzzleControllerTest {
         principal = createTestPrincipal(testUser);
 
         UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
-                principal, null, principal.getAuthorities());
+                principal, null, principal.getAuthorities()
+        );
         SecurityContextHolder.getContext().setAuthentication(auth);
     }
 
     // --- GET /api/puzzles/today ---
 
-    @Nested
+    @Nested 
     @DisplayName("GET /api/puzzles/today Tests")
     class GetTodayPuzzleTests {
 
@@ -94,7 +95,7 @@ class PuzzleControllerTest {
         void shouldReturnOkWithPuzzleDataWhenPuzzleExists() throws Exception {
             DailyPuzzleResponse response = createDailyPuzzleResponse("puz-1", LocalDate.now(), "A", 100);
 
-            when(puzzleService.getTodayPuzzle()).thenReturn(response);
+        when(puzzleService.getTodayPuzzle()).thenReturn(response);
 
             mockMvc.perform(get("/api/puzzles/today")
                     .contentType(MediaType.APPLICATION_JSON))
@@ -103,8 +104,8 @@ class PuzzleControllerTest {
                     .andExpect(jsonPath("$.centerLetter").value("A"))
                     .andExpect(jsonPath("$.maxScore").value(100));
 
-            verify(puzzleService, times(1)).getTodayPuzzle();
-        }
+        verify(puzzleService, times(1)).getTodayPuzzle();
+    }
 
         @Test
         @DisplayName("Should return 404 Not Found when puzzle is missing")

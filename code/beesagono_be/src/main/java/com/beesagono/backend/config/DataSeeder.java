@@ -11,13 +11,16 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import com.beesagono.backend.entity.Badge;
 import com.beesagono.backend.entity.ErrorType;
 import com.beesagono.backend.entity.Role;
 import com.beesagono.backend.entity.User;
 import com.beesagono.backend.entity.UserRole;
 import com.beesagono.backend.entity.id.UserRoleId;
+import com.beesagono.backend.enums.BadgeCode;
 import com.beesagono.backend.enums.ErrorTypeCode;
 import com.beesagono.backend.enums.RoleName;
+import com.beesagono.backend.repository.BadgeRepository;
 import com.beesagono.backend.repository.ErrorTypeRepository;
 import com.beesagono.backend.repository.RoleRepository;
 import com.beesagono.backend.repository.UserRepository;
@@ -36,6 +39,7 @@ public class DataSeeder implements ApplicationRunner {
     private final UserRepository userRepository;
     private final UserRoleRepository userRoleRepository;
     private final ErrorTypeRepository errorTypeRepository;
+    private final BadgeRepository badgeRepository;
     private final PasswordEncoder passwordEncoder;
 
     @Value("${app.admin.username:#{null}}")
@@ -50,13 +54,14 @@ public class DataSeeder implements ApplicationRunner {
     @Override
     @Transactional
     public void run(ApplicationArguments args) {
-        seedRuoli();
+        seedRoles();
         seedErrorTypes();
+        seedBadges();
         seedAdmin();
         log.info("DataSeeder Beesagono completato con successo");
     }
 
-    private void seedRuoli() {
+    private void seedRoles() {
         for (RoleName eRole : RoleName.values()) {
             if (roleRepository.findByName(eRole).isEmpty()) {
                 Role role = Role.builder()
@@ -87,6 +92,32 @@ public class DataSeeder implements ApplicationRunner {
                 log.info(">>> ErrorType creato: {}", code.name());
             }
         });
+    }
+
+    private void seedBadges() {
+        for (BadgeCode badgeCode : BadgeCode.values()) {
+            badgeRepository.findById(badgeCode.name()).ifPresentOrElse(
+                    existingBadge -> {
+                        // Update title, description, and category if updated in Enum
+                        existingBadge.setTitle(badgeCode.getTitle());
+                        existingBadge.setDescription(badgeCode.getDescription());
+                        existingBadge.setCategory(badgeCode.getCategory());
+                        existingBadge.setIconUrl(badgeCode.getIconUrl());
+                        badgeRepository.save(existingBadge);
+                    },
+                    () -> {
+                        // Create new badge if it does not exist in DB
+                        Badge badge = Badge.builder()
+                                .code(badgeCode.name())
+                                .title(badgeCode.getTitle())
+                                .description(badgeCode.getDescription())
+                                .category(badgeCode.getCategory())
+                                .iconUrl(badgeCode.getIconUrl())
+                                .build();
+                        badgeRepository.save(badge);
+                        log.info(">>> Badge creato: {}", badgeCode.name());
+                    });
+        }
     }
 
     private void seedAdmin() {
