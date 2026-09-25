@@ -9,9 +9,11 @@ import com.beesagono.backend.entity.DailyPuzzle;
 import com.beesagono.backend.entity.FoundWord;
 import com.beesagono.backend.entity.GameSession;
 import com.beesagono.backend.entity.InvalidWordAttempt;
+import com.beesagono.backend.entity.PuzzleOuterLetter;
 import com.beesagono.backend.entity.PuzzleWord;
 import com.beesagono.backend.entity.User;
 import com.beesagono.backend.entity.id.FoundWordId;
+import com.beesagono.backend.entity.id.PuzzleOuterLetterId;
 import com.beesagono.backend.enums.ErrorTypeCode;
 import com.beesagono.backend.enums.RankTier;
 import com.beesagono.backend.repository.DailyPuzzleRepository;
@@ -96,6 +98,14 @@ class GameServiceImplTest {
     private GameSession session;
     private String userId;
 
+    private List<PuzzleOuterLetter> buildOuterLetters(String puzzleId, List<String> letters) {
+        return letters.stream()
+                .map(l -> PuzzleOuterLetter.builder()
+                        .id(new PuzzleOuterLetterId(puzzleId, l))
+                        .build())
+                .toList();
+    }
+
     @BeforeEach
     void setUp() {
         userId = "user-123";
@@ -110,6 +120,7 @@ class GameServiceImplTest {
                 .id("puzzle-123")
                 .puzzleDate(LocalDate.now())
                 .centerLetter("A")
+                .outerLetters(buildOuterLetters("puzzle-123", List.of("B", "C", "E", "F", "M", "O")))
                 .maxScore(100)
                 .build();
 
@@ -355,78 +366,166 @@ class GameServiceImplTest {
     class SyncLocalProgressTests {
 
         @Test
-        @DisplayName("Should return empty list when request games list is empty")
+        @DisplayName("Should return empty list when request games list is null or empty")
         void shouldReturnEmptyWhenRequestIsEmpty() {
-            GameBulkSyncRequest request = new GameBulkSyncRequest(Collections.emptyList());
+            GameBulkSyncRequest requestNull = new GameBulkSyncRequest(null);
+            assertThat(gameService.syncLocalProgress(requestNull, userId)).isEmpty();
 
-            List<GameSessionResponse> responses = gameService.syncLocalProgress(request, userId);
-
-            assertThat(responses).isEmpty();
+            GameBulkSyncRequest requestEmpty = new GameBulkSyncRequest(Collections.emptyList());
+            assertThat(gameService.syncLocalProgress(requestEmpty, userId)).isEmpty();
         }
 
         @Test
-        @DisplayName("Should sync local progress and persist new found words")
-        void shouldSyncLocalProgressSuccessfully() {
-            LocalDate puzzleDate = LocalDate.now();
-            GameSyncRequest syncRequest = new GameSyncRequest();
-            syncRequest.setPuzzleDate(puzzleDate);
-            syncRequest.setCenterLetter("A");
-            syncRequest.setFoundWords(List.of("CASA", "ALBERO"));
+        @DisplayName("Should sync local progress in chronological order and update session score and global stats")
+        void shouldSyncLocalProgressInChronologicalOrder() {
+            LocalDate today = LocalDate.now();
+            LocalDate yesterday = today.minusDays(1);
 
-            GameBulkSyncRequest request = new GameBulkSyncRequest(List.of(syncRequest));
-            PuzzleWord pw1 = PuzzleWord.builder().isMielegramma(false).build();
-            PuzzleWord pw2 = PuzzleWord.builder().isMielegramma(true).build();
+            GameSyncRequest syncYesterday = new GameSyncRequest();
+            syncYesterday.setPuzzleDate(yesterday);
+            syncYesterday.setFoundWords(List.of("CASA"));
 
-            when(dailyPuzzleRepository.findByPuzzleDate(puzzleDate)).thenReturn(Optional.of(puzzle));
-            when(gameSessionRepository.findByUserIdAndPuzzleId(userId, puzzle.getId()))
-                    .thenReturn(Optional.of(session));
+            GameSyncRequest syncToday = new GameSyncRequest();
+            syncToday.setPuzzleDate(today);
+            syncToday.setFoundWords(List.of("ALBERO"));
 
-            when(foundWordRepository.existsByIdSessionIdAndIdWord(session.getId(), "CASA")).thenReturn(false);
-            when(foundWordRepository.existsByIdSessionIdAndIdWord(session.getId(), "ALBERO")).thenReturn(false);
+            GameBulkSyncRequest request = new GameBulkSyncRequest(List.of(syncToday, syncYesterday));
 
-            when(puzzleWordRepository.findByIdPuzzleIdAndIdWord(puzzle.getId(), "CASA")).thenReturn(Optional.of(pw1));
-            when(puzzleWordRepository.findByIdPuzzleIdAndIdWord(puzzle.getId(), "ALBERO")).thenReturn(Optional.of(pw2));
+            DailyPuzzle yesterdayPuzzle = DailyPuzzle.builder()
+                    .id("p-yesterday")
+                    .puzzleDate(yesterday)
+                    .centerLetter("A")
+                    .outerLetters(buildOuterLetters("p-yesterday", List.of("B", "C", "E", "F", "M", "O")))
+                    .maxScore(100)
+                    .build();
+
+            DailyPuzzle todayPuzzle = DailyPuzzle.builder()
+                    .id("p-today")
+                    .puzzleDate(today)
+                    .centerLetter("A")
+                    .outerLetters(buildOuterLetters("p-today", List.of("B", "C", "E", "F", "M", "O")))
+                    .maxScore(100)
+                    .build();
+
+            GameSession yesterdaySession = GameSession.builder().id("s-yesterday").user(user).puzzle(yesterdayPuzzle)
+                    .currentScore(0).build();
+            GameSession todaySession = GameSession.builder().id("s-today").user(user).puzzle(todayPuzzle)
+                    .currentScore(0).build();
+
+            when(dailyPuzzleRepository.findByPuzzleDate(yesterday)).thenReturn(Optional.of(yesterdayPuzzle));
+            when(dailyPuzzleRepository.findByPuzzleDate(today)).thenReturn(Optional.of(todayPuzzle));
+
+            when(gameSessionRepository.findByUserIdAndPuzzleId(userId, yesterdayPuzzle.getId()))
+                    .thenReturn(Optional.of(yesterdaySession));
+            when(gameSessionRepository.findByUserIdAndPuzzleId(userId, todayPuzzle.getId()))
+                    .thenReturn(Optional.of(todaySession));
+
+            when(foundWordRepository.existsByIdSessionIdAndIdWord("s-yesterday", "CASA")).thenReturn(false);
+            when(foundWordRepository.existsByIdSessionIdAndIdWord("s-today", "ALBERO")).thenReturn(false);
+
+            PuzzleWord pwCasa = PuzzleWord.builder().isMielegramma(false).build();
+            PuzzleWord pwAlbero = PuzzleWord.builder().isMielegramma(true).build();
+
+            when(puzzleWordRepository.findByIdPuzzleIdAndIdWord(yesterdayPuzzle.getId(), "CASA"))
+                    .thenReturn(Optional.of(pwCasa));
+            when(puzzleWordRepository.findByIdPuzzleIdAndIdWord(todayPuzzle.getId(), "ALBERO"))
+                    .thenReturn(Optional.of(pwAlbero));
 
             when(scoringService.calculateWordScore("CASA", false)).thenReturn(1);
             when(scoringService.calculateWordScore("ALBERO", true)).thenReturn(14);
-            when(scoringService.calculateCurrentRank(15, 100)).thenReturn(RankTier.EXPERT);
 
-            FoundWord fw1 = FoundWord.builder().id(new FoundWordId(session.getId(), "CASA")).build();
-            FoundWord fw2 = FoundWord.builder().id(new FoundWordId(session.getId(), "ALBERO")).build();
-            when(foundWordRepository.findByIdSessionId(session.getId())).thenReturn(List.of(fw1, fw2));
+            when(scoringService.calculateCurrentRank(1, 100)).thenReturn(RankTier.INITIAL);
+            when(scoringService.calculateCurrentRank(14, 100)).thenReturn(RankTier.EXPERT);
+
+            FoundWord fw1 = FoundWord.builder().id(new FoundWordId("s-yesterday", "CASA")).build();
+            FoundWord fw2 = FoundWord.builder().id(new FoundWordId("s-today", "ALBERO")).build();
+            when(foundWordRepository.findByIdSessionId("s-yesterday")).thenReturn(List.of(fw1));
+            when(foundWordRepository.findByIdSessionId("s-today")).thenReturn(List.of(fw2));
 
             List<GameSessionResponse> responses = gameService.syncLocalProgress(request, userId);
 
-            assertThat(responses).hasSize(1);
-            GameSessionResponse response = responses.get(0);
-            assertThat(response.getFoundWords()).containsExactlyInAnyOrder("CASA", "ALBERO");
+            assertThat(responses).hasSize(2);
+            assertThat(responses.get(0).getId()).isEqualTo("s-yesterday");
+            assertThat(responses.get(1).getId()).isEqualTo("s-today");
 
-            verify(puzzleService, times(1)).generateAndSavePuzzleForDate(puzzleDate);
+            verify(puzzleService, times(1)).generateAndSavePuzzleForDate(yesterday);
+            verify(puzzleService, times(1)).generateAndSavePuzzleForDate(today);
+
             verify(foundWordRepository, times(2)).save(any(FoundWord.class));
-            verify(gameSessionRepository, atLeast(1)).save(session);
+            verify(gameSessionRepository, times(1)).save(yesterdaySession);
+            verify(gameSessionRepository, times(1)).save(todaySession);
+
             verify(playerSeasonService, times(1)).updateSeasonProgress(userId, 15, false);
             verify(playerStatsService, times(1)).updatePlayerStatsAfterGame(userId, 15, "ALBERO", false);
             verify(badgeService, times(1)).evaluateAndAwardBadges(userId);
         }
 
         @Test
-        @DisplayName("Should ignore sync item if center letter mismatch occurs")
-        void shouldIgnoreSyncItemWhenCenterLetterMismatches() {
+        @DisplayName("Should process found words and invalid word attempts in bulk sync")
+        void shouldSyncFoundWordsAndInvalidWordsCorrectly() {
             LocalDate puzzleDate = LocalDate.now();
             GameSyncRequest syncRequest = new GameSyncRequest();
             syncRequest.setPuzzleDate(puzzleDate);
-            syncRequest.setCenterLetter("Z"); // Mismatch: Puzzle has 'A'
+            syncRequest.setFoundWords(List.of("CASA"));
+
+            String invalidWord = "AMBEFA";
+            syncRequest.setInvalidWords(List.of(invalidWord));
+
+            GameBulkSyncRequest request = new GameBulkSyncRequest(List.of(syncRequest));
+            PuzzleWord pw = PuzzleWord.builder().isMielegramma(false).build();
+
+            when(dailyPuzzleRepository.findByPuzzleDate(puzzleDate)).thenReturn(Optional.of(puzzle));
+            when(gameSessionRepository.findByUserIdAndPuzzleId(userId, puzzle.getId()))
+                    .thenReturn(Optional.of(session));
+
+            when(foundWordRepository.existsByIdSessionIdAndIdWord(session.getId(), "CASA")).thenReturn(false);
+            when(puzzleWordRepository.findByIdPuzzleIdAndIdWord(puzzle.getId(), "CASA")).thenReturn(Optional.of(pw));
+            when(scoringService.calculateWordScore("CASA", false)).thenReturn(1);
+            when(scoringService.calculateCurrentRank(1, 100)).thenReturn(RankTier.INITIAL);
+
+            when(invalidWordAttemptRepository.findDistinctAttemptedWordsBySessionId(session.getId()))
+                    .thenReturn(Collections.emptyList());
+
+            FoundWord fw = FoundWord.builder().id(new FoundWordId(session.getId(), "CASA")).build();
+            when(foundWordRepository.findByIdSessionId(session.getId())).thenReturn(List.of(fw));
+
+            List<GameSessionResponse> responses = gameService.syncLocalProgress(request, userId);
+
+            assertThat(responses).hasSize(1);
+            verify(foundWordRepository, times(1)).save(foundWordCaptor.capture());
+            verify(invalidWordAttemptRepository, times(1)).save(invalidAttemptCaptor.capture());
+
+            assertThat(foundWordCaptor.getValue().getScoreAssigned()).isEqualTo(1);
+            assertThat(invalidAttemptCaptor.getValue().getAttemptedWord()).isEqualTo(invalidWord);
+
+            verify(playerSeasonService, times(1)).updateSeasonProgress(userId, 1, false);
+            verify(playerStatsService, times(1)).updatePlayerStatsAfterGame(userId, 1, "CASA", false);
+            verify(badgeService, times(1)).evaluateAndAwardBadges(userId);
+        }
+
+        @Test
+        @DisplayName("Should not execute global side effects if no new points earned and no completion in bulk")
+        void shouldNotTriggerGlobalSideEffectsWhenNoProgressMade() {
+            LocalDate puzzleDate = LocalDate.now();
+            GameSyncRequest syncRequest = new GameSyncRequest();
+            syncRequest.setPuzzleDate(puzzleDate);
             syncRequest.setFoundWords(List.of("CASA"));
 
             GameBulkSyncRequest request = new GameBulkSyncRequest(List.of(syncRequest));
 
             when(dailyPuzzleRepository.findByPuzzleDate(puzzleDate)).thenReturn(Optional.of(puzzle));
+            when(gameSessionRepository.findByUserIdAndPuzzleId(userId, puzzle.getId()))
+                    .thenReturn(Optional.of(session));
+            when(foundWordRepository.existsByIdSessionIdAndIdWord(session.getId(), "CASA")).thenReturn(true);
+            when(foundWordRepository.findByIdSessionId(session.getId())).thenReturn(Collections.emptyList());
 
             List<GameSessionResponse> responses = gameService.syncLocalProgress(request, userId);
 
-            assertThat(responses).isEmpty();
-            verify(puzzleService, times(1)).generateAndSavePuzzleForDate(puzzleDate);
-            verify(gameSessionRepository, never()).findByUserIdAndPuzzleId(any(), any());
+            assertThat(responses).hasSize(1);
+            verify(playerSeasonService, never()).updateSeasonProgress(anyString(), anyInt(), anyBoolean());
+            verify(playerStatsService, never()).updatePlayerStatsAfterGame(anyString(), anyInt(), anyString(),
+                    anyBoolean());
+            verify(badgeService, never()).evaluateAndAwardBadges(anyString());
         }
     }
 }
