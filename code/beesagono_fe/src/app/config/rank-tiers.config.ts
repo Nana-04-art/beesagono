@@ -1,4 +1,4 @@
-import { RankTier } from '../models/rank.model';
+import { RankTier } from '../models/game/rank.model';
 
 export const RANK_TIERS: readonly RankTier[] = [
     { threshold: 0, label: '🌱 Iniziato' },
