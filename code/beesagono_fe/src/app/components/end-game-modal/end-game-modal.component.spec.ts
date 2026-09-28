@@ -1,7 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { EndGameModalComponent } from './end-game-modal.component';
 import { describe, beforeEach, it, expect, vi } from 'vitest';
-import { ShareScorePayload } from '../../models/share-score.model';
+import { ShareScorePayload } from '../../models/game/share-score.model';
 import { ElementRef } from '@angular/core';
 
 describe('EndGameModalComponent', () => {

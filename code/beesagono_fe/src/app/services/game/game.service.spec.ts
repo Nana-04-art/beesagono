@@ -6,8 +6,8 @@ import { PuzzleGeneratorService } from '../puzzle-generator/puzzle-generator.ser
 import { DictionaryService } from '../dictionary/dictionary.service';
 import { ScoreService } from '../score/score.service';
 import { StatsService } from '../stats/stats.service';
-import { GameBoard } from '../../models/game-board.model';
-import { GameState } from '../../models/game-state.model';
+import { GameBoard } from '../../models/game/game-board.model';
+import { GameState } from '../../models/game/game-state.model';
 import { RANK_TIERS } from '../../config/rank-tiers.config';
 
 describe('GameService', () => {

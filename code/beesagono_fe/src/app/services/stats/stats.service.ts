@@ -1,5 +1,5 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
-import { PlayerStats, SeasonStats } from '../../models/stats.model';
+import { PlayerStats, SeasonStats } from '../../models/stats/stats.model';
 import { StorageService } from '../storage/storage.service';
 import { CAREER_TIERS, STREAK_MILESTONES } from '../../config/career-tiers.constant';
 import { getTodayIsoString } from '../game/game.service';

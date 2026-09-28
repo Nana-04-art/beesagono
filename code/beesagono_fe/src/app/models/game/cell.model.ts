@@ -1,4 +1,4 @@
-import { HexPosition } from './hex-position.type';
+import { HexPosition } from "./hex-position.type"; 
 
 export interface Cell {
   /** Unique ID for trackBy DOM operations (e.g., 'hex-0') */
