@@ -1,0 +1,32 @@
+.beesagono-card {
+    border: 2px solid #ffc107;
+    border-radius: 16px;
+}
+
+.beesagono-icon {
+    color: #ffc107;
+}
+
+.beesagono-btn {
+    background-color: #ffc107;
+    border: none;
+    transition: all 0.2s ease-in-out;
+
+    &:hover:not(:disabled) {
+        background-color: #e0a800;
+        transform: translateY(-1px);
+    }
+}
+
+a {
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+
+    &:hover {
+        filter: brightness(0.8);
+    }
+}
+
+.text-muted {
+    font-size: 0.85rem;
+}
