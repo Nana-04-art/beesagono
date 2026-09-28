@@ -62,6 +62,24 @@
 }
 
 /* ==========================================
+   HEADER DROPDOWN CUSTOM STYLES (Light Mode Default)
+   ========================================== */
+.popover-dropdown {
+    background-color: var(--card-bg, #ffffff);
+    color: var(--text-main, #1e293b);
+}
+
+.dropdown-item-custom {
+    color: var(--text-main, #1e293b);
+    transition: background-color 0.15s ease-in-out;
+
+    &:hover {
+        background-color: rgba(245, 158, 11, 0.15);
+        color: var(--text-main, #1e293b);
+    }
+}
+
+/* ==========================================
    DARK MODE OVERRIDES
    ========================================== */
 [data-theme='dark'] {
@@ -382,6 +400,10 @@
 
     .text-warning-emphasis {
         color: #f59e0b !important;
+
+        &:hover {
+            color: #fbbf24 !important;
+        }
     }
 
     .found-words-card,
@@ -391,6 +413,91 @@
         .text-warning {
             color: #f59e0b !important;
             font-weight: 700 !important;
+        }
+    }
+
+    /* Header User Dropdown in Dark Mode */
+    .popover-dropdown {
+        background-color: var(--card-bg) !important;
+        border-color: var(--card-border) !important;
+    }
+
+    .dropdown-item-custom {
+        color: var(--text-main) !important;
+
+        &:hover {
+            background-color: rgba(245, 158, 11, 0.2) !important;
+            color: var(--text-main) !important;
+        }
+    }
+
+    /* Login and Register Cards */
+    .beesagono-card {
+        background-color: var(--card-bg) !important;
+        border-color: var(--card-border) !important;
+        color: var(--text-main) !important;
+
+        .text-dark,
+        h3 {
+            color: var(--text-main) !important;
+        }
+
+        .text-muted {
+            color: var(--text-muted) !important;
+        }
+    }
+
+    /* Isolamento Google SDK Button */
+    #googleBtn {
+        color-scheme: light dark;
+
+        iframe {
+            color-scheme: normal !important;
+        }
+    }
+
+    /* Form labels & Input Groups in Dark Mode */
+    .form-label {
+        color: var(--text-main) !important;
+    }
+
+    .input-group {
+
+        .input-group-text,
+        .form-control,
+        .btn-outline-secondary {
+            background-color: var(--bg-main) !important;
+            border-color: var(--card-border) !important;
+            color: var(--text-main) !important;
+        }
+
+        .input-group-text {
+
+            .bi-person-fill,
+            .bi-lock-fill {
+                color: #f59e0b !important;
+            }
+        }
+
+        .form-control {
+            &::placeholder {
+                color: var(--text-muted) !important;
+            }
+
+            &:focus {
+                border-color: #f59e0b !important;
+                box-shadow: none !important;
+            }
+        }
+
+        .btn-outline-secondary {
+            color: var(--text-muted) !important;
+
+            &:hover,
+            &:focus {
+                background-color: var(--card-border) !important;
+                color: var(--text-main) !important;
+            }
         }
     }
 }
