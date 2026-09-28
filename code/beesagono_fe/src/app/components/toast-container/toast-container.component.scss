@@ -1,0 +1,31 @@
+.pointer-events-none {
+    pointer-events: none;
+}
+
+.pointer-events-auto {
+    pointer-events: auto;
+}
+
+.toast-container {
+    z-index: 99999 !important;
+}
+
+.toast {
+    display: block !important;
+    // Force visibility if Bootstrap hides it
+    opacity: 1 !important;
+    border-radius: 8px;
+    animation: slideIn 0.25s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateY(100%);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
