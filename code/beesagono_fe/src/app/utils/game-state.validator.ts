@@ -1,4 +1,4 @@
-import { GameState } from '../models/game-state.model';
+import { GameState } from '../models/game/game-state.model';
 
 /**
  * Validates that a string is a valid ISO 8601 date (YYYY-MM-DD),

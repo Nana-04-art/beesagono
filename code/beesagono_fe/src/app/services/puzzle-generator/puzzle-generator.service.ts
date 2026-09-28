@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
-import { Cell } from '../../models/cell.model';
-import { GameBoard } from '../../models/game-board.model';
-import { HexPosition } from '../../models/hex-position.type';
+import { Cell } from '../../models/game/cell.model';
+import { GameBoard } from '../../models/game/game-board.model';
+import { HexPosition } from '../../models/game/hex-position.type';
 import { GAME_RULES } from '../../config/game-rules.config';
 
 @Injectable({ providedIn: 'root' })
