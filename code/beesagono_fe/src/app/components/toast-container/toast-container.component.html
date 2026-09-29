@@ -1,5 +1,5 @@
 <div class="toast-container position-fixed bottom-0 end-0 p-3 pointer-events-none" style="z-index: 1200;">
-  @for (toast of toastService.toasts(); track $index) {
+  @for (toast of toastService.toasts; track $index) {
   <div class="toast show align-items-center text-white border-0 mb-2 shadow-sm pointer-events-auto"
     [ngClass]="toast.classname" role="alert" aria-live="assertive" aria-atomic="true">
     <div class="d-flex">

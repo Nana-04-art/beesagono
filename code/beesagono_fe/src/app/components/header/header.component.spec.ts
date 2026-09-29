@@ -1,11 +1,13 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Component, input, output, signal } from '@angular/core';
 import { vi, describe, beforeEach, it, expect } from 'vitest';
+import { provideRouter } from '@angular/router';
 import { HeaderComponent } from './header.component';
 import { ScoreboardComponent } from './scoreboard/scoreboard.component';
 import { StatsComponent } from './stats/stats.component';
 import { RulesComponent } from './rules/rules.component';
 import { ThemeService } from '../../services/theme/theme.service';
+import { AuthService } from '../../services/auth/auth.service';
 
 @Component({
   selector: 'app-scoreboard',
@@ -43,17 +45,29 @@ class MockThemeService {
   toggleTheme = vi.fn();
 }
 
+class MockAuthService {
+  currentUser = signal<{ username: string } | null>(null);
+  isLoggedIn = signal<boolean>(false);
+  logout = vi.fn();
+}
+
 describe('HeaderComponent', () => {
   let component: HeaderComponent;
   let fixture: ComponentFixture<HeaderComponent>;
   let themeServiceMock: MockThemeService;
+  let authServiceMock: MockAuthService;
 
   beforeEach(async () => {
     themeServiceMock = new MockThemeService();
+    authServiceMock = new MockAuthService();
 
     TestBed.configureTestingModule({
       imports: [HeaderComponent],
-      providers: [{ provide: ThemeService, useValue: themeServiceMock }],
+      providers: [
+        provideRouter([]),
+        { provide: ThemeService, useValue: themeServiceMock },
+        { provide: AuthService, useValue: authServiceMock },
+      ],
     });
 
     TestBed.overrideComponent(HeaderComponent, {

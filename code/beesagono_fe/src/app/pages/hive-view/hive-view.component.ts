@@ -6,7 +6,7 @@ import { WordDisplayComponent } from '../../components/word-display/word-display
 import { HiveControlsComponent } from '../../components/hive-controls/hive-controls.component';
 import { FoundWordsComponent } from '../../components/found-words/found-words.component';
 import { EndGameModalComponent } from '../../components/end-game-modal/end-game-modal.component';
-import { ShareScorePayload } from '../../models/share-score.model';
+import { ShareScorePayload } from '../../models/game/share-score.model';
 import { HeaderComponent } from '../../components/header/header.component';
 import { WordsByLetterComponent } from '../../components/words-by-letter/words-by-letter.component';
 import { InvalidWordsComponent } from '../../components/invalid-words/invalid-words.component';

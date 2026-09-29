@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-
+import { describe, beforeEach, it, expect } from 'vitest';
 import { RulesComponent } from './rules.component';
 
 describe('RulesComponent', () => {
@@ -13,10 +13,15 @@ describe('RulesComponent', () => {
 
     fixture = TestBed.createComponent(RulesComponent);
     component = fixture.componentInstance;
-    await fixture.whenStable();
+    fixture.detectChanges();
   });
 
   it('should create', () => {
     expect(component).toBeTruthy();
+  });
+
+  it('should expose rankTiers', () => {
+    expect(component.rankTiers).toBeDefined();
+    expect(component.rankTiers.length).toBeGreaterThan(0);
   });
 });
