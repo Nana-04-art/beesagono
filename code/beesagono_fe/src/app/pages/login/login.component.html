@@ -1,0 +1,122 @@
+<div class="container d-flex justify-content-center align-items-center vh-100">
+    <div class="card beesagono-card shadow-lg" style="width: 100%; max-width: 420px;">
+        <div class="card-body p-4">
+            <div class="text-center mb-4">
+                <i class="bi bi-hexagon-fill beesagono-icon display-4"></i>
+                <h3 class="fw-bold mt-2 text-dark">Benvenuto su Beesagono</h3>
+                <p class="text-muted small">Accedi per continuare a giocare</p>
+            </div>
+
+            <!-- Google Sign In Button Container -->
+            <div class="d-flex justify-content-center mb-3">
+                <div id="googleBtn"></div>
+            </div>
+
+            <div class="d-flex align-items-center my-3">
+                <hr class="flex-grow-1 m-0 text-muted" />
+                <span class="px-2 text-muted small">OPPURE</span>
+                <hr class="flex-grow-1 m-0 text-muted" />
+            </div>
+
+            <form (ngSubmit)="onSubmit()">
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Username o Email</label>
+                    <div class="input-group has-validation">
+                        <span class="input-group-text bg-light border-end-0">
+                            <i class="bi bi-person-fill text-warning"></i>
+                        </span>
+                        <input type="text" name="usernameOrEmail" [ngModel]="usernameOrEmail()"
+                            (ngModelChange)="usernameOrEmail.set($event)" #userInput="ngModel"
+                            class="form-control border-start-0"
+                            [class.is-invalid]="userInput.invalid && userInput.touched" required
+                            placeholder="Inserisci username o email">
+                        <div class="invalid-feedback">Username o email obbligatori.</div>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Password</label>
+                    <div class="input-group has-validation">
+                        <span class="input-group-text bg-light border-end-0">
+                            <i class="bi bi-lock-fill text-warning"></i>
+                        </span>
+                        <input #passwordInput type="password" name="password" [ngModel]="password()"
+                            (ngModelChange)="password.set($event)" #passInput="ngModel"
+                            class="form-control border-start-0 border-end-0"
+                            [class.is-invalid]="passInput.invalid && passInput.touched" required
+                            placeholder="Inserisci password">
+                        <button class="btn btn-outline-secondary border-start-0" type="button"
+                            (click)="passwordInput.type = passwordInput.type === 'password' ? 'text' : 'password'">
+                            <i class="bi"
+                                [ngClass]="passwordInput.type === 'password' ? 'bi-eye-slash-fill' : 'bi-eye-fill'"></i>
+                        </button>
+                        <div class="invalid-feedback">La password è obbligatoria.</div>
+                    </div>
+                </div>
+
+                <div class="d-grid mt-4">
+                    <button type="submit" class="btn btn-warning text-dark fw-bold btn-lg shadow-sm beesagono-btn"
+                        [disabled]="!usernameOrEmail() || !password() || isLoading()">
+                        @if (!isLoading()) {
+                        <i class="bi bi-box-arrow-in-right me-2"></i> Accedi
+                        }
+                        @if (isLoading()) {
+                        <span class="spinner-border spinner-border-sm me-2"></span> Accesso in corso...
+                        }
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <div class="card-footer bg-transparent border-0 pb-4 text-center">
+            <span class="text-muted small">Non hai un account?</span>
+            <a routerLink="/register" class="ms-1 fw-bold text-warning-emphasis text-decoration-none">
+                Registrati ora
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Modal for New Google User Username Selection -->
+@if (googleAuth.pendingGoogleUser()) {
+<!-- Background Backdrop -->
+<div class="modal-backdrop-custom" (click)="$event.stopPropagation()"></div>
+
+<!-- Central Wrapper -->
+<div class="modal-wrapper-custom d-flex align-items-center justify-content-center p-3" role="dialog" aria-modal="true"
+    aria-labelledby="googleUsernameTitle" (click)="$event.stopPropagation()">
+    <!-- Card con scroll interno e max-height per schermi piccoli -->
+    <div class="modal-card bg-white rounded-4 shadow-lg border-0 d-flex flex-column w-100 p-4 overflow-y-auto"
+        style="max-width: 28rem; max-height: calc(100dvh - 2rem);">
+        <h4 class="fw-bold text-center text-dark" id="googleUsernameTitle">Scegli il tuo Username</h4>
+        <p class="text-muted small text-center mb-3">
+            Completa il tuo profilo per <strong>{{ googleAuth.pendingGoogleUser()?.email }}</strong>
+        </p>
+
+        <form (ngSubmit)="googleAuth.completeGoogleRegistration()">
+            <div class="mb-3">
+                <label class="form-label fw-semibold">Username</label>
+                <input #usernameInputRef type="text" name="googleUsername" [ngModel]="googleAuth.selectedUsername()"
+                    (ngModelChange)="googleAuth.selectedUsername.set($event)" class="form-control"
+                    placeholder="Scegli un username univoco" required autocomplete="off">
+            </div>
+
+            <div class="d-flex justify-content-end gap-2 mt-4">
+                <button #cancelBtnRef type="button" class="btn btn-outline-secondary px-3"
+                    (click)="cancelGoogleModal()">
+                    Annulla
+                </button>
+                <button #completeBtnRef type="submit" class="btn btn-warning text-dark fw-bold px-3"
+                    [disabled]="googleAuth.isLoading() || !googleAuth.selectedUsername().trim()">
+                    @if (!googleAuth.isLoading()) {
+                    Completa Registrazione
+                    }
+                    @if (googleAuth.isLoading()) {
+                    <span class="spinner-border spinner-border-sm me-2"></span> Salvataggio...
+                    }
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+}
