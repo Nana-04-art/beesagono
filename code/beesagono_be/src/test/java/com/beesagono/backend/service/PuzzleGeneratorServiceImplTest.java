@@ -21,6 +21,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -240,7 +241,7 @@ class PuzzleGeneratorServiceImplTest {
                     .isInstanceOf(RuntimeException.class)
                     .hasMessageContaining("Database error during puzzle words save");
 
-            verify(dailyPuzzleRepository, times(1)).save(any(DailyPuzzle.class));
+        verify(dailyPuzzleRepository, times(1)).save(any(DailyPuzzle.class));
             verify(puzzleOuterLetterRepository, times(1)).saveAll(any());
         }
     }
