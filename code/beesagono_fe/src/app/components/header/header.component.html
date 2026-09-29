@@ -33,7 +33,7 @@
 
                 @if (activePopover() === 'scoreboard') {
                 <div id="scoreboard-popover"
-                    class="scoreboard-popover position-absolute top-100 start-50 translate-middle-x mt-2">
+                    class="scoreboard-popover position-absolute top-100 start-50 translate-middle-x mt-2 z-3">
                     <app-scoreboard [score]="score()" [rankName]="rank().label" />
                 </div>
                 }
@@ -93,6 +93,38 @@
                     <span class="d-none d-lg-inline extra-small fw-bold ms-1">Condividi</span>
                 </button>
 
+                <!-- AUTH SECTION (Log In button for guests / Name + Dropdown menu for logged-in users) -->
+                <div class="position-relative ms-1">
+                    @if (!authService.isLoggedIn()) {
+                    <a routerLink="/login"
+                        class="header-btn px-2 py-1 d-flex align-items-center gap-1 text-decoration-none"
+                        title="Accedi">
+                        <i class="bi bi-person-circle text-warning fs-6"></i>
+                        <span class="d-none d-md-inline extra-small fw-bold">Accedi</span>
+                    </a>
+                    } @else {
+                    <button type="button" class="header-btn px-2 py-1 d-flex align-items-center gap-1"
+                        [class.active]="activePopover() === 'userMenu'" (click)="toggleUserMenu()"
+                        title="Profilo utente">
+                        <i class="bi bi-person-circle text-warning fs-6"></i>
+                        <span class="d-none d-md-inline extra-small fw-bold">
+                            {{ authService.currentUser()?.username }}
+                        </span>
+                    </button>
+
+                    @if (activePopover() === 'userMenu') {
+                    <div class="popover-dropdown position-absolute top-100 end-0 mt-2 z-3 rounded-3 shadow p-2 border border-warning border-opacity-25"
+                        style="min-width: 140px;">
+                        <button type="button"
+                            class="dropdown-item-custom btn border-0 text-danger d-flex align-items-center gap-2 extra-small fw-bold p-2 w-100 text-start rounded-2"
+                            (click)="authService.logout(); closeAll()">
+                            <i class="bi bi-box-arrow-left fs-6"></i> Esci
+                        </button>
+                    </div>
+                    }
+                    }
+                </div>
+
                 <!-- Button 4: Dark/Light Mode -->
                 <button type="button"
                     class="btn btn-outline-secondary btn-sm theme-toggle-btn ms-1 d-flex align-items-center justify-content-center p-1"
@@ -113,7 +145,7 @@
             </div>
         </div>
 
-        <!-- Mobile-Only Row: Rank Indicator (Visible on < MD screens) -->
+        <!-- Mobile-Only Row: Rank Indicator -->
         <div class="d-md-none w-100 d-flex justify-content-center position-relative rank-popover-wrapper">
             <button type="button" id="scoreboard-trigger-mobile"
                 class="btn border-0 p-0 shadow-none d-flex align-items-center bg-warning bg-opacity-10 border border-warning border-opacity-25 rounded-pill px-3 py-0.5 shadow-sm cursor-pointer rank-badge"
