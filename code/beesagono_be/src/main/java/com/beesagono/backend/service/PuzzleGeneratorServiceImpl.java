@@ -31,13 +31,12 @@ public class PuzzleGeneratorServiceImpl implements PuzzleGeneratorService {
     private final DailyPuzzleRepository dailyPuzzleRepository;
     private final PuzzleOuterLetterRepository puzzleOuterLetterRepository;
     private final PuzzleWordRepository puzzleWordRepository;
+    private final ScoringService scoringService;
 
-    private static final int MIN_WORD_LENGTH = 4;
     private static final int REQUIRED_LETTERS_COUNT = 7;
     private static final int MIN_TARGET_WORDS_COUNT = 20;
     private static final int MIN_MIELEGRAMMI_COUNT = 1;
     private static final int MAX_GENERATION_ATTEMPTS = 50;
-    private static final int MIELEGRAMMA_BONUS = 7;
     private static final int RECENT_CENTER_LETTERS_LIMIT = 3;
 
     @Override
@@ -106,10 +105,10 @@ public class PuzzleGeneratorServiceImpl implements PuzzleGeneratorService {
                     mielegrammi.add(word);
                 }
 
-                int basePoints = word.length() == MIN_WORD_LENGTH ? 1 : word.length();
-                int bonus = isMielegramma ? MIELEGRAMMA_BONUS : 0;
+                // Using the centralized service
+                int score = scoringService.calculateWordScore(word, isMielegramma);
 
-                targetWords.add(new PuzzleWordData(dw, isMielegramma, basePoints + bonus));
+                targetWords.add(new PuzzleWordData(dw, isMielegramma, score));
             }
 
             GeneratedBoard currentBoard = new GeneratedBoard(
@@ -133,44 +132,53 @@ public class PuzzleGeneratorServiceImpl implements PuzzleGeneratorService {
 
         GeneratedBoard boardToSave = selectedBoard != null ? selectedBoard : fallbackBoard;
 
-        if (boardToSave != null) {
-            int maxScore = boardToSave.words().stream().mapToInt(PuzzleWordData::score).sum();
-
-            DailyPuzzle dailyPuzzle = DailyPuzzle.builder()
-                    .puzzleDate(date)
-                    .centerLetter(boardToSave.centerLetter())
-                    .maxScore(maxScore)
-                    .seed(boardToSave.seed())
-                    .build();
-
-            DailyPuzzle savedPuzzle = dailyPuzzleRepository.save(dailyPuzzle);
-
-            // Batch saving of outer letters
-            List<PuzzleOuterLetter> outerLetters = boardToSave.uniqueLetters().stream()
-                    .filter(l -> !l.equals(boardToSave.centerLetter()))
-                    .map(letter -> PuzzleOuterLetter.builder()
-                            .id(new PuzzleOuterLetterId(savedPuzzle.getId(), letter))
-                            .puzzle(savedPuzzle)
-                            .build())
-                    .collect(Collectors.toList());
-
-            puzzleOuterLetterRepository.saveAll(outerLetters);
-
-            // Batch saving of valid words in the puzzle
-            List<PuzzleWord> puzzleWords = boardToSave.words().stream()
-                    .map(pwd -> PuzzleWord.builder()
-                            .id(new PuzzleWordId(savedPuzzle.getId(), pwd.dictEntity().getWord()))
-                            .puzzle(savedPuzzle)
-                            .dictionaryWord(pwd.dictEntity())
-                            .isMielegramma(pwd.isPangram())
-                            .build())
-                    .collect(Collectors.toList());
-
-            puzzleWordRepository.saveAll(puzzleWords);
-
-            log.info(">>> DailyPuzzle per il {} generato con successo! (Centro: {}, Seed: {}, MaxScore: {})",
-                    date, boardToSave.centerLetter(), boardToSave.seed(), maxScore);
+        // Edge case check: ensure that a board with at least one valid word was
+        // generated
+        if (boardToSave == null || boardToSave.words().isEmpty()) {
+            log.error(
+                    "Impossibile generare un puzzle per la data {}: tutti i {} tentativi hanno prodotto 0 parole valide.",
+                    date, MAX_GENERATION_ATTEMPTS);
+            throw new IllegalStateException(
+                    "Generazione puzzle fallita per la data " + date + ": nessun tabellone valido trovato.");
         }
+
+        int maxScore = boardToSave.words().stream().mapToInt(PuzzleWordData::score).sum();
+
+        DailyPuzzle dailyPuzzle = DailyPuzzle.builder()
+                .puzzleDate(date)
+                .centerLetter(boardToSave.centerLetter())
+                .maxScore(maxScore)
+                .seed(boardToSave.seed())
+                .build();
+
+        DailyPuzzle savedPuzzle = dailyPuzzleRepository.save(dailyPuzzle);
+
+        // Batch saving of outer letters
+        List<PuzzleOuterLetter> outerLetters = boardToSave.uniqueLetters().stream()
+                .filter(l -> !l.equals(boardToSave.centerLetter()))
+                .map(letter -> PuzzleOuterLetter.builder()
+                        .id(new PuzzleOuterLetterId(savedPuzzle.getId(), letter))
+                        .puzzle(savedPuzzle)
+                        .build())
+                .collect(Collectors.toList());
+
+        puzzleOuterLetterRepository.saveAll(outerLetters);
+
+        // Batch saving of valid words in the puzzle
+        List<PuzzleWord> puzzleWords = boardToSave.words().stream()
+                .map(pwd -> PuzzleWord.builder()
+                        .id(new PuzzleWordId(savedPuzzle.getId(), pwd.dictEntity().getWord()))
+                        .puzzle(savedPuzzle)
+                        .dictionaryWord(pwd.dictEntity())
+                        .isMielegramma(pwd.isPangram())
+                        .build())
+                .collect(Collectors.toList());
+
+        puzzleWordRepository.saveAll(puzzleWords);
+
+        log.info(
+                ">>> DailyPuzzle per il {} generato con successo! (Centro: {}, Seed: {}, MaxScore: {}, Parole: {})",
+                date, boardToSave.centerLetter(), boardToSave.seed(), maxScore, boardToSave.words().size());
     }
 
     // --- Utility Bitmask and PRNG Algorithms ---

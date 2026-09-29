@@ -10,6 +10,7 @@ import com.beesagono.backend.repository.GameSessionRepository;
 import com.beesagono.backend.repository.PuzzleWordRepository;
 import lombok.RequiredArgsConstructor;
 
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,6 +27,7 @@ public class PuzzleServiceImpl implements PuzzleService {
     private final GameSessionRepository gameSessionRepository;
     private final PuzzleGeneratorService puzzleGeneratorService;
     private final DailyPuzzleMapper dailyPuzzleMapper;
+    private final ScoringService scoringService;
 
     @Override
     @Transactional
@@ -33,7 +35,12 @@ public class PuzzleServiceImpl implements PuzzleService {
         LocalDate today = LocalDate.now();
 
         if (!dailyPuzzleRepository.existsByPuzzleDate(today)) {
-            puzzleGeneratorService.generateAndSavePuzzleForDate(today);
+            try {
+                puzzleGeneratorService.generateAndSavePuzzleForDate(today);
+            } catch (DataIntegrityViolationException e) {
+                // If another concurrent request has just created the puzzle, ignore the
+                // duplicate
+            }
         }
 
         DailyPuzzle puzzle = dailyPuzzleRepository.findByPuzzleDate(today)
@@ -75,8 +82,7 @@ public class PuzzleServiceImpl implements PuzzleService {
         return puzzleWordRepository.findByIdPuzzleIdAndIdWord(puzzleId, word)
                 .map(pw -> {
                     boolean isMiele = Boolean.TRUE.equals(pw.getIsMielegramma());
-                    int basePoints = word.length() == 4 ? 1 : word.length();
-                    int score = isMiele ? basePoints + 7 : basePoints;
+                    int score = scoringService.calculateWordScore(word, isMiele);
 
                     return new WordSubmissionResponse(true, word, score, isMiele, null, null);
                 })

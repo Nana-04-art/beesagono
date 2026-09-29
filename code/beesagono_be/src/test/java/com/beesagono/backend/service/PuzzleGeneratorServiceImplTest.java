@@ -6,7 +6,9 @@ import com.beesagono.backend.repository.DailyPuzzleRepository;
 import com.beesagono.backend.repository.DictionaryWordRepository;
 import com.beesagono.backend.repository.PuzzleOuterLetterRepository;
 import com.beesagono.backend.repository.PuzzleWordRepository;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -20,7 +22,9 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -41,184 +45,203 @@ class PuzzleGeneratorServiceImplTest {
     @Mock
     private PuzzleWordRepository puzzleWordRepository;
 
+    @Mock
+    private ScoringService scoringService;
+
     @InjectMocks
     private PuzzleGeneratorServiceImpl puzzleGeneratorService;
 
-    @Test
-    @DisplayName("generateAndSavePuzzleForDate - Idempotency check: does nothing when puzzle already exists")
-    void shouldDoNothingWhenPuzzleAlreadyExists() {
-        LocalDate date = LocalDate.of(2026, 9, 8);
+    private LocalDate testDate;
 
-        when(dailyPuzzleRepository.existsByPuzzleDate(date)).thenReturn(true);
-
-        puzzleGeneratorService.generateAndSavePuzzleForDate(date);
-
-        verify(dailyPuzzleRepository, never()).save(any());
-        verify(puzzleOuterLetterRepository, never()).saveAll(any());
-        verify(puzzleWordRepository, never()).saveAll(any());
+    @BeforeEach
+    void setUp() {
+        testDate = LocalDate.of(2026, 9, 8);
     }
 
-    @Test
-    @DisplayName("generateAndSavePuzzleForDate - Generates and saves puzzle successfully when Quality Gate is passed")
-    void shouldGenerateAndSavePuzzleSuccessfully() {
-        LocalDate date = LocalDate.of(2026, 9, 8);
+    @Nested
+    @DisplayName("generateAndSavePuzzleForDate - Idempotency Checks")
+    class IdempotencyTests {
 
-        List<DictionaryWord> validWords = new ArrayList<>();
-        validWords.add(DictionaryWord.builder()
-                .word("ALBERGO")
-                .uniqueLettersCount(7)
-                .build()); // Mielegramma
+        @Test
+        @DisplayName("Should do nothing when a puzzle already exists for the given date")
+        void shouldDoNothingWhenPuzzleAlreadyExists() {
+            when(dailyPuzzleRepository.existsByPuzzleDate(testDate)).thenReturn(true);
 
-        for (int i = 0; i < 20; i++) {
-            validWords.add(DictionaryWord.builder()
-                    .word("ALBA" + i)
-                    .uniqueLettersCount(4)
-                    .build());
+            puzzleGeneratorService.generateAndSavePuzzleForDate(testDate);
+
+            verify(dailyPuzzleRepository, never()).save(any());
+            verify(puzzleOuterLetterRepository, never()).saveAll(any());
+            verify(puzzleWordRepository, never()).saveAll(any());
+        }
+    }
+
+    @Nested
+    @DisplayName("generateAndSavePuzzleForDate - Puzzle Generation Flow")
+    class GenerationFlowTests {
+
+        @BeforeEach
+        void setUpScoringMock() {
+            when(scoringService.calculateWordScore(anyString(), anyBoolean())).thenReturn(4);
         }
 
-        DailyPuzzle savedPuzzle = DailyPuzzle.builder()
-                .id("puzzle-1")
-                .puzzleDate(date)
-                .centerLetter("A")
-                .maxScore(100)
-                .build();
+        @Test
+        @DisplayName("Should generate and save puzzle successfully when Quality Gate is passed")
+        void shouldGenerateAndSavePuzzleSuccessfully() {
+            List<DictionaryWord> validWords = new ArrayList<>();
+            validWords.add(DictionaryWord.builder()
+                    .word("ALBERGO")
+                    .uniqueLettersCount(7)
+                    .build());
 
-        when(dailyPuzzleRepository.existsByPuzzleDate(date)).thenReturn(false);
-        when(dailyPuzzleRepository.findAllByOrderByPuzzleDateDesc(any(Pageable.class)))
-                .thenReturn(List.of());
-        when(dictionaryWordRepository.findCandidatePangrams()).thenReturn(List.of("ALBERGO"));
-        when(dictionaryWordRepository.findValidWordsForPuzzle(anyInt(), anyInt()))
-                .thenReturn(validWords);
-        when(dailyPuzzleRepository.save(any(DailyPuzzle.class))).thenReturn(savedPuzzle);
-
-        puzzleGeneratorService.generateAndSavePuzzleForDate(date);
-
-        verify(dailyPuzzleRepository, times(1)).save(any(DailyPuzzle.class));
-        verify(puzzleOuterLetterRepository, times(1)).saveAll(any());
-        verify(puzzleWordRepository, times(1)).saveAll(any());
-    }
-
-    @Test
-    @DisplayName("generateAndSavePuzzleForDate - Fallback mode: uses best available board when Quality Gate fails after max attempts")
-    void shouldFallbackToBestBoardWhenQualityGateFails() {
-        LocalDate date = LocalDate.of(2026, 9, 8);
-
-        // We generate a single word per attempt, so the Quality Gate is never
-        // passed (requires >= 20 words)
-        List<DictionaryWord> validWords = List.of(
-                DictionaryWord.builder()
-                        .word("ALBERGO")
-                        .uniqueLettersCount(7)
+            for (int i = 0; i < 20; i++) {
+                validWords.add(DictionaryWord.builder()
+                        .word("ALBA" + i)
+                        .uniqueLettersCount(4)
                         .build());
+            }
 
-        DailyPuzzle savedPuzzle = DailyPuzzle.builder()
-                .id("puzzle-fallback-1")
-                .puzzleDate(date)
-                .centerLetter("A")
-                .maxScore(14)
-                .build();
+            DailyPuzzle savedPuzzle = DailyPuzzle.builder()
+                    .id("puzzle-1")
+                    .puzzleDate(testDate)
+                    .centerLetter("A")
+                    .maxScore(100)
+                    .build();
 
-        when(dailyPuzzleRepository.existsByPuzzleDate(date)).thenReturn(false);
-        when(dailyPuzzleRepository.findAllByOrderByPuzzleDateDesc(any(Pageable.class)))
-                .thenReturn(List.of());
-        when(dictionaryWordRepository.findCandidatePangrams()).thenReturn(List.of("ALBERGO"));
-        when(dictionaryWordRepository.findValidWordsForPuzzle(anyInt(), anyInt()))
-                .thenReturn(validWords);
-        when(dailyPuzzleRepository.save(any(DailyPuzzle.class))).thenReturn(savedPuzzle);
+            when(dailyPuzzleRepository.existsByPuzzleDate(testDate)).thenReturn(false);
+            when(dailyPuzzleRepository.findAllByOrderByPuzzleDateDesc(any(Pageable.class)))
+                    .thenReturn(List.of());
+            when(dictionaryWordRepository.findCandidatePangrams()).thenReturn(List.of("ALBERGO"));
+            when(dictionaryWordRepository.findValidWordsForPuzzle(anyInt(), anyInt()))
+                    .thenReturn(validWords);
+            when(dailyPuzzleRepository.save(any(DailyPuzzle.class))).thenReturn(savedPuzzle);
 
-        puzzleGeneratorService.generateAndSavePuzzleForDate(date);
+            puzzleGeneratorService.generateAndSavePuzzleForDate(testDate);
 
-        // Ensure that the best board is saved anyway after 50 unsuccessful attempts
-        // (fallback)
-        verify(dailyPuzzleRepository, times(1)).save(any(DailyPuzzle.class));
-        verify(puzzleOuterLetterRepository, times(1)).saveAll(any());
-        verify(puzzleWordRepository, times(1)).saveAll(any());
+            verify(dailyPuzzleRepository, times(1)).save(any(DailyPuzzle.class));
+            verify(puzzleOuterLetterRepository, times(1)).saveAll(any());
+            verify(puzzleWordRepository, times(1)).saveAll(any());
+        }
+
+        @Test
+        @DisplayName("Should fallback to best available board when Quality Gate fails after max attempts")
+        void shouldFallbackToBestBoardWhenQualityGateFails() {
+            List<DictionaryWord> validWords = List.of(
+                    DictionaryWord.builder()
+                            .word("ALBERGO")
+                            .uniqueLettersCount(7)
+                            .build());
+
+            DailyPuzzle savedPuzzle = DailyPuzzle.builder()
+                    .id("puzzle-fallback-1")
+                    .puzzleDate(testDate)
+                    .centerLetter("A")
+                    .maxScore(14)
+                    .build();
+
+            when(dailyPuzzleRepository.existsByPuzzleDate(testDate)).thenReturn(false);
+            when(dailyPuzzleRepository.findAllByOrderByPuzzleDateDesc(any(Pageable.class)))
+                    .thenReturn(List.of());
+            when(dictionaryWordRepository.findCandidatePangrams()).thenReturn(List.of("ALBERGO"));
+            when(dictionaryWordRepository.findValidWordsForPuzzle(anyInt(), anyInt()))
+                    .thenReturn(validWords);
+            when(dailyPuzzleRepository.save(any(DailyPuzzle.class))).thenReturn(savedPuzzle);
+
+            puzzleGeneratorService.generateAndSavePuzzleForDate(testDate);
+
+            verify(dailyPuzzleRepository, times(1)).save(any(DailyPuzzle.class));
+            verify(puzzleOuterLetterRepository, times(1)).saveAll(any());
+            verify(puzzleWordRepository, times(1)).saveAll(any());
+        }
     }
 
-    @Test
-    @DisplayName("generateAndSavePuzzleForDate - Propagates exception when dailyPuzzleRepository.save fails")
-    void shouldPropagateExceptionWhenPuzzleSaveFails() {
-        LocalDate date = LocalDate.of(2026, 9, 8);
+    @Nested
+    @DisplayName("generateAndSavePuzzleForDate - Error Handling & Exception Propagation")
+    class ExceptionHandlingTests {
 
-        List<DictionaryWord> validWords = List.of(
-                DictionaryWord.builder().word("ALBERGO").uniqueLettersCount(7).build());
+        @BeforeEach
+        void setUpScoringMock() {
+            when(scoringService.calculateWordScore(anyString(), anyBoolean())).thenReturn(4);
+        }
 
-        when(dailyPuzzleRepository.existsByPuzzleDate(date)).thenReturn(false);
-        when(dailyPuzzleRepository.findAllByOrderByPuzzleDateDesc(any(Pageable.class))).thenReturn(List.of());
-        when(dictionaryWordRepository.findCandidatePangrams()).thenReturn(List.of("ALBERGO"));
-        when(dictionaryWordRepository.findValidWordsForPuzzle(anyInt(), anyInt())).thenReturn(validWords);
+        @Test
+        @DisplayName("Should propagate exception when dailyPuzzleRepository.save fails")
+        void shouldPropagateExceptionWhenPuzzleSaveFails() {
+            List<DictionaryWord> validWords = List.of(
+                    DictionaryWord.builder().word("ALBERGO").uniqueLettersCount(7).build());
 
-        when(dailyPuzzleRepository.save(any(DailyPuzzle.class)))
-                .thenThrow(new RuntimeException("Database error during puzzle save"));
+            when(dailyPuzzleRepository.existsByPuzzleDate(testDate)).thenReturn(false);
+            when(dailyPuzzleRepository.findAllByOrderByPuzzleDateDesc(any(Pageable.class))).thenReturn(List.of());
+            when(dictionaryWordRepository.findCandidatePangrams()).thenReturn(List.of("ALBERGO"));
+            when(dictionaryWordRepository.findValidWordsForPuzzle(anyInt(), anyInt())).thenReturn(validWords);
 
-        assertThatThrownBy(() -> puzzleGeneratorService.generateAndSavePuzzleForDate(date))
-                .isInstanceOf(RuntimeException.class)
-                .hasMessageContaining("Database error during puzzle save");
+            when(dailyPuzzleRepository.save(any(DailyPuzzle.class)))
+                    .thenThrow(new RuntimeException("Database error during puzzle save"));
 
-        verify(puzzleOuterLetterRepository, never()).saveAll(any());
-        verify(puzzleWordRepository, never()).saveAll(any());
-    }
+            assertThatThrownBy(() -> puzzleGeneratorService.generateAndSavePuzzleForDate(testDate))
+                    .isInstanceOf(RuntimeException.class)
+                    .hasMessageContaining("Database error during puzzle save");
 
-    @Test
-    @DisplayName("generateAndSavePuzzleForDate - Propagates exception when outer letters save fails")
-    void shouldPropagateExceptionWhenOuterLettersSaveFails() {
-        LocalDate date = LocalDate.of(2026, 9, 8);
+            verify(puzzleOuterLetterRepository, never()).saveAll(any());
+            verify(puzzleWordRepository, never()).saveAll(any());
+        }
 
-        List<DictionaryWord> validWords = List.of(
-                DictionaryWord.builder().word("ALBERGO").uniqueLettersCount(7).build());
+        @Test
+        @DisplayName("Should propagate exception when outer letters save fails")
+        void shouldPropagateExceptionWhenOuterLettersSaveFails() {
+            List<DictionaryWord> validWords = List.of(
+                    DictionaryWord.builder().word("ALBERGO").uniqueLettersCount(7).build());
 
-        DailyPuzzle savedPuzzle = DailyPuzzle.builder()
-                .id("puzzle-1")
-                .puzzleDate(date)
-                .centerLetter("A")
-                .maxScore(100)
-                .build();
+            DailyPuzzle savedPuzzle = DailyPuzzle.builder()
+                    .id("puzzle-1")
+                    .puzzleDate(testDate)
+                    .centerLetter("A")
+                    .maxScore(100)
+                    .build();
 
-        when(dailyPuzzleRepository.existsByPuzzleDate(date)).thenReturn(false);
-        when(dailyPuzzleRepository.findAllByOrderByPuzzleDateDesc(any(Pageable.class))).thenReturn(List.of());
-        when(dictionaryWordRepository.findCandidatePangrams()).thenReturn(List.of("ALBERGO"));
-        when(dictionaryWordRepository.findValidWordsForPuzzle(anyInt(), anyInt())).thenReturn(validWords);
-        when(dailyPuzzleRepository.save(any(DailyPuzzle.class))).thenReturn(savedPuzzle);
+            when(dailyPuzzleRepository.existsByPuzzleDate(testDate)).thenReturn(false);
+            when(dailyPuzzleRepository.findAllByOrderByPuzzleDateDesc(any(Pageable.class))).thenReturn(List.of());
+            when(dictionaryWordRepository.findCandidatePangrams()).thenReturn(List.of("ALBERGO"));
+            when(dictionaryWordRepository.findValidWordsForPuzzle(anyInt(), anyInt())).thenReturn(validWords);
+            when(dailyPuzzleRepository.save(any(DailyPuzzle.class))).thenReturn(savedPuzzle);
 
-        when(puzzleOuterLetterRepository.saveAll(any()))
-                .thenThrow(new RuntimeException("Database error during outer letters save"));
+            when(puzzleOuterLetterRepository.saveAll(any()))
+                    .thenThrow(new RuntimeException("Database error during outer letters save"));
 
-        assertThatThrownBy(() -> puzzleGeneratorService.generateAndSavePuzzleForDate(date))
-                .isInstanceOf(RuntimeException.class)
-                .hasMessageContaining("Database error during outer letters save");
+            assertThatThrownBy(() -> puzzleGeneratorService.generateAndSavePuzzleForDate(testDate))
+                    .isInstanceOf(RuntimeException.class)
+                    .hasMessageContaining("Database error during outer letters save");
 
-        verify(puzzleWordRepository, never()).saveAll(any());
-    }
+            verify(puzzleWordRepository, never()).saveAll(any());
+        }
 
-    @Test
-    @DisplayName("generateAndSavePuzzleForDate - Propagates exception when puzzle words save fails")
-    void shouldPropagateExceptionWhenPuzzleWordsSaveFails() {
-        LocalDate date = LocalDate.of(2026, 9, 8);
+        @Test
+        @DisplayName("Should propagate exception when puzzle words save fails")
+        void shouldPropagateExceptionWhenPuzzleWordsSaveFails() {
+            List<DictionaryWord> validWords = List.of(
+                    DictionaryWord.builder().word("ALBERGO").uniqueLettersCount(7).build());
 
-        List<DictionaryWord> validWords = List.of(
-                DictionaryWord.builder().word("ALBERGO").uniqueLettersCount(7).build());
+            DailyPuzzle savedPuzzle = DailyPuzzle.builder()
+                    .id("puzzle-1")
+                    .puzzleDate(testDate)
+                    .centerLetter("A")
+                    .maxScore(100)
+                    .build();
 
-        DailyPuzzle savedPuzzle = DailyPuzzle.builder()
-                .id("puzzle-1")
-                .puzzleDate(date)
-                .centerLetter("A")
-                .maxScore(100)
-                .build();
+            when(dailyPuzzleRepository.existsByPuzzleDate(testDate)).thenReturn(false);
+            when(dailyPuzzleRepository.findAllByOrderByPuzzleDateDesc(any(Pageable.class))).thenReturn(List.of());
+            when(dictionaryWordRepository.findCandidatePangrams()).thenReturn(List.of("ALBERGO"));
+            when(dictionaryWordRepository.findValidWordsForPuzzle(anyInt(), anyInt())).thenReturn(validWords);
+            when(dailyPuzzleRepository.save(any(DailyPuzzle.class))).thenReturn(savedPuzzle);
 
-        when(dailyPuzzleRepository.existsByPuzzleDate(date)).thenReturn(false);
-        when(dailyPuzzleRepository.findAllByOrderByPuzzleDateDesc(any(Pageable.class))).thenReturn(List.of());
-        when(dictionaryWordRepository.findCandidatePangrams()).thenReturn(List.of("ALBERGO"));
-        when(dictionaryWordRepository.findValidWordsForPuzzle(anyInt(), anyInt())).thenReturn(validWords);
-        when(dailyPuzzleRepository.save(any(DailyPuzzle.class))).thenReturn(savedPuzzle);
+            when(puzzleWordRepository.saveAll(any()))
+                    .thenThrow(new RuntimeException("Database error during puzzle words save"));
 
-        when(puzzleWordRepository.saveAll(any()))
-                .thenThrow(new RuntimeException("Database error during puzzle words save"));
+            assertThatThrownBy(() -> puzzleGeneratorService.generateAndSavePuzzleForDate(testDate))
+                    .isInstanceOf(RuntimeException.class)
+                    .hasMessageContaining("Database error during puzzle words save");
 
-        assertThatThrownBy(() -> puzzleGeneratorService.generateAndSavePuzzleForDate(date))
-                .isInstanceOf(RuntimeException.class)
-                .hasMessageContaining("Database error during puzzle words save");
-
-        verify(dailyPuzzleRepository, times(1)).save(any(DailyPuzzle.class));
-        verify(puzzleOuterLetterRepository, times(1)).saveAll(any());
+            verify(dailyPuzzleRepository, times(1)).save(any(DailyPuzzle.class));
+            verify(puzzleOuterLetterRepository, times(1)).saveAll(any());
+        }
     }
 }
