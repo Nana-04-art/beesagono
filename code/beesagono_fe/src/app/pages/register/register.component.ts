@@ -48,7 +48,6 @@ export class RegisterComponent {
   }
 
   onRegister(): void {
-
     this.isLoading.set(true);
     const formValues = this.registerForm.getRawValue();
 
@@ -71,10 +70,7 @@ export class RegisterComponent {
     ).subscribe({
       next: (response) => {
         this.isLoading.set(false);
-        localStorage.setItem('token', response.accessToken);
-        if (response.refreshToken) {
-          localStorage.setItem('refreshToken', response.refreshToken);
-        }
+        this.authService.setSession(response);
 
         this.toast.show(`Benvenuto/a su Beesagono, ${response.username}!`, {
           classname: 'bg-success text-white'

@@ -21,10 +21,7 @@ export class LoginComponent implements AfterViewInit {
   private readonly toast = inject(ToastService);
   private readonly router = inject(Router);
 
-  // Direct reference to the Google button container
-  @ViewChild('googleBtnContainer') googleBtnContainer?: ElementRef<HTMLDivElement>;
-
-  // ViewChilds for the modal focus trap
+  // ViewChild references for modal focus trapping
   @ViewChild('usernameInputRef') usernameInputRef?: ElementRef<HTMLInputElement>;
   @ViewChild('cancelBtnRef') cancelBtnRef?: ElementRef<HTMLButtonElement>;
   @ViewChild('completeBtnRef') completeBtnRef?: ElementRef<HTMLButtonElement>;
@@ -47,17 +44,17 @@ export class LoginComponent implements AfterViewInit {
     });
   }
 
-  // We use AfterViewInit instead of OnInit to ensure the DOM is ready
+  // Use AfterViewInit instead of OnInit to ensure the DOM is completely ready
   ngAfterViewInit(): void {
     this.renderGoogleButton();
   }
 
   private renderGoogleButton(): void {
-    // If the Google script is ready, render
+    // Render immediately if the Google script is loaded
     if (typeof google !== 'undefined' && google.accounts) {
       this.googleAuth.initializeGoogleButton('googleBtn', this.GOOGLE_CLIENT_ID);
     } else {
-      // If the Google script is still loading, wait a moment and try again
+      // Retry after a short delay if the Google script is still loading
       setTimeout(() => this.renderGoogleButton(), 200);
     }
   }

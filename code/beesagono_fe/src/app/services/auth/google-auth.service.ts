@@ -31,12 +31,18 @@ export class GoogleAuthService {
       const element = document.getElementById(elementId);
 
       if (element) {
+        element.innerHTML = ''; // Preventive cleanup
+
+        // Calculate dynamic width based on the parent container
+        const parentWidth = element.parentElement?.clientWidth || window.innerWidth;
+        const targetWidth = Math.min(Math.max(parentWidth - 32, 200), 400);
+
         google.accounts.id.renderButton(element, {
           theme: isDark ? 'filled_black' : 'outline',
           size: 'large',
           text: 'continue_with',
           shape: 'pill',
-          width: 320
+          width: targetWidth // Dynamic adaptive width
         });
       }
     }
