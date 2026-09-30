@@ -1,14 +1,14 @@
 import { Injectable, Signal, computed, effect, inject, signal } from '@angular/core';
-import { GameBoard } from '../../models/game/game-board.model'; 
-import { GameState } from '../../models/game/game-state.model'; 
+import { firstValueFrom } from 'rxjs';
+import { GameBoard } from '../../models/game/game-board.model';
+import { GameState } from '../../models/game/game-state.model';
 import { RankTier } from '../../models/game/rank.model';
 import { ValidationResult } from '../../models/game/validation.model';
 import { ShareScorePayload } from '../../models/game/share-score.model';
-import { Cell } from '../../models/game/cell.model'; 
+import { Cell } from '../../models/game/cell.model';
 import { GAME_RULES } from '../../config/game-rules.config';
 import { getCenterLetter, getAvailableLetters } from '../../models/game/game-board.selectors';
-import { DictionaryService } from '../dictionary/dictionary.service';
-import { PuzzleGeneratorService } from '../puzzle-generator/puzzle-generator.service';
+import { PuzzleService } from '../puzzle/puzzle.service';
 import { StorageService } from '../storage/storage.service';
 import { ScoreService } from '../score/score.service';
 import { StatsService } from '../stats/stats.service';
@@ -27,8 +27,7 @@ export function getTodayIsoString(date = new Date()): string {
 })
 export class GameService {
     private storageService = inject(StorageService);
-    private dictionaryService = inject(DictionaryService);
-    private puzzleGeneratorService = inject(PuzzleGeneratorService);
+    private puzzleService = inject(PuzzleService);
     private scoreService = inject(ScoreService);
     private statsService = inject(StatsService);
 
@@ -213,13 +212,8 @@ export class GameService {
         this._loadError.set(null);
 
         try {
-            await this.dictionaryService.loadDictionary();
-            const wordSet = this.dictionaryService.getWordSet();
-            const todayIsoDate = this.getTodayIsoString();
-            const generatedBoard = this.puzzleGeneratorService.generateDailyPuzzle(
-                todayIsoDate,
-                wordSet
-            );
+            const generatedBoard = await firstValueFrom(this.puzzleService.getTodayPuzzle());
+            const todayIsoDate = generatedBoard.date;
 
             this._board.set(generatedBoard);
 
@@ -440,6 +434,7 @@ export class GameService {
             totalMielegrammi: currentBoard ? currentBoard.mielegrammi.length : 0,
         };
     }
+
     private getTodayIsoString(): string {
         return getTodayIsoString();
     }

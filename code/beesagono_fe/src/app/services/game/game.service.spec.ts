@@ -1,9 +1,9 @@
 import { TestBed } from '@angular/core/testing';
 import { vi, describe, beforeEach, afterEach, it, expect } from 'vitest';
+import { of, throwError } from 'rxjs';
 import { GameService, getTodayIsoString } from './game.service';
 import { StorageService } from '../storage/storage.service';
-import { PuzzleGeneratorService } from '../puzzle-generator/puzzle-generator.service';
-import { DictionaryService } from '../dictionary/dictionary.service';
+import { PuzzleService } from '../puzzle/puzzle.service';
 import { ScoreService } from '../score/score.service';
 import { StatsService } from '../stats/stats.service';
 import { GameBoard } from '../../models/game/game-board.model';
@@ -15,12 +15,8 @@ describe('GameService', () => {
 
   const todayStr = getTodayIsoString();
 
-  let mockPuzzleGenerator: {
-    generateDailyPuzzle: ReturnType<typeof vi.fn>;
-  };
-  let mockDictionaryService: {
-    loadDictionary: ReturnType<typeof vi.fn>;
-    getWordSet: ReturnType<typeof vi.fn>;
+  let mockPuzzleService: {
+    getTodayPuzzle: ReturnType<typeof vi.fn>;
   };
   let mockStorageService: {
     load: ReturnType<typeof vi.fn>;
@@ -56,13 +52,8 @@ describe('GameService', () => {
   };
 
   beforeEach(async () => {
-    mockPuzzleGenerator = {
-      generateDailyPuzzle: vi.fn().mockReturnValue(mockBoard),
-    };
-
-    mockDictionaryService = {
-      loadDictionary: vi.fn().mockResolvedValue(undefined),
-      getWordSet: vi.fn().mockReturnValue(new Set(['MIELE', 'MELE', 'MIELEGRAMMA'])),
+    mockPuzzleService = {
+      getTodayPuzzle: vi.fn().mockReturnValue(of(mockBoard)),
     };
 
     mockStorageService = {
@@ -102,8 +93,7 @@ describe('GameService', () => {
     TestBed.configureTestingModule({
       providers: [
         GameService,
-        { provide: PuzzleGeneratorService, useValue: mockPuzzleGenerator },
-        { provide: DictionaryService, useValue: mockDictionaryService },
+        { provide: PuzzleService, useValue: mockPuzzleService },
         { provide: StorageService, useValue: mockStorageService },
         { provide: ScoreService, useValue: mockScoreService },
         { provide: StatsService, useValue: mockStatsService },
@@ -160,6 +150,19 @@ describe('GameService', () => {
     expect(service.foundWords()).toEqual([]);
     expect(service.invalidWords()).toEqual([]);
     expect(mockStatsService.recordGameStarted).toHaveBeenCalledWith(todayStr);
+  });
+
+  it('should handle error when loading puzzle fails', async () => {
+    mockPuzzleService.getTodayPuzzle.mockReturnValue(
+      throwError(() => new Error('Network error'))
+    );
+
+    // Reset status to allow reload
+    (service as any)._loadStatus.set('idle');
+    await service.loadDailyGame();
+
+    expect(service.loadStatus()).toBe('error');
+    expect(service.loadError()).toBe('Network error');
   });
 
   it('should handle input characters, backspace, and ENTER via handleInput', () => {
@@ -308,14 +311,8 @@ describe('GameService', () => {
     const spy = vi.spyOn(service, 'loadDailyGame');
     vi.spyOn(service as any, 'getTodayIsoString').mockReturnValue('2026-08-01');
 
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    vi.setSystemTime(tomorrow);
-
     service.checkDateRollover();
 
     expect(spy).toHaveBeenCalledTimes(1);
-
-    vi.useRealTimers();
   });
 });
