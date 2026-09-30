@@ -1,19 +1,19 @@
 <nav
-    class="navbar sticky-top bg-white bg-opacity-75 border-bottom border-warning border-opacity-25 backdrop-blur py-2 px-2 px-lg-4">
-    <div class="container-fluid max-w-7xl px-0 d-flex flex-column gap-2">
+    class="navbar sticky-top bg-white bg-opacity-75 border-bottom border-warning border-opacity-25 backdrop-blur py-2 px-1 px-sm-2 px-lg-4">
+    <div class="container-fluid max-w-7xl px-0 d-flex flex-column gap-2 overflow-hidden">
 
         <!-- Top Row -->
-        <div class="w-100 d-flex align-items-center justify-content-between gap-1 position-relative">
+        <div class="w-100 d-flex align-items-center justify-content-between position-relative">
 
             <!-- Left Section: Title & Date -->
-            <div class="d-flex align-items-center gap-1 flex-shrink-0 cursor-pointer user-select-none min-w-0"
+            <div class="d-flex align-items-center gap-1 flex-shrink-1 min-w-0 cursor-pointer user-select-none"
                 (click)="onLogoClick()">
                 <span class="fs-5 fs-sm-2 animate-bounce-subtle flex-shrink-0" role="img" aria-label="Ape">🐝</span>
-                <div class="d-flex flex-column text-truncate">
+                <div class="d-flex flex-column text-truncate min-w-0">
                     <h1 class="fw-black fs-6 tracking-wider text-warning-emphasis m-0 lh-1 text-truncate">MIELEGRAMMI
                     </h1>
                     <span class="date-subtitle fw-bold text-uppercase tracking-widest mt-1 text-truncate"
-                        style="font-size: 0.6rem;">{{ formattedDate() }}</span>
+                        style="font-size: 0.55rem;">{{ formattedDate() }}</span>
                 </div>
             </div>
 
@@ -44,9 +44,10 @@
 
                 <!-- Button 1: Rules -->
                 <div class="position-relative rules-popover-wrapper">
-                    <button type="button" class="header-btn px-2 py-1" [class.active]="activePopover() === 'rules'"
-                        title="Come si gioca" [attr.aria-expanded]="activePopover() === 'rules'"
-                        aria-controls="rules-popover" (click)="toggleRules()">
+                    <button type="button" class="header-btn px-1 px-sm-2 py-1"
+                        [class.active]="activePopover() === 'rules'" title="Come si gioca"
+                        [attr.aria-expanded]="activePopover() === 'rules'" aria-controls="rules-popover"
+                        (click)="toggleRules()">
                         <svg xmlns="http://www.w3.org/2000/svg" class="btn-icon" fill="none" viewBox="0 0 24 24"
                             stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -64,9 +65,10 @@
 
                 <!-- Button 2: Statistics -->
                 <div class="position-relative stats-popover-wrapper">
-                    <button type="button" class="header-btn px-2 py-1" [class.active]="activePopover() === 'stats'"
-                        title="Le tue statistiche" [attr.aria-expanded]="activePopover() === 'stats'"
-                        aria-controls="stats-popover" (click)="toggleStats()">
+                    <button type="button" class="header-btn px-1 px-sm-2 py-1"
+                        [class.active]="activePopover() === 'stats'" title="Le tue statistiche"
+                        [attr.aria-expanded]="activePopover() === 'stats'" aria-controls="stats-popover"
+                        (click)="toggleStats()">
                         <svg xmlns="http://www.w3.org/2000/svg" class="btn-icon" fill="none" viewBox="0 0 24 24"
                             stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -83,8 +85,8 @@
                 </div>
 
                 <!-- Button 3: Share -->
-                <button type="button" class="header-btn header-btn-primary px-2 py-1" title="Condividi risultato"
-                    (click)="shareRequested.emit()">
+                <button type="button" class="header-btn header-btn-primary px-1 px-sm-2 py-1"
+                    title="Condividi risultato" (click)="shareRequested.emit()">
                     <svg xmlns="http://www.w3.org/2000/svg" class="btn-icon" fill="none" viewBox="0 0 24 24"
                         stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -93,21 +95,21 @@
                     <span class="d-none d-lg-inline extra-small fw-bold ms-1">Condividi</span>
                 </button>
 
-                <!-- AUTH SECTION (Log In button for guests / Name + Dropdown menu for logged-in users) -->
-                <div class="position-relative ms-1">
+                <!-- AUTH SECTION -->
+                <div class="position-relative">
                     @if (!authService.isLoggedIn()) {
                     <a routerLink="/login"
-                        class="header-btn px-2 py-1 d-flex align-items-center gap-1 text-decoration-none"
+                        class="header-btn px-1 px-sm-2 py-1 d-flex align-items-center text-decoration-none"
                         title="Accedi">
                         <i class="bi bi-person-circle text-warning fs-6"></i>
-                        <span class="d-none d-md-inline extra-small fw-bold">Accedi</span>
+                        <span class="d-none d-md-inline extra-small fw-bold ms-1">Accedi</span>
                     </a>
                     } @else {
-                    <button type="button" class="header-btn px-2 py-1 d-flex align-items-center gap-1"
+                    <button type="button" class="header-btn px-1 px-sm-2 py-1 d-flex align-items-center"
                         [class.active]="activePopover() === 'userMenu'" (click)="toggleUserMenu()"
                         title="Profilo utente">
                         <i class="bi bi-person-circle text-warning fs-6"></i>
-                        <span class="d-none d-md-inline extra-small fw-bold">
+                        <span class="d-none d-md-inline extra-small fw-bold ms-1">
                             {{ authService.currentUser()?.username }}
                         </span>
                     </button>
@@ -125,9 +127,9 @@
                     }
                 </div>
 
-                <!-- Button 4: Dark/Light Mode -->
+                <!-- Button 4: Theme Toggle -->
                 <button type="button"
-                    class="btn btn-outline-secondary btn-sm theme-toggle-btn ms-1 d-flex align-items-center justify-content-center p-1"
+                    class="btn btn-outline-secondary btn-sm theme-toggle-btn p-1 d-flex align-items-center justify-content-center"
                     (click)="themeService.toggleTheme()"
                     [attr.aria-label]="themeService.currentTheme() === 'light' ? 'Attiva modalità scura' : 'Attiva modalità chiara'">
                     <div class="theme-icon-wrapper" [class.is-dark]="themeService.currentTheme() === 'dark'">

@@ -63,9 +63,18 @@ describe('GoogleAuthService', () => {
 
   describe('initializeGoogleButton', () => {
     it('should initialize and render Google button if window.google is defined and trigger callback', () => {
+      // Create parent and target elements to test dynamic width behavior
+      const parentElement = document.createElement('div');
       const mockElement = document.createElement('div');
       mockElement.id = 'google-btn';
-      document.body.appendChild(mockElement);
+      parentElement.appendChild(mockElement);
+      document.body.appendChild(parentElement);
+
+      // Mock parent clientWidth to test calculation: Math.min(Math.max(350 - 32, 200), 400) = 318
+      Object.defineProperty(parentElement, 'clientWidth', {
+        value: 350,
+        configurable: true,
+      });
 
       const handleResponseSpy = vi.spyOn(service, 'handleGoogleCredentialResponse').mockImplementation(() => { });
 
@@ -96,14 +105,48 @@ describe('GoogleAuthService', () => {
         size: 'large',
         text: 'continue_with',
         shape: 'pill',
-        width: 320,
+        width: 318, // 350 - 32 = 318
       });
 
       // Invoke the callback to verify integration with handleGoogleCredentialResponse
       capturedCallback({ credential: 'test-token-from-google' });
       expect(handleResponseSpy).toHaveBeenCalledWith('test-token-from-google');
 
-      document.body.removeChild(mockElement);
+      document.body.removeChild(parentElement);
+    });
+
+    it('should render button with dark theme if data-theme attribute is dark', () => {
+      const parentElement = document.createElement('div');
+      const mockElement = document.createElement('div');
+      mockElement.id = 'google-btn-dark';
+      parentElement.appendChild(mockElement);
+      document.body.appendChild(parentElement);
+
+      document.documentElement.setAttribute('data-theme', 'dark');
+
+      const mockInitialize = vi.fn();
+      const mockRenderButton = vi.fn();
+
+      (window as any).google = {
+        accounts: {
+          id: {
+            initialize: mockInitialize,
+            renderButton: mockRenderButton,
+          },
+        },
+      };
+
+      service.initializeGoogleButton('google-btn-dark', 'test-client-id');
+
+      expect(mockRenderButton).toHaveBeenCalledWith(
+        mockElement,
+        expect.objectContaining({
+          theme: 'filled_black',
+        })
+      );
+
+      document.documentElement.removeAttribute('data-theme');
+      document.body.removeChild(parentElement);
     });
 
     it('should not throw error if element is not found in DOM', () => {
@@ -174,6 +217,21 @@ describe('GoogleAuthService', () => {
       expect(service.isLoading()).toBe(false);
       expect(service.pendingGoogleUser()).toEqual(mockCheckResponse);
       expect(service.selectedUsername()).toBe('mario_suggested');
+    });
+
+    it('should handle unregistered user without suggestedUsername and fallback to empty string', () => {
+      const mockCheckResponse: GoogleCheckResponse = {
+        registered: false,
+        email: 'mario@example.com',
+      };
+
+      mockAuthService.checkGoogleUser.mockReturnValue(of(mockCheckResponse));
+
+      service.handleGoogleCredentialResponse('mock-id-token');
+
+      expect(service.isLoading()).toBe(false);
+      expect(service.pendingGoogleUser()).toEqual(mockCheckResponse);
+      expect(service.selectedUsername()).toBe('');
     });
 
     it('should handle error when checkGoogleUser fails', () => {

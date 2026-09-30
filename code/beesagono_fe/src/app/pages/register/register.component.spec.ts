@@ -15,6 +15,7 @@ describe('RegisterComponent', () => {
   let mockAuthService: {
     register: ReturnType<typeof vi.fn>;
     login: ReturnType<typeof vi.fn>;
+    setSession: ReturnType<typeof vi.fn>;
   };
 
   let mockToastService: {
@@ -26,6 +27,7 @@ describe('RegisterComponent', () => {
     mockAuthService = {
       register: vi.fn(),
       login: vi.fn(),
+      setSession: vi.fn(),
     };
 
     mockToastService = {
@@ -39,7 +41,7 @@ describe('RegisterComponent', () => {
     await TestBed.configureTestingModule({
       imports: [RegisterComponent],
       providers: [
-        provideRouter([]), // Usa il provider router ufficiale di Angular
+        provideRouter([]),
         { provide: AuthService, useValue: mockAuthService },
         { provide: ToastService, useValue: mockToastService },
       ],
@@ -49,7 +51,6 @@ describe('RegisterComponent', () => {
     component = fixture.componentInstance;
     router = TestBed.inject(Router);
 
-    // Spia il metodo navigate del Router reale del DI container
     vi.spyOn(router, 'navigate').mockResolvedValue(true);
 
     fixture.detectChanges();
@@ -152,7 +153,7 @@ describe('RegisterComponent', () => {
       role: 'USER',
     };
 
-    it('should execute registration, automatic login, store tokens and navigate on success', () => {
+    it('should execute registration, automatic login, delegate session storage to AuthService and navigate on success', () => {
       component.registerForm.setValue(validFormValues);
 
       mockAuthService.register.mockReturnValue(of(mockRegisterResponse));
@@ -177,32 +178,14 @@ describe('RegisterComponent', () => {
         password: 'Password123!',
       });
 
-      expect(localStorage.getItem('token')).toBe('access-token-123');
-      expect(localStorage.getItem('refreshToken')).toBe('refresh-token-123');
+      // Verify that the component called setSession with the returned LoginResponse// Verifichiamo che il componente abbia chiamato setSession con il LoginResponse restituito
+      expect(mockAuthService.setSession).toHaveBeenCalledWith(mockLoginResponse);
 
       expect(mockToastService.show).toHaveBeenCalledWith(
         'Benvenuto/a su Beesagono, testuser!',
         { classname: 'bg-success text-white' }
       );
 
-      expect(router.navigate).toHaveBeenCalledWith(['/']);
-    });
-
-    it('should perform registration and login without refreshToken if not present in response', () => {
-      component.registerForm.setValue(validFormValues);
-
-      const loginResponseWithoutRefresh: LoginResponse = {
-        ...mockLoginResponse,
-        refreshToken: undefined,
-      };
-
-      mockAuthService.register.mockReturnValue(of(mockRegisterResponse));
-      mockAuthService.login.mockReturnValue(of(loginResponseWithoutRefresh));
-
-      component.onRegister();
-
-      expect(localStorage.getItem('token')).toBe('access-token-123');
-      expect(localStorage.getItem('refreshToken')).toBeNull();
       expect(router.navigate).toHaveBeenCalledWith(['/']);
     });
 
