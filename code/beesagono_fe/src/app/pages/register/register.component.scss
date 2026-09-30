@@ -3,8 +3,48 @@
     border-radius: 16px;
 }
 
-.beesagono-icon {
-    color: #ffc107;
+// Styles for the centered hexagon icon + bee
+.beesagono-wrapper {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1em;
+    height: 1em;
+
+    .beesagono-icon {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        color: #ffc107;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .beesagono-emoji {
+        position: relative;
+        z-index: 1;
+        font-size: 0.5em;
+        line-height: 1;
+        display: inline-block;
+        animation: bounce-subtle 2.5s ease-in-out infinite;
+    }
+}
+
+// Vertical bounce animation for the bee
+@keyframes bounce-subtle {
+
+    0%,
+    100% {
+        transform: translateY(-1px);
+    }
+
+    50% {
+        transform: translateY(-5px);
+    }
 }
 
 .beesagono-btn {
@@ -29,4 +69,8 @@ a {
 
 .text-muted {
     font-size: 0.85rem;
+}
+
+.input-group.has-validation>.form-control.is-invalid {
+    z-index: 2;
 }

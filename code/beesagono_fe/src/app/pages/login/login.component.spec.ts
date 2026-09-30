@@ -89,6 +89,7 @@ describe('LoginComponent', () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
+    vi.useRealTimers();
     delete (globalThis as any).google;
     document.body.style.overflow = '';
   });
@@ -97,8 +98,28 @@ describe('LoginComponent', () => {
     expect(component).toBeTruthy();
   });
 
-  describe('ngAfterViewInit', () => {
-    it('should initialize Google button with correct client ID', () => {
+  describe('ngAfterViewInit & Google Button Rendering', () => {
+    it('should initialize Google button directly if window.google is ready', () => {
+      expect(mockGoogleAuthService.initializeGoogleButton).toHaveBeenCalledWith(
+        'googleBtn',
+        '362890069300-870q1d3b9nj16i0j19gco6npvcma1hpr.apps.googleusercontent.com'
+      );
+    });
+
+    it('should retry rendering Google button after delay if google is undefined initially', () => {
+      vi.useFakeTimers();
+      delete (globalThis as any).google;
+
+      mockGoogleAuthService.initializeGoogleButton.mockClear();
+
+      (component as any).renderGoogleButton();
+      expect(mockGoogleAuthService.initializeGoogleButton).not.toHaveBeenCalled();
+
+      // Simulate google object loading asynchronously
+      (globalThis as any).google = { accounts: {} };
+
+      vi.advanceTimersByTime(200);
+
       expect(mockGoogleAuthService.initializeGoogleButton).toHaveBeenCalledWith(
         'googleBtn',
         '362890069300-870q1d3b9nj16i0j19gco6npvcma1hpr.apps.googleusercontent.com'
@@ -107,7 +128,8 @@ describe('LoginComponent', () => {
   });
 
   describe('Constructor effect (Modal pending google user)', () => {
-    it('should lock body scroll and focus input when pendingGoogleUser is present', async () => {
+    it('should lock body scroll and call focusUsernameInput when pendingGoogleUser is set', () => {
+      vi.useFakeTimers();
       const focusInputSpy = vi.spyOn(component as any, 'focusUsernameInput');
 
       pendingGoogleUserSignal.set({
@@ -122,6 +144,19 @@ describe('LoginComponent', () => {
       expect(focusInputSpy).toHaveBeenCalled();
     });
 
+    it('should focus the username input element after timer delay', () => {
+      vi.useFakeTimers();
+      const inputEl = document.createElement('input');
+      const focusSpy = vi.spyOn(inputEl, 'focus');
+      component.usernameInputRef = new ElementRef(inputEl);
+
+      (component as any).focusUsernameInput();
+
+      expect(focusSpy).not.toHaveBeenCalled();
+      vi.advanceTimersByTime(50);
+      expect(focusSpy).toHaveBeenCalled();
+    });
+
     it('should restore body scroll when pendingGoogleUser is null', () => {
       mockGoogleAuthService.pendingGoogleUser.set(null);
       TestBed.flushEffects();
@@ -131,8 +166,8 @@ describe('LoginComponent', () => {
     });
   });
 
-  describe('handleKeyboardEvent', () => {
-    it('should do nothing if pendingGoogleUser is null', () => {
+  describe('handleKeyboardEvent (Focus Trap & Keyboard Shortcuts)', () => {
+    it('should do nothing on keydown if pendingGoogleUser is null', () => {
       const cancelSpy = vi.spyOn(component, 'cancelGoogleModal');
       const event = new KeyboardEvent('keydown', { key: 'Escape' });
 
@@ -141,7 +176,7 @@ describe('LoginComponent', () => {
       expect(cancelSpy).not.toHaveBeenCalled();
     });
 
-    it('should cancel modal on Escape key press', () => {
+    it('should cancel modal on Escape key press when modal is active', () => {
       pendingGoogleUserSignal.set({ registered: false });
       const cancelSpy = vi.spyOn(component, 'cancelGoogleModal');
       const event = new KeyboardEvent('keydown', { key: 'Escape' });
@@ -151,7 +186,7 @@ describe('LoginComponent', () => {
       expect(cancelSpy).toHaveBeenCalled();
     });
 
-    it('should navigate focus trap forward with Tab key', () => {
+    it('should cycle focus forward with Tab key', () => {
       pendingGoogleUserSignal.set({ registered: false });
 
       const inputEl = document.createElement('input');
@@ -162,7 +197,8 @@ describe('LoginComponent', () => {
       component.cancelBtnRef = new ElementRef(cancelEl);
       component.completeBtnRef = new ElementRef(completeEl);
 
-      vi.spyOn(document, 'activeElement', 'get').mockReturnValue(cancelEl);
+      const activeElementSpy = vi.spyOn(document, 'activeElement', 'get').mockReturnValue(cancelEl);
+      const completeFocusSpy = vi.spyOn(completeEl, 'focus');
 
       const event = new KeyboardEvent('keydown', { key: 'Tab', shiftKey: false });
       const preventDefaultSpy = vi.spyOn(event, 'preventDefault');
@@ -170,17 +206,18 @@ describe('LoginComponent', () => {
       component.handleKeyboardEvent(event);
 
       expect(preventDefaultSpy).toHaveBeenCalled();
+      expect(completeFocusSpy).toHaveBeenCalled();
 
-      vi.spyOn(document, 'activeElement', 'get').mockReturnValue(completeEl);
+      // Test wrapping around from last element back to first element
+      activeElementSpy.mockReturnValue(completeEl);
       const inputFocusSpy = vi.spyOn(inputEl, 'focus');
 
       component.handleKeyboardEvent(event);
 
-      expect(preventDefaultSpy).toHaveBeenCalled();
       expect(inputFocusSpy).toHaveBeenCalled();
     });
 
-    it('should navigate focus trap backward with Shift+Tab key', () => {
+    it('should cycle focus backward with Shift+Tab key', () => {
       pendingGoogleUserSignal.set({ registered: false });
 
       const inputEl = document.createElement('input');
@@ -205,7 +242,7 @@ describe('LoginComponent', () => {
   });
 
   describe('cancelGoogleModal', () => {
-    it('should reset body overflow and cancel Google registration', () => {
+    it('should reset body overflow and call Google cancel registration', () => {
       document.body.style.overflow = 'hidden';
 
       component.cancelGoogleModal();
@@ -216,6 +253,16 @@ describe('LoginComponent', () => {
   });
 
   describe('onSubmit', () => {
+    it('should not trigger login if form values are empty', () => {
+      component.usernameOrEmail.set('');
+      component.password.set('');
+
+      component.onSubmit();
+
+      expect(mockAuthService.login).not.toHaveBeenCalled();
+      expect(component.isLoading()).toBe(false);
+    });
+
     it('should perform successful login, show toast, and navigate to home', () => {
       component.usernameOrEmail.set('mario');
       component.password.set('password123');
@@ -247,6 +294,29 @@ describe('LoginComponent', () => {
       );
 
       expect(router.navigate).toHaveBeenCalledWith(['/']);
+    });
+
+    it('should handle fallback username in toast when res.username is undefined', () => {
+      component.usernameOrEmail.set('mario');
+      component.password.set('password123');
+
+      const mockLoginResponseNoUsername: LoginResponse = {
+        accessToken: 'mock-access-token',
+        tokenType: 'Bearer',
+        id: '1',
+        username: '',
+        email: 'mario@example.com',
+        role: 'USER',
+      };
+
+      mockAuthService.login.mockReturnValue(of(mockLoginResponseNoUsername));
+
+      component.onSubmit();
+
+      expect(mockToastService.show).toHaveBeenCalledWith(
+        'Bentornato, giocatore!',
+        { classname: 'bg-success text-white' }
+      );
     });
 
     it('should handle 401 Unauthorized error', () => {
