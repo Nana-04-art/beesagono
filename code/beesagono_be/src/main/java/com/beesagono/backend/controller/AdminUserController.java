@@ -31,33 +31,38 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/admin/users")
 @RequiredArgsConstructor
 @PreAuthorize("hasRole('ADMIN')")
-@Tag(name = "Admin Users Controller", description = "Administrative endpoints for user management")
+@Tag(name = "Admin Users Controller", description = "Administrative endpoints for user management and admin creation")
 public class AdminUserController {
 
     private final AdminService adminService;
 
-    @Operation(summary = "Retrieve paginated list of users", description = "Fetches a paginated list of registered users with optional search filtering by username or email. Requires ADMIN role.")
+    @Operation(summary = "Get paginated user list", description = "Retrieves a paginated list of registered users with an optional search filter for username or email.")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Users page retrieved successfully", content = @Content(mediaType = "application/json", schema = @Schema(implementation = Page.class))),
-            @ApiResponse(responseCode = "401", description = "Unauthorized - Missing or invalid JWT token", content = @Content),
-            @ApiResponse(responseCode = "403", description = "Forbidden - Requires ADMIN role", content = @Content)
+            @ApiResponse(responseCode = "200", description = "User list retrieved successfully", content = @Content(mediaType = "application/json", schema = @Schema(implementation = Page.class))),
+            @ApiResponse(responseCode = "400", description = "Invalid pagination parameters", content = @Content),
+            @ApiResponse(responseCode = "401", description = "Unauthorized user", content = @Content),
+            @ApiResponse(responseCode = "403", description = "Access denied - ADMIN role required", content = @Content),
+            @ApiResponse(responseCode = "500", description = "Internal server error while retrieving users", content = @Content)
     })
     @GetMapping
     public ResponseEntity<Page<UserResponse>> getUsers(
-            @Parameter(description = "Optional search query to filter users by username or email") @RequestParam(required = false) String search,
-            @Parameter(description = "Pagination and sorting parameter (e.g., page=0, size=20, sort=username,asc)") @PageableDefault(size = 20, sort = "username", direction = Sort.Direction.ASC) Pageable pageable) {
+            @Parameter(description = "Optional search term to filter users by username or email", example = "john") @RequestParam(required = false) String search,
+            @Parameter(description = "Pagination and sorting parameters (page, size, sort)") Pageable pageable) {
         return ResponseEntity.ok(adminService.getUsers(search, pageable));
     }
 
-    @Operation(summary = "Create a new admin user", description = "Registers a new administrative user with elevated privileges. Requires ADMIN role.")
+    @Operation(summary = "Create a new administrator user", description = "Registers a new user account with administrative privileges.")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "201", description = "Admin user created successfully", content = @Content(mediaType = "application/json", schema = @Schema(implementation = UserResponse.class))),
-            @ApiResponse(responseCode = "400", description = "Bad Request - Validation failure or user/email already exists", content = @Content),
-            @ApiResponse(responseCode = "401", description = "Unauthorized - Missing or invalid JWT token", content = @Content),
-            @ApiResponse(responseCode = "403", description = "Forbidden - Requires ADMIN role", content = @Content)
+            @ApiResponse(responseCode = "201", description = "Administrator created successfully", content = @Content(mediaType = "application/json", schema = @Schema(implementation = UserResponse.class))),
+            @ApiResponse(responseCode = "400", description = "Invalid request payload or validation failure", content = @Content),
+            @ApiResponse(responseCode = "401", description = "Unauthorized user", content = @Content),
+            @ApiResponse(responseCode = "403", description = "Access denied - ADMIN role required", content = @Content),
+            @ApiResponse(responseCode = "409", description = "Username or email is already in use", content = @Content),
+            @ApiResponse(responseCode = "500", description = "Internal server error during admin creation", content = @Content)
     })
     @PostMapping
-    public ResponseEntity<UserResponse> createAdmin(@Valid @RequestBody CreateAdminRequest request) {
+    public ResponseEntity<UserResponse> createAdmin(
+            @Valid @RequestBody CreateAdminRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(adminService.createAdmin(request));
     }
 }
