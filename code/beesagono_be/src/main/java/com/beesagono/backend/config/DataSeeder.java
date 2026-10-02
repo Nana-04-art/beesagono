@@ -112,7 +112,7 @@ public class DataSeeder implements ApplicationRunner {
 
             User savedAdmin = userRepository.save(admin);
 
-            // Assegnazione ruolo ADMIN
+            // ADMIN role assignment
             UserRoleId adminRoleId = new UserRoleId(savedAdmin.getId(), adminRole.getId());
             UserRole adminUserRole = UserRole.builder()
                     .id(adminRoleId)
@@ -121,7 +121,7 @@ public class DataSeeder implements ApplicationRunner {
                     .build();
             userRoleRepository.save(adminUserRole);
 
-            // Assegnazione ruolo USER
+            // USER role assignment
             UserRoleId userRoleId = new UserRoleId(savedAdmin.getId(), userRole.getId());
             UserRole userUserRole = UserRole.builder()
                     .id(userRoleId)

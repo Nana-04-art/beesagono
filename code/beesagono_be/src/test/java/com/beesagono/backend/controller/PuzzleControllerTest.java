@@ -3,7 +3,6 @@ package com.beesagono.backend.controller;
 import com.beesagono.backend.dto.puzzle.DailyPuzzleResponse;
 import com.beesagono.backend.entity.User;
 import com.beesagono.backend.repository.UserRepository;
-import com.beesagono.backend.security.GlobalExceptionHandler;
 import com.beesagono.backend.security.JwtAuthenticationFilter;
 import com.beesagono.backend.security.JwtUtils;
 import com.beesagono.backend.security.TokenBlacklist;
@@ -19,7 +18,6 @@ import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Import;
 import org.springframework.core.MethodParameter;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -48,7 +46,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(PuzzleController.class)
-@Import({ GlobalExceptionHandler.class, PuzzleControllerTest.TestConfig.class })
 @AutoConfigureMockMvc(addFilters = false)
 class PuzzleControllerTest {
 
