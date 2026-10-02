@@ -5,10 +5,15 @@ import com.beesagono.backend.dto.dictionary.BatchAddWordRequest;
 import com.beesagono.backend.dto.dictionary.BatchUploadResponse;
 import com.beesagono.backend.dto.dictionary.DictionaryFilterRequest;
 import com.beesagono.backend.dto.dictionary.DictionaryWordResponse;
+import com.beesagono.backend.dto.dictionary.WordValidationResponse;
+import com.beesagono.backend.entity.DailyPuzzle;
 import com.beesagono.backend.entity.DictionaryWord;
+import com.beesagono.backend.entity.PuzzleWord;
 import com.beesagono.backend.entity.User;
 import com.beesagono.backend.mapper.DictionaryWordMapper;
+import com.beesagono.backend.repository.DailyPuzzleRepository;
 import com.beesagono.backend.repository.DictionaryWordRepository;
+import com.beesagono.backend.repository.PuzzleWordRepository;
 import com.beesagono.backend.specification.DictionaryWordSpecification;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -24,10 +29,12 @@ import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.text.Normalizer;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -36,7 +43,10 @@ import java.util.stream.Collectors;
 public class DictionaryServiceImpl implements DictionaryService {
 
     private final DictionaryWordRepository dictionaryWordRepository;
+    private final DailyPuzzleRepository dailyPuzzleRepository;
+    private final PuzzleWordRepository puzzleWordRepository;
     private final DictionaryWordMapper dictionaryWordMapper;
+    private final ScoringService scoringService;
 
     @Override
     @Transactional
@@ -192,4 +202,70 @@ public class DictionaryServiceImpl implements DictionaryService {
         }
         return mask;
     }
+
+    @Override
+    @Transactional(readOnly = true)
+    public WordValidationResponse validateWordForGuest(String puzzleDate, String rawWord) {
+        if (rawWord == null || rawWord.isBlank()) {
+            return WordValidationResponse.builder()
+                    .word(rawWord)
+                    .valid(false)
+                    .errorCode("TOO_SHORT")
+                    .errorMessage("La parola non può essere vuota.")
+                    .build();
+        }
+
+        String word = rawWord.trim().toUpperCase();
+        LocalDate date = LocalDate.parse(puzzleDate);
+
+        // Fetch DailyPuzzle for the specified date
+        DailyPuzzle puzzle = dailyPuzzleRepository.findByPuzzleDate(date)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Puzzle non trovato per la data: " + puzzleDate));
+
+        // Syntax check: minimum length (4 letters)
+        if (word.length() < 4) {
+            return WordValidationResponse.builder()
+                    .word(word)
+                    .valid(false)
+                    .errorCode("TOO_SHORT")
+                    .errorMessage("La parola deve contenere almeno 4 lettere.")
+                    .build();
+        }
+
+        // Check for mandatory center letter
+        if (!word.contains(puzzle.getCenterLetter())) {
+            return WordValidationResponse.builder()
+                    .word(word)
+                    .valid(false)
+                    .errorCode("MISSING_CENTER")
+                    .errorMessage("La parola non contiene la lettera centrale obbligatoria.")
+                    .build();
+        }
+
+        // Verify solution in DB via PuzzleWordRepository
+        Optional<PuzzleWord> puzzleWordOpt = puzzleWordRepository.findByIdPuzzleIdAndIdWord(puzzle.getId(), word);
+
+        if (puzzleWordOpt.isEmpty()) {
+            return WordValidationResponse.builder()
+                    .word(word)
+                    .valid(false)
+                    .errorCode("NOT_IN_DICTIONARY")
+                    .errorMessage("La parola non è presente nel dizionario ufficiale.")
+                    .build();
+        }
+
+        // Valid word: extract pangram flag and calculate score
+        PuzzleWord pw = puzzleWordOpt.get();
+        boolean isMielegramma = Boolean.TRUE.equals(pw.getIsMielegramma());
+        int points = scoringService.calculateWordScore(word, isMielegramma);
+
+        return WordValidationResponse.builder()
+                .word(word)
+                .valid(true)
+                .pointsEarned(points)
+                .isMielegramma(isMielegramma)
+                .build();
+    }
+
 }
