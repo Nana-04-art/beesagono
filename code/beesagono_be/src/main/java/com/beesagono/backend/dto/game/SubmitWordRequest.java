@@ -6,6 +6,9 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+/**
+ * Data Transfer Object representing a player's request payload when attempting to submit a word within an active game session.
+ */
 @Data
 @Builder 
 @NoArgsConstructor

@@ -17,8 +17,11 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
-import lombok.experimental.SuperBuilder;
 
+/**
+ * Entity storing aggregated career statistics, current streak counters, total
+ * overall score, and high-level milestones for a player across all seasons.
+ */
 @Getter
 @Setter
 @NoArgsConstructor
@@ -27,7 +30,7 @@ import lombok.experimental.SuperBuilder;
 @EqualsAndHashCode(onlyExplicitlyIncluded = true)
 @Entity
 @Table(name = "player_stats")
-@SuperBuilder
+@Builder
 public class PlayerStats {
 
     @Id
@@ -38,7 +41,7 @@ public class PlayerStats {
 
     @OneToOne(fetch = FetchType.LAZY)
     @MapsId
-    @JoinColumn(name = "user_id", insertable = false, updatable = false)
+    @JoinColumn(name = "user_id")
     private User user;
 
     @Builder.Default
@@ -67,4 +70,16 @@ public class PlayerStats {
 
     @Column(name = "last_played_date")
     private LocalDate lastPlayedDate;
+
+    @Column(name = "last_streak_milestone_claimed")
+    private Integer lastStreakMilestoneClaimed;
+
+    @Column(name = "longest_word_found")
+    private String longestWordFound;
+
+    @Column(name = "total_score_earned")
+    private Integer totalScoreEarned; // Utilizzato per calcolare la media punti
+
+    @Column(name = "total_puzzles_completed")
+    private Integer totalPuzzlesCompleted; // Contatore alveari completati al 100%
 }

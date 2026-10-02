@@ -8,6 +8,9 @@ import lombok.NoArgsConstructor;
 
 import java.util.List;
 
+/**
+ * Data Transfer Object representing a bulk synchronization request for offline or local game sessions.
+ */
 @Data
 @Builder
 @NoArgsConstructor

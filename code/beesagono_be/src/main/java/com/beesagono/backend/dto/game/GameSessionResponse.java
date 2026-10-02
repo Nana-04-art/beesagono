@@ -8,6 +8,9 @@ import lombok.NoArgsConstructor;
 import java.util.Date;
 import java.util.Set;
 
+/**
+ * Data Transfer Object representing detailed state information for a player's current or past game session.
+ */
 @Data
 @Builder
 @NoArgsConstructor
