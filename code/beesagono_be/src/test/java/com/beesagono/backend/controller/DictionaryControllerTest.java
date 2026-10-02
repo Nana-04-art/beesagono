@@ -107,9 +107,9 @@ class DictionaryControllerTest {
         }
     }
 
-    @TestConfiguration 
+    @TestConfiguration
     static class TestConfig {
-        @Bean 
+        @Bean
         public ObjectMapper objectMapper() {
             return new ObjectMapper();
         }
