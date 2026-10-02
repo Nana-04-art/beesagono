@@ -38,11 +38,12 @@ public class PlayerSeasonServiceImpl implements PlayerSeasonService {
     private final UserRepository userRepository;
     private final ScoringService scoringService;
 
-    // Target annuale di punti stimato per la percentuale di CareerTier
-    private static final int ANNUAL_TARGET_POINTS = 5000;
+    // Estimated annual points target for calculating the percentage of
+    // CareerTier
+    private static final int ANNUAL_TARGET_POINTS = 80000;
 
     @Override
-    @Transactional(readOnly = true)
+    @Transactional
     public PlayerSeasonResponse getCurrentSeasonStats(String userId) {
         int currentYear = LocalDate.now().getYear();
 
