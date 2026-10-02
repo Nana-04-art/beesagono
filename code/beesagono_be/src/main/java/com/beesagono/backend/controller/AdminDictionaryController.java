@@ -50,7 +50,7 @@ import java.util.List;
 @RequestMapping("/api/admin/dictionary")
 @RequiredArgsConstructor
 @PreAuthorize("hasRole('ADMIN')")
-@Tag(name = "Admin Dictionary Management", description = "Endpoints for managing global dictionary entries, batch imports, file uploads, and invalid attempt statistics")
+@Tag(name = "Admin Dictionary Controller", description = "Administrative endpoints for managing dictionary entries, batch imports, and invalid word attempts")
 @SecurityRequirement(name = "bearerAuth")
 public class AdminDictionaryController {
 

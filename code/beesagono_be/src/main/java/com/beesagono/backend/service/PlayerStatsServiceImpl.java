@@ -2,8 +2,11 @@ package com.beesagono.backend.service;
 
 import com.beesagono.backend.dto.stats.PlayerStatsResponse;
 import com.beesagono.backend.entity.PlayerStats;
+import com.beesagono.backend.entity.User;
 import com.beesagono.backend.repository.GameSessionRepository;
 import com.beesagono.backend.repository.PlayerStatsRepository;
+import com.beesagono.backend.repository.UserRepository;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,29 +20,14 @@ public class PlayerStatsServiceImpl implements PlayerStatsService {
 
     private final PlayerStatsRepository playerStatsRepository;
     private final GameSessionRepository gameSessionRepository;
+    private final UserRepository userRepository;
 
     @Override
     @Transactional
     public PlayerStatsResponse getPlayerStats(String userId) {
-        PlayerStats stats = playerStatsRepository.findById(userId)
-                .orElseGet(() -> PlayerStats.builder()
-                        .userId(userId)
-                        .gamesPlayed(0)
-                        .gamesCompleted(0)
-                        .currentStreak(0)
-                        .maxStreak(0)
-                        .totalScoreEarned(0)
-                        .build());
+        PlayerStats stats = getOrCreatePlayerStats(userId);
 
-        // Recalculates the streak on the fly whenever stats are requested
-        int calculatedStreak = calculateCurrentStreak(userId);
-        stats.setCurrentStreak(calculatedStreak);
-
-        int maxStreak = stats.getMaxStreak() != null ? stats.getMaxStreak() : 0;
-        if (calculatedStreak > maxStreak) {
-            stats.setMaxStreak(calculatedStreak);
-        }
-
+        refreshStreak(stats, userId);
         playerStatsRepository.save(stats);
 
         return mapToResponse(stats);
@@ -48,15 +36,7 @@ public class PlayerStatsServiceImpl implements PlayerStatsService {
     @Override
     @Transactional
     public void updatePlayerStatsAfterGame(String userId, int gameScore, String bestWordFound, boolean isCompleted) {
-        PlayerStats stats = playerStatsRepository.findById(userId)
-                .orElseGet(() -> PlayerStats.builder()
-                        .userId(userId)
-                        .gamesPlayed(0)
-                        .gamesCompleted(0)
-                        .currentStreak(0)
-                        .maxStreak(0)
-                        .totalScoreEarned(0)
-                        .build());
+        PlayerStats stats = getOrCreatePlayerStats(userId);
 
         int gamesPlayed = (stats.getGamesPlayed() != null ? stats.getGamesPlayed() : 0) + 1;
         stats.setGamesPlayed(gamesPlayed);
@@ -65,7 +45,8 @@ public class PlayerStatsServiceImpl implements PlayerStatsService {
         stats.setTotalScoreEarned(currentTotalScore + gameScore);
 
         if (isCompleted) {
-            stats.setGamesCompleted((stats.getGamesCompleted() != null ? stats.getGamesCompleted() : 0) + 1);
+            int gamesCompleted = (stats.getGamesCompleted() != null ? stats.getGamesCompleted() : 0) + 1;
+            stats.setGamesCompleted(gamesCompleted);
         }
 
         if (bestWordFound != null) {
@@ -75,17 +56,11 @@ public class PlayerStatsServiceImpl implements PlayerStatsService {
             }
         }
 
-        // Dynamic Streak Recalculation
-        int calculatedStreak = calculateCurrentStreak(userId);
-        stats.setCurrentStreak(calculatedStreak);
-
-        int maxStreak = stats.getMaxStreak() != null ? stats.getMaxStreak() : 0;
-        if (calculatedStreak > maxStreak) {
-            stats.setMaxStreak(calculatedStreak);
-        }
-
+        refreshStreak(stats, userId);
         playerStatsRepository.save(stats);
     }
+
+    // -- Private Helper Methods --
 
     /**
      * Calculates the streak of consecutive days based on the dates of played
@@ -149,5 +124,30 @@ public class PlayerStatsServiceImpl implements PlayerStatsService {
                 .averageScorePerGame(Math.round(averageScore * 100.0) / 100.0)
                 .completionRate(Math.round(completionRate * 100.0) / 100.0)
                 .build();
+    }
+
+    private PlayerStats getOrCreatePlayerStats(String userId) {
+        return playerStatsRepository.findById(userId)
+                .orElseGet(() -> {
+                    User userReference = userRepository.getReferenceById(userId);
+                    return PlayerStats.builder()
+                            .user(userReference)
+                            .gamesPlayed(0)
+                            .gamesCompleted(0)
+                            .currentStreak(0)
+                            .maxStreak(0)
+                            .totalScoreEarned(0)
+                            .build();
+                });
+    }
+
+    private void refreshStreak(PlayerStats stats, String userId) {
+        int calculatedStreak = calculateCurrentStreak(userId);
+        stats.setCurrentStreak(calculatedStreak);
+
+        int maxStreak = stats.getMaxStreak() != null ? stats.getMaxStreak() : 0;
+        if (calculatedStreak > maxStreak) {
+            stats.setMaxStreak(calculatedStreak);
+        }
     }
 }

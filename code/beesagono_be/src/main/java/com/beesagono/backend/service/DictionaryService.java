@@ -53,5 +53,13 @@ public interface DictionaryService {
      */
     Page<DictionaryWordResponse> getWords(DictionaryFilterRequest filterRequest, Pageable pageable);
 
+    /**
+     * Validates whether a given word is valid for a specific daily puzzle without
+     * requiring user authentication.
+     *
+     * @param puzzleDate target puzzle date string in standard ISO format (e.g. YYYY-MM-DD)
+     * @param rawWord    raw input word string submitted by the guest user
+     * @return {@link WordValidationResponse} detailing validity status, score, and error reason if invalid
+     */
     WordValidationResponse validateWordForGuest(String puzzleDate, String rawWord);
 }
