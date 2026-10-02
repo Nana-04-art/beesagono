@@ -2,8 +2,10 @@ package com.beesagono.backend.service;
 
 import com.beesagono.backend.dto.stats.PlayerStatsResponse;
 import com.beesagono.backend.entity.PlayerStats;
+import com.beesagono.backend.entity.User;
 import com.beesagono.backend.repository.GameSessionRepository;
 import com.beesagono.backend.repository.PlayerStatsRepository;
+import com.beesagono.backend.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -33,6 +35,9 @@ class PlayerStatsServiceImplTest {
 
     @Mock
     private GameSessionRepository gameSessionRepository;
+
+    @Mock
+    private UserRepository userRepository;
 
     @InjectMocks
     private PlayerStatsServiceImpl playerStatsService;
@@ -89,7 +94,10 @@ class PlayerStatsServiceImplTest {
         @Test
         @DisplayName("Should create initial default stats for new user")
         void shouldCreateInitialStatsWhenUserNotFoundOnGetPlayerStats() {
+            User mockUser = User.builder().id(userId).username("testuser").build();
+
             when(playerStatsRepository.findById(userId)).thenReturn(Optional.empty());
+            when(userRepository.getReferenceById(userId)).thenReturn(mockUser);
             when(gameSessionRepository.findDistinctPlayedPuzzleDatesByUserId(userId))
                     .thenReturn(Collections.emptyList());
             when(playerStatsRepository.save(any(PlayerStats.class)))

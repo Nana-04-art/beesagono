@@ -131,6 +131,7 @@ public class PlayerStatsServiceImpl implements PlayerStatsService {
                 .orElseGet(() -> {
                     User userReference = userRepository.getReferenceById(userId);
                     return PlayerStats.builder()
+                            .userId(userId)
                             .user(userReference)
                             .gamesPlayed(0)
                             .gamesCompleted(0)
