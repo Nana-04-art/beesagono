@@ -38,18 +38,21 @@ public class PlayerSeasonServiceImpl implements PlayerSeasonService {
     private final UserRepository userRepository;
     private final ScoringService scoringService;
 
-    // Target annuale di punti stimato per la percentuale di CareerTier
-    private static final int ANNUAL_TARGET_POINTS = 5000;
+    // Estimated annual points target for calculating the percentage of
+    // CareerTier
+    private static final int ANNUAL_TARGET_POINTS = 80000;
 
     @Override
-    @Transactional(readOnly = true)
+    @Transactional
     public PlayerSeasonResponse getCurrentSeasonStats(String userId) {
         int currentYear = LocalDate.now().getYear();
 
         PlayerSeason season = playerSeasonRepository.findByIdUserIdAndIdSeasonYear(userId, currentYear)
                 .orElseGet(() -> createInitialSeason(userId, currentYear));
 
-        return mapToResponse(season);
+        PlayerStats stats = playerStatsRepository.findById(userId).orElse(null);
+
+        return mapToResponse(season, stats);
     }
 
     @Override
@@ -98,8 +101,9 @@ public class PlayerSeasonServiceImpl implements PlayerSeasonService {
     @Override
     @Transactional(readOnly = true)
     public List<PlayerSeasonResponse> getPlayerSeasonHistory(String userId) {
+        PlayerStats stats = playerStatsRepository.findById(userId).orElse(null);
         return playerSeasonRepository.findByUserId(userId).stream()
-                .map(this::mapToResponse)
+                .map(season -> mapToResponse(season, stats))
                 .collect(Collectors.toList());
     }
 
@@ -173,10 +177,21 @@ public class PlayerSeasonServiceImpl implements PlayerSeasonService {
         return playerSeasonRepository.save(season);
     }
 
-    private PlayerSeasonResponse mapToResponse(PlayerSeason season) {
+    private PlayerSeasonResponse mapToResponse(PlayerSeason season, PlayerStats stats) {
+        // We safely handle both the case where stats is null and any
+        // null values ​​in the fields.
+        int gamesPlayed = (stats != null && stats.getGamesPlayed() != null) ? stats.getGamesPlayed() : 0;
+        int gamesCompleted = (stats != null && stats.getGamesCompleted() != null) ? stats.getGamesCompleted() : 0;
+        int currentStreak = (stats != null && stats.getCurrentStreak() != null) ? stats.getCurrentStreak() : 0;
+        int maxStreak = (stats != null && stats.getMaxStreak() != null) ? stats.getMaxStreak() : 0;
+
         return PlayerSeasonResponse.builder()
                 .year(season.getId() != null ? season.getId().getSeasonYear() : null)
                 .highestTierAchieved(season.getHighestTierAchieved())
+                .gamesPlayed(gamesPlayed)
+                .gamesCompleted(gamesCompleted)
+                .currentStreak(currentStreak)
+                .maxStreak(maxStreak)
                 .basePoints(season.getBasePoints())
                 .bonusPoints(season.getBonusPoints())
                 .totalPoints(season.getTotalPoints())

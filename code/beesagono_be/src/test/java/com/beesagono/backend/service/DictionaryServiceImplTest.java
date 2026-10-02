@@ -5,10 +5,15 @@ import com.beesagono.backend.dto.dictionary.BatchAddWordRequest;
 import com.beesagono.backend.dto.dictionary.BatchUploadResponse;
 import com.beesagono.backend.dto.dictionary.DictionaryFilterRequest;
 import com.beesagono.backend.dto.dictionary.DictionaryWordResponse;
+import com.beesagono.backend.dto.dictionary.WordValidationResponse;
+import com.beesagono.backend.entity.DailyPuzzle;
 import com.beesagono.backend.entity.DictionaryWord;
+import com.beesagono.backend.entity.PuzzleWord;
 import com.beesagono.backend.entity.User;
 import com.beesagono.backend.mapper.DictionaryWordMapper;
+import com.beesagono.backend.repository.DailyPuzzleRepository;
 import com.beesagono.backend.repository.DictionaryWordRepository;
+import com.beesagono.backend.repository.PuzzleWordRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -24,17 +29,19 @@ import org.springframework.http.HttpStatus;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.LocalDate;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.when;
-import static org.mockito.Mockito.eq;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class DictionaryServiceImplTest {
@@ -43,7 +50,16 @@ class DictionaryServiceImplTest {
     private DictionaryWordRepository dictionaryWordRepository;
 
     @Mock
+    private DailyPuzzleRepository dailyPuzzleRepository;
+
+    @Mock
+    private PuzzleWordRepository puzzleWordRepository;
+
+    @Mock
     private DictionaryWordMapper dictionaryWordMapper;
+
+    @Mock
+    private ScoringService scoringService;
 
     @InjectMocks
     private DictionaryServiceImpl dictionaryService;
@@ -185,6 +201,132 @@ class DictionaryServiceImplTest {
         assertThat(result.getContent().get(0).getWord()).isEqualTo("CASA");
     }
 
+    // --- validateWordForGuest Tests ---
+
+    @Test
+    @DisplayName("validateWordForGuest - Success")
+    void validateWordForGuest_Success() {
+        String puzzleDateStr = "2026-10-02";
+        LocalDate puzzleDate = LocalDate.parse(puzzleDateStr);
+        String rawWord = "casa";
+        String cleanWord = "CASA";
+
+        DailyPuzzle puzzle = DailyPuzzle.builder()
+                .id("puzzle-1")
+                .puzzleDate(puzzleDate)
+                .centerLetter("A")
+                .build();
+
+        PuzzleWord puzzleWord = PuzzleWord.builder()
+                .isMielegramma(false)
+                .build();
+
+        when(dailyPuzzleRepository.findByPuzzleDate(puzzleDate)).thenReturn(Optional.of(puzzle));
+        when(puzzleWordRepository.findByIdPuzzleIdAndIdWord("puzzle-1", cleanWord)).thenReturn(Optional.of(puzzleWord));
+        when(scoringService.calculateWordScore(cleanWord, false)).thenReturn(1);
+
+        WordValidationResponse response = dictionaryService.validateWordForGuest(puzzleDateStr, rawWord);
+
+        assertThat(response).isNotNull();
+        assertThat(response.isValid()).isTrue();
+        assertThat(response.getWord()).isEqualTo(cleanWord);
+        assertThat(response.getPointsEarned()).isEqualTo(1);
+        assertThat(response.isMielegramma()).isFalse();
+    }
+
+    @Test
+    @DisplayName("validateWordForGuest - Empty or null word returns TOO_SHORT error")
+    void validateWordForGuest_EmptyWord() {
+        WordValidationResponse response = dictionaryService.validateWordForGuest("2026-10-02", "   ");
+
+        assertThat(response).isNotNull();
+        assertThat(response.isValid()).isFalse();
+        assertThat(response.getErrorCode()).isEqualTo("TOO_SHORT");
+        assertThat(response.getErrorMessage()).contains("non può essere vuota");
+    }
+
+    @Test
+    @DisplayName("validateWordForGuest - Word shorter than 4 letters returns TOO_SHORT error")
+    void validateWordForGuest_WordTooShort() {
+        String puzzleDateStr = "2026-10-02";
+        LocalDate puzzleDate = LocalDate.parse(puzzleDateStr);
+
+        DailyPuzzle puzzle = DailyPuzzle.builder()
+                .id("puzzle-1")
+                .puzzleDate(puzzleDate)
+                .centerLetter("A")
+                .build();
+
+        when(dailyPuzzleRepository.findByPuzzleDate(puzzleDate)).thenReturn(Optional.of(puzzle));
+
+        WordValidationResponse response = dictionaryService.validateWordForGuest(puzzleDateStr, "sol");
+
+        assertThat(response).isNotNull();
+        assertThat(response.isValid()).isFalse();
+        assertThat(response.getErrorCode()).isEqualTo("TOO_SHORT");
+        assertThat(response.getErrorMessage()).contains("almeno 4 lettere");
+    }
+
+    @Test
+    @DisplayName("validateWordForGuest - Missing center letter returns MISSING_CENTER error")
+    void validateWordForGuest_MissingCenterLetter() {
+        String puzzleDateStr = "2026-10-02";
+        LocalDate puzzleDate = LocalDate.parse(puzzleDateStr);
+
+        DailyPuzzle puzzle = DailyPuzzle.builder()
+                .id("puzzle-1")
+                .puzzleDate(puzzleDate)
+                .centerLetter("Z")
+                .build();
+
+        when(dailyPuzzleRepository.findByPuzzleDate(puzzleDate)).thenReturn(Optional.of(puzzle));
+
+        WordValidationResponse response = dictionaryService.validateWordForGuest(puzzleDateStr, "casa");
+
+        assertThat(response).isNotNull();
+        assertThat(response.isValid()).isFalse();
+        assertThat(response.getErrorCode()).isEqualTo("MISSING_CENTER");
+        assertThat(response.getErrorMessage()).contains("lettera centrale obbligatoria");
+    }
+
+    @Test
+    @DisplayName("validateWordForGuest - Word not in puzzle dictionary returns NOT_IN_DICTIONARY error")
+    void validateWordForGuest_NotInDictionary() {
+        String puzzleDateStr = "2026-10-02";
+        LocalDate puzzleDate = LocalDate.parse(puzzleDateStr);
+
+        DailyPuzzle puzzle = DailyPuzzle.builder()
+                .id("puzzle-1")
+                .puzzleDate(puzzleDate)
+                .centerLetter("A")
+                .build();
+
+        when(dailyPuzzleRepository.findByPuzzleDate(puzzleDate)).thenReturn(Optional.of(puzzle));
+        when(puzzleWordRepository.findByIdPuzzleIdAndIdWord("puzzle-1", "CASA")).thenReturn(Optional.empty());
+
+        WordValidationResponse response = dictionaryService.validateWordForGuest(puzzleDateStr, "casa");
+
+        assertThat(response).isNotNull();
+        assertThat(response.isValid()).isFalse();
+        assertThat(response.getErrorCode()).isEqualTo("NOT_IN_DICTIONARY");
+        assertThat(response.getErrorMessage()).contains("dizionario ufficiale");
+    }
+
+    @Test
+    @DisplayName("validateWordForGuest - Throws 404 NOT_FOUND when puzzle is missing for date")
+    void validateWordForGuest_PuzzleNotFound() {
+        String puzzleDateStr = "2026-10-02";
+        LocalDate puzzleDate = LocalDate.parse(puzzleDateStr);
+
+        when(dailyPuzzleRepository.findByPuzzleDate(puzzleDate)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> dictionaryService.validateWordForGuest(puzzleDateStr, "casa"))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasMessageContaining("Puzzle non trovato")
+                .extracting(e -> ((ResponseStatusException) e).getStatusCode())
+                .isEqualTo(HttpStatus.NOT_FOUND);
+    }
+
     // --- Helper Methods ---
 
     private AddWordRequest createAddWordRequest(String word, Boolean isCandidatePangram) {
@@ -194,7 +336,8 @@ class DictionaryServiceImplTest {
         return request;
     }
 
-    private DictionaryWord createDictionaryWord(String word, int length, int uniqueLetters, boolean isPangram, User user) {
+    private DictionaryWord createDictionaryWord(String word, int length, int uniqueLetters, boolean isPangram,
+            User user) {
         return DictionaryWord.builder()
                 .word(word)
                 .wordLength(length)
@@ -204,7 +347,8 @@ class DictionaryServiceImplTest {
                 .build();
     }
 
-    private DictionaryWordResponse createDictionaryWordResponse(String word, int length, int uniqueLetters, boolean isPangram) {
+    private DictionaryWordResponse createDictionaryWordResponse(String word, int length, int uniqueLetters,
+            boolean isPangram) {
         return DictionaryWordResponse.builder()
                 .word(word)
                 .wordLength(length)
