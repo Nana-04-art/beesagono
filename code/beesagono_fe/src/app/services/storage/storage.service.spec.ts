@@ -2,7 +2,7 @@ import { TestBed } from '@angular/core/testing';
 import { signal } from '@angular/core';
 import { vi, describe, beforeEach, afterEach, it, expect } from 'vitest';
 import { StorageService } from './storage.service';
-import { GameState } from '../../models/game-state.model';
+import { GameState } from '../../models/game/game-state.model';
 
 export class MockThemeService {
   readonly currentTheme = signal<'light' | 'dark'>('light');

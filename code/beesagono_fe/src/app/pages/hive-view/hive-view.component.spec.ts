@@ -2,14 +2,17 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { HiveViewComponent } from './hive-view.component';
 import { GameService } from '../../services/game/game.service';
 import { WelcomeNoticeService } from '../../services/welcome-notice/welcome-notice.service';
+import { AuthService } from '../../services/auth/auth.service';
+import { ThemeService } from '../../services/theme/theme.service';
 import { describe, beforeEach, afterEach, it, expect, vi } from 'vitest';
 import { signal, NO_ERRORS_SCHEMA, WritableSignal } from '@angular/core';
-import { GameBoard } from '../../models/game-board.model';
-import { Cell } from '../../models/cell.model';
-import { ShareScorePayload } from '../../models/share-score.model';
-import { RankTier } from '../../models/rank.model';
-import { ValidationResult } from '../../models/validation.model';
-import { WordMapItem } from '../../models/word-map-item.model';
+import { provideRouter } from '@angular/router';
+import { GameBoard } from '../../models/game/game-board.model';
+import { Cell } from '../../models/game/cell.model';
+import { ShareScorePayload } from '../../models/game/share-score.model';
+import { RankTier } from '../../models/game/rank.model';
+import { ValidationResult } from '../../models/game/validation.model';
+import { WordMapItem } from '../../models/game/word-map-item.model';
 
 Object.defineProperty(window, 'matchMedia', {
     writable: true,
@@ -79,6 +82,8 @@ describe('HiveViewComponent', () => {
 
     let mockGameService: Partial<GameService>;
     let mockWelcomeNoticeService: Partial<WelcomeNoticeService>;
+    let mockAuthService: { currentUser: WritableSignal<{ username: string } | null>; isLoggedIn: WritableSignal<boolean>; logout: ReturnType<typeof vi.fn> };
+    let mockThemeService: { currentTheme: WritableSignal<'light' | 'dark'>; isDarkMode: ReturnType<typeof vi.fn>; toggleTheme: ReturnType<typeof vi.fn> };
 
     beforeEach(async () => {
         vi.useFakeTimers();
@@ -157,11 +162,26 @@ describe('HiveViewComponent', () => {
             dismissNotice: vi.fn()
         };
 
+        mockAuthService = {
+            currentUser: signal(null),
+            isLoggedIn: signal(false),
+            logout: vi.fn()
+        };
+
+        mockThemeService = {
+            currentTheme: signal('light'),
+            isDarkMode: vi.fn().mockReturnValue(false),
+            toggleTheme: vi.fn()
+        };
+
         await TestBed.configureTestingModule({
             imports: [HiveViewComponent],
             providers: [
+                provideRouter([]),
                 { provide: GameService, useValue: mockGameService },
-                { provide: WelcomeNoticeService, useValue: mockWelcomeNoticeService }
+                { provide: WelcomeNoticeService, useValue: mockWelcomeNoticeService },
+                { provide: AuthService, useValue: mockAuthService },
+                { provide: ThemeService, useValue: mockThemeService }
             ],
             schemas: [NO_ERRORS_SCHEMA]
         }).compileComponents();

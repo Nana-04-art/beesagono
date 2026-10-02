@@ -1,19 +1,19 @@
 import { Injectable, Signal, computed, effect, inject, signal } from '@angular/core';
-import { GameBoard } from '../../models/game-board.model';
-import { GameState } from '../../models/game-state.model';
-import { RankTier } from '../../models/rank.model';
-import { ValidationResult } from '../../models/validation.model';
-import { ShareScorePayload } from '../../models/share-score.model';
-import { Cell } from '../../models/cell.model';
+import { GameBoard } from '../../models/game/game-board.model'; 
+import { GameState } from '../../models/game/game-state.model'; 
+import { RankTier } from '../../models/game/rank.model';
+import { ValidationResult } from '../../models/game/validation.model';
+import { ShareScorePayload } from '../../models/game/share-score.model';
+import { Cell } from '../../models/game/cell.model'; 
 import { GAME_RULES } from '../../config/game-rules.config';
-import { getCenterLetter, getAvailableLetters } from '../../models/game-board.selectors';
+import { getCenterLetter, getAvailableLetters } from '../../models/game/game-board.selectors';
 import { DictionaryService } from '../dictionary/dictionary.service';
 import { PuzzleGeneratorService } from '../puzzle-generator/puzzle-generator.service';
 import { StorageService } from '../storage/storage.service';
 import { ScoreService } from '../score/score.service';
 import { StatsService } from '../stats/stats.service';
 import { RANK_TIERS } from '../../config/rank-tiers.config';
-import { WordMapItem } from '../../models/word-map-item.model';
+import { WordMapItem } from '../../models/game/word-map-item.model';
 
 export function getTodayIsoString(date = new Date()): string {
     const year = date.getFullYear();

@@ -1,6 +1,6 @@
 import { Injectable, signal, Signal } from '@angular/core';
 import { GAME_RULES } from '../../config/game-rules.config';
-import { RankTier } from '../../models/rank.model';
+import { RankTier } from '../../models/game/rank.model';
 import { RANK_TIERS } from '../../config/rank-tiers.config';
 
 @Injectable({
