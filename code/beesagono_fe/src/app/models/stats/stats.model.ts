@@ -25,12 +25,3 @@ export interface PlayerStats {
     seasonHistory: Record<number, SeasonStats>;
     dailyRankDistribution: Record<string, number>;
 }
-
-export interface GameStats {
-    gamesPlayed: number;
-    gamesWon: number; // Matches in which the maximum rank or a target threshold was reached
-    currentStreak: number;
-    maxStreak: number;
-    lastPlayedDate: string; // YYYY-MM-DD format
-    rankDistribution: Record<string, number>; // Es: { 'Iniziato': 2, 'Genio': 5 }
-}

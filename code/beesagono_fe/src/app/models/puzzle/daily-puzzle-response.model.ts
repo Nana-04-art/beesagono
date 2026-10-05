@@ -4,6 +4,6 @@ export interface DailyPuzzleResponse {
     centerLetter: string;
     outerLetters: string[];
     maxScore: number;
-    possibleWords?: string[];
+    validWords?: string[];
     mielegrammi?: string[];
 }
