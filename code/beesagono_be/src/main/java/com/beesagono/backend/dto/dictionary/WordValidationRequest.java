@@ -1,6 +1,4 @@
 package com.beesagono.backend.dto.dictionary;
-
-import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -13,7 +11,5 @@ import lombok.NoArgsConstructor;
 public class WordValidationRequest {
 
     private String puzzleDate;
-
-    @Size(min = 4, message = "La parola deve contenere almeno 4 lettere")
     private String word;
 }

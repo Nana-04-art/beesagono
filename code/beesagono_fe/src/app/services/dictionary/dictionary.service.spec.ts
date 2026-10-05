@@ -1,19 +1,32 @@
 import { TestBed } from '@angular/core/testing';
+import { provideHttpClient } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { vi, describe, beforeEach, afterEach, it, expect } from 'vitest';
 import { DictionaryService } from './dictionary.service';
+import { WordValidationRequest, WordValidationResponse } from '../../models/game/word-validation.model';
+import { environment } from '../../environments/environment';
 
 describe('DictionaryService', () => {
   let service: DictionaryService;
+  let httpMock: HttpTestingController;
+
+  const mockBaseUrl = `${environment.apiBaseUrl}/dictionary`;
 
   beforeEach(() => {
-    TestBed.resetTestingModule();
     TestBed.configureTestingModule({
-      providers: [DictionaryService],
+      providers: [
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        DictionaryService
+      ],
     });
+
     service = TestBed.inject(DictionaryService);
+    httpMock = TestBed.inject(HttpTestingController);
   });
 
   afterEach(() => {
+    httpMock.verify();
     vi.restoreAllMocks();
   });
 
@@ -21,87 +34,49 @@ describe('DictionaryService', () => {
     expect(service).toBeTruthy();
   });
 
-  it('should throw an error when getWordSet() is called before loadDictionary()', () => {
-    expect(() => service.getWordSet()).toThrowError(
-      'DictionaryService.getWordSet() chiamato prima del completamento di loadDictionary().'
-    );
-  });
+  describe('validateWord', () => {
+    it('should send a POST request with sanitized payload and return validation response', () => {
+      const puzzleDate = '2026-03-30';
+      const inputWord = '  miele  ';
+      const mockResponse: WordValidationResponse = {
+        word: 'MIELE',
+        valid: true,
+        pointsEarned: 5,
+        isMielegramma: false,
+        errorCode: '',
+        errorMessage: ''
+      };
 
-  it('should load dictionary, sanitize, uppercase, and deduplicate an array-based JSON response', async () => {
-    const rawMockData = [' miele ', 'Miele', 'APE', '123', 'bee-hive', '  vespa  '];
+      service.validateWord(puzzleDate, inputWord).subscribe((response) => {
+        expect(response).toEqual(mockResponse);
+      });
 
-    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
-      new Response(JSON.stringify(rawMockData), { status: 200 })
-    );
+      const req = httpMock.expectOne(`${mockBaseUrl}/validate`);
+      expect(req.request.method).toBe('POST');
 
-    const result = await service.loadDictionary();
+      // Verifica che la parola inviata al backend sia stata formattata (trimmed & uppercased)
+      const expectedPayload: WordValidationRequest = {
+        puzzleDate: '2026-03-30',
+        word: 'MIELE'
+      };
+      expect(req.request.body).toEqual(expectedPayload);
 
-    expect(result).toEqual(['MIELE', 'APE', 'VESPA']);
+      req.flush(mockResponse);
+    });
 
-    const wordSet = service.getWordSet();
-    expect(wordSet.size).toBe(3);
-    expect(wordSet.has('MIELE')).toBe(true);
-    expect(wordSet.has('APE')).toBe(true);
-    expect(wordSet.has('VESPA')).toBe(true);
-    expect(wordSet.has('123')).toBe(false);
-  });
+    it('should propagate error when HTTP request fails', () => {
+      const puzzleDate = '2026-03-30';
+      const word = 'APE';
 
-  it('should load dictionary when JSON response is an object with "words" property', async () => {
-    const rawMockData = { words: ['casa', 'CASA', 'albero'] };
+      service.validateWord(puzzleDate, word).subscribe({
+        next: () => expect.fail('Dovrebbe fallire con un errore HTTP'),
+        error: (error) => {
+          expect(error.status).toBe(500);
+        }
+      });
 
-    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
-      new Response(JSON.stringify(rawMockData), { status: 200 })
-    );
-
-    const result = await service.loadDictionary();
-
-    expect(result).toEqual(['CASA', 'ALBERO']);
-    expect(service.getWordSet().has('ALBERO')).toBe(true);
-  });
-
-  it('should cache fetch calls and return cached list on subsequent loadDictionary() calls', async () => {
-    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
-      new Response(JSON.stringify(['MIELE']), { status: 200 })
-    );
-
-    const firstCall = await service.loadDictionary();
-    const secondCall = await service.loadDictionary();
-
-    expect(firstCall).toBe(secondCall);
-    expect(fetchSpy).toHaveBeenCalledTimes(1);
-  });
-
-  it('should throw error on HTTP error response', async () => {
-    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
-      new Response(null, { status: 404 })
-    );
-
-    await expect(service.loadDictionary()).rejects.toThrowError(
-      'Impossibile caricare il dizionario (HTTP 404)'
-    );
-  });
-
-  it('should throw error on invalid JSON shape (neither array nor object with words)', async () => {
-    const invalidJson = { data: ['MIELE'] };
-
-    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
-      new Response(JSON.stringify(invalidJson), { status: 200 })
-    );
-
-    await expect(service.loadDictionary()).rejects.toThrowError(
-      'Il formato del dizionario non è valido (deve essere un array o un oggetto con chiave "words").'
-    );
-  });
-
-  it('should throw error if JSON contains no valid alphabetic words after sanitization', async () => {
-    const invalidData = ['123', '---', '  '];
-
-    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(
-      new Response(JSON.stringify(invalidData), { status: 200 })
-    );
-
-    await expect(service.loadDictionary()).rejects.toThrowError(
-      'Il file dictionary.json non contiene parole valide.'
-    );
+      const req = httpMock.expectOne(`${mockBaseUrl}/validate`);
+      req.flush('Internal Server Error', { status: 500, statusText: 'Server Error' });
+    });
   });
 });
