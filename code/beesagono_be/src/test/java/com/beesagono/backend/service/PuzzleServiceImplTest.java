@@ -32,110 +32,110 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class PuzzleServiceImplTest {
 
-    @Mock
-    private DailyPuzzleRepository dailyPuzzleRepository;
+        @Mock
+        private DailyPuzzleRepository dailyPuzzleRepository;
 
-    @Mock
-    private PuzzleWordRepository puzzleWordRepository;
+        @Mock
+        private PuzzleWordRepository puzzleWordRepository;
 
-    @Mock
-    private GameSessionRepository gameSessionRepository;
+        @Mock
+        private GameSessionRepository gameSessionRepository;
 
-    @Mock
-    private PuzzleGeneratorService puzzleGeneratorService;
+        @Mock
+        private PuzzleGeneratorService puzzleGeneratorService;
 
-    @Mock
-    private DailyPuzzleMapper dailyPuzzleMapper;
+        @Mock
+        private DailyPuzzleMapper dailyPuzzleMapper;
 
-    @Mock
-    private ScoringService scoringService;
+        @Mock
+        private ScoringService scoringService;
 
-    @InjectMocks
-    private PuzzleServiceImpl puzzleService;
+        @InjectMocks
+        private PuzzleServiceImpl puzzleService;
 
-    private DailyPuzzle samplePuzzle;
-    private DailyPuzzleResponse sampleResponse;
+        private DailyPuzzle samplePuzzle;
+        private DailyPuzzleResponse sampleResponse;
 
-    @BeforeEach
-    void setUp() {
-        LocalDate today = LocalDate.now();
-        samplePuzzle = DailyPuzzle.builder()
-                .id("puzzle-today")
-                .puzzleDate(today)
-                .centerLetter("A")
-                .build();
+        @BeforeEach
+        void setUp() {
+                LocalDate today = LocalDate.now();
+                samplePuzzle = DailyPuzzle.builder()
+                                .id("puzzle-today")
+                                .puzzleDate(today)
+                                .centerLetter("A")
+                                .build();
 
-        sampleResponse = DailyPuzzleResponse.builder()
-                .id("puzzle-today")
-                .puzzleDate(today)
-                .centerLetter("A")
-                .build();
-    }
-
-    // --- getTodayPuzzle ---
-    @Nested
-    @DisplayName("getTodayPuzzle - Puzzle Retrieval & Generation")
-    class GetTodayPuzzleTests {
-
-        @Test
-        @DisplayName("Should generate puzzle if missing and return mapped DTO")
-        void shouldGeneratePuzzleIfNotExistsAndReturnResponse() {
-            LocalDate today = LocalDate.now();
-
-            when(dailyPuzzleRepository.existsByPuzzleDate(today)).thenReturn(false);
-            when(dailyPuzzleRepository.findByPuzzleDate(today)).thenReturn(Optional.of(samplePuzzle));
-            when(dailyPuzzleMapper.toDailyPuzzleResponse(samplePuzzle)).thenReturn(sampleResponse);
-
-            DailyPuzzleResponse response = puzzleService.getTodayPuzzle();
-
-            verify(puzzleGeneratorService, times(1)).generateAndSavePuzzleForDate(today);
-            assertThat(response).isNotNull();
-            assertThat(response.getId()).isEqualTo("puzzle-today");
+                sampleResponse = DailyPuzzleResponse.builder()
+                                .id("puzzle-today")
+                                .puzzleDate(today)
+                                .centerLetter("A")
+                                .build();
         }
 
-        @Test
-        @DisplayName("Should use existing puzzle without triggering generation")
-        void shouldReturnExistingPuzzleWithoutGeneration() {
-            LocalDate today = LocalDate.now();
+        // --- getTodayPuzzle ---
+        @Nested
+        @DisplayName("getTodayPuzzle - Puzzle Retrieval & Generation")
+        class GetTodayPuzzleTests {
 
-            when(dailyPuzzleRepository.existsByPuzzleDate(today)).thenReturn(true);
-            when(dailyPuzzleRepository.findByPuzzleDate(today)).thenReturn(Optional.of(samplePuzzle));
-            when(dailyPuzzleMapper.toDailyPuzzleResponse(samplePuzzle)).thenReturn(sampleResponse);
+                @Test
+                @DisplayName("Should generate puzzle if missing and return mapped DTO")
+                void shouldGeneratePuzzleIfNotExistsAndReturnResponse() {
+                        LocalDate today = LocalDate.now();
 
-            DailyPuzzleResponse response = puzzleService.getTodayPuzzle();
+                        when(dailyPuzzleRepository.existsByPuzzleDate(today)).thenReturn(false);
+                        when(dailyPuzzleRepository.findByPuzzleDate(today)).thenReturn(Optional.of(samplePuzzle));
+                        when(dailyPuzzleMapper.toDailyPuzzleResponse(samplePuzzle)).thenReturn(sampleResponse);
 
-            verify(puzzleGeneratorService, never()).generateAndSavePuzzleForDate(any());
-            assertThat(response).isEqualTo(sampleResponse);
+                        DailyPuzzleResponse response = puzzleService.getTodayPuzzle();
+
+                        verify(puzzleGeneratorService, times(1)).generateAndSavePuzzleForDate(today);
+                        assertThat(response).isNotNull();
+                        assertThat(response.getId()).isEqualTo("puzzle-today");
+                }
+
+                @Test
+                @DisplayName("Should use existing puzzle without triggering generation")
+                void shouldReturnExistingPuzzleWithoutGeneration() {
+                        LocalDate today = LocalDate.now();
+
+                        when(dailyPuzzleRepository.existsByPuzzleDate(today)).thenReturn(true);
+                        when(dailyPuzzleRepository.findByPuzzleDate(today)).thenReturn(Optional.of(samplePuzzle));
+                        when(dailyPuzzleMapper.toDailyPuzzleResponse(samplePuzzle)).thenReturn(sampleResponse);
+
+                        DailyPuzzleResponse response = puzzleService.getTodayPuzzle();
+
+                        verify(puzzleGeneratorService, never()).generateAndSavePuzzleForDate(any());
+                        assertThat(response).isEqualTo(sampleResponse);
+                }
+
+                @Test
+                @DisplayName("Should catch DataIntegrityViolationException and fetch existing puzzle during concurrent creation")
+                void shouldHandleConcurrentPuzzleGeneration() {
+                        LocalDate today = LocalDate.now();
+
+                        when(dailyPuzzleRepository.existsByPuzzleDate(today)).thenReturn(false);
+                        doThrow(new DataIntegrityViolationException("Duplicate key"))
+                                        .when(puzzleGeneratorService).generateAndSavePuzzleForDate(today);
+                        when(dailyPuzzleRepository.findByPuzzleDate(today)).thenReturn(Optional.of(samplePuzzle));
+                        when(dailyPuzzleMapper.toDailyPuzzleResponse(samplePuzzle)).thenReturn(sampleResponse);
+
+                        DailyPuzzleResponse response = puzzleService.getTodayPuzzle();
+
+                        verify(puzzleGeneratorService, times(1)).generateAndSavePuzzleForDate(today);
+                        assertThat(response).isEqualTo(sampleResponse);
+                }
+
+                @Test
+                @DisplayName("Should throw ResponseStatusException NOT_FOUND when puzzle is missing after generation attempt")
+                void shouldThrowExceptionWhenPuzzleNotFound() {
+                        LocalDate today = LocalDate.now();
+
+                        when(dailyPuzzleRepository.existsByPuzzleDate(today)).thenReturn(false);
+                        when(dailyPuzzleRepository.findByPuzzleDate(today)).thenReturn(Optional.empty());
+
+                        assertThatThrownBy(() -> puzzleService.getTodayPuzzle())
+                                        .isInstanceOf(ResponseStatusException.class)
+                                        .hasMessageContaining("Puzzle del giorno non trovato");
+                }
         }
-
-        @Test
-        @DisplayName("Should catch DataIntegrityViolationException and fetch existing puzzle during concurrent creation")
-        void shouldHandleConcurrentPuzzleGeneration() {
-            LocalDate today = LocalDate.now();
-
-            when(dailyPuzzleRepository.existsByPuzzleDate(today)).thenReturn(false);
-            doThrow(new DataIntegrityViolationException("Duplicate key"))
-                    .when(puzzleGeneratorService).generateAndSavePuzzleForDate(today);
-            when(dailyPuzzleRepository.findByPuzzleDate(today)).thenReturn(Optional.of(samplePuzzle));
-            when(dailyPuzzleMapper.toDailyPuzzleResponse(samplePuzzle)).thenReturn(sampleResponse);
-
-            DailyPuzzleResponse response = puzzleService.getTodayPuzzle();
-
-            verify(puzzleGeneratorService, times(1)).generateAndSavePuzzleForDate(today);
-            assertThat(response).isEqualTo(sampleResponse);
-        }
-
-        @Test
-        @DisplayName("Should throw ResponseStatusException NOT_FOUND when puzzle is missing after generation attempt")
-        void shouldThrowExceptionWhenPuzzleNotFound() {
-            LocalDate today = LocalDate.now();
-
-            when(dailyPuzzleRepository.existsByPuzzleDate(today)).thenReturn(false);
-            when(dailyPuzzleRepository.findByPuzzleDate(today)).thenReturn(Optional.empty());
-
-            assertThatThrownBy(() -> puzzleService.getTodayPuzzle())
-                    .isInstanceOf(ResponseStatusException.class)
-                    .hasMessageContaining("Puzzle del giorno non trovato");
-        }
-    }
 }
