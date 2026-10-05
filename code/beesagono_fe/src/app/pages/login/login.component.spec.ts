@@ -349,4 +349,21 @@ describe('LoginComponent', () => {
       );
     });
   });
+
+  describe('ngOnDestroy', () => {
+    it('should clear pending retry timers and reset body overflow on destroy', () => {
+      vi.useFakeTimers();
+      // Simulates a state with a pending timer and a pending user
+      delete (globalThis as any).google;
+      (component as any).renderGoogleButton();
+
+      pendingGoogleUserSignal.set({ registered: false });
+      document.body.style.overflow = 'hidden';
+
+      fixture.destroy();
+
+      expect(document.body.style.overflow).toBe('');
+      expect(mockGoogleAuthService.cancelGoogleRegistration).toHaveBeenCalled();
+    });
+  });
 });

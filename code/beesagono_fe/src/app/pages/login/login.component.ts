@@ -1,4 +1,14 @@
-import { Component, ElementRef, HostListener, AfterViewInit, ViewChild, effect, inject, signal } from '@angular/core';
+import {
+  Component,
+  ElementRef,
+  HostListener,
+  AfterViewInit,
+  ViewChild,
+  effect,
+  inject,
+  signal,
+  OnDestroy
+} from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
@@ -15,7 +25,7 @@ declare const google: any;
   templateUrl: './login.component.html',
   styleUrls: ['./login.component.scss']
 })
-export class LoginComponent implements AfterViewInit {
+export class LoginComponent implements AfterViewInit, OnDestroy {
   private readonly authService = inject(AuthService);
   public readonly googleAuth = inject(GoogleAuthService);
   private readonly toast = inject(ToastService);
@@ -32,15 +42,28 @@ export class LoginComponent implements AfterViewInit {
 
   private readonly GOOGLE_CLIENT_ID = '362890069300-870q1d3b9nj16i0j19gco6npvcma1hpr.apps.googleusercontent.com';
 
+  // Tracking timer for canceling retries and counting attempts
+  private googleRetryTimer: ReturnType<typeof setTimeout> | null = null;
+  private googleRetryAttempts = 0;
+  private readonly MAX_GOOGLE_RETRY_ATTEMPTS = 15; // Max ~3 seconds
+
   constructor() {
-    // Reacts to the Google modal state to lock/restore scrolling and set focus
-    effect(() => {
-      if (this.googleAuth.pendingGoogleUser()) {
+    // Reactive scrolling and focus management with effect cleanup callback
+    effect((onCleanup) => {
+      const isPending = !!this.googleAuth.pendingGoogleUser();
+      const previousOverflow = document.body.style.overflow;
+
+      if (isPending) {
         document.body.style.overflow = 'hidden';
         this.focusUsernameInput();
       } else {
         document.body.style.overflow = '';
       }
+
+      // Cleanup registered directly in the effect in case of destruction or re-evaluation
+      onCleanup(() => {
+        document.body.style.overflow = previousOverflow;
+      });
     });
   }
 
@@ -49,13 +72,32 @@ export class LoginComponent implements AfterViewInit {
     this.renderGoogleButton();
   }
 
+  ngOnDestroy(): void {
+    // Cancel any pending retries for SDK loading
+    if (this.googleRetryTimer !== null) {
+      clearTimeout(this.googleRetryTimer);
+      this.googleRetryTimer = null;
+    }
+
+    // Restore body style
+    document.body.style.overflow = '';
+
+    // Clear pending Google registration when navigating away
+    if (this.googleAuth.pendingGoogleUser()) {
+      this.googleAuth.cancelGoogleRegistration();
+    }
+  }
+
   private renderGoogleButton(): void {
     // Render immediately if the Google script is loaded
     if (typeof google !== 'undefined' && google.accounts) {
       this.googleAuth.initializeGoogleButton('googleBtn', this.GOOGLE_CLIENT_ID);
+      this.googleRetryAttempts = 0;
+    } else if (this.googleRetryAttempts < this.MAX_GOOGLE_RETRY_ATTEMPTS) {
+      this.googleRetryAttempts++;
+      this.googleRetryTimer = setTimeout(() => this.renderGoogleButton(), 200);
     } else {
-      // Retry after a short delay if the Google script is still loading
-      setTimeout(() => this.renderGoogleButton(), 200);
+      console.warn('Google SDK not loaded or blocked.');
     }
   }
 

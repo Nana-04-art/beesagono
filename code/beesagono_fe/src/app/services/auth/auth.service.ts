@@ -2,6 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable, signal, computed, inject } from '@angular/core';
 import { Observable, tap } from 'rxjs';
 import { Router } from '@angular/router';
+import { environment } from '../../environments/environment'; 
 import {
   GoogleCheckResponse,
   GoogleLoginRequest,
@@ -21,7 +22,7 @@ export interface User {
   providedIn: 'root'
 })
 export class AuthService {
-  private readonly baseUrl = 'http://localhost:8080/api/auth';
+  private readonly baseUrl = `${environment.apiBaseUrl}/auth`;
   private readonly http = inject(HttpClient);
   private readonly router = inject(Router);
 

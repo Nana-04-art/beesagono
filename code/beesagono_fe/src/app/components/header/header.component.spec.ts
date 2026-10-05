@@ -2,6 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { Component, input, output, signal } from '@angular/core';
 import { vi, describe, beforeEach, it, expect } from 'vitest';
 import { provideRouter } from '@angular/router';
+import { By } from '@angular/platform-browser';
 import { HeaderComponent } from './header.component';
 import { ScoreboardComponent } from './scoreboard/scoreboard.component';
 import { StatsComponent } from './stats/stats.component';
@@ -96,6 +97,14 @@ describe('HeaderComponent', () => {
     expect(component).toBeTruthy();
   });
 
+  describe('Template Regression Tests', () => {
+    it('should not have overflow-hidden class on container-fluid to prevent clipping popovers', () => {
+      const containerEl = fixture.nativeElement.querySelector('.container-fluid');
+      expect(containerEl).toBeTruthy();
+      expect(containerEl.classList.contains('overflow-hidden')).toBe(false);
+    });
+  });
+
   describe('Input Signals', () => {
     it('should receive inputs correctly', () => {
       expect(component.score()).toBe(120);
@@ -142,6 +151,14 @@ describe('HeaderComponent', () => {
       expect(component.activePopover()).toBeNull();
     });
 
+    it('should toggle userMenu popover when toggleUserMenu() is called', () => {
+      component.toggleUserMenu();
+      expect(component.activePopover()).toBe('userMenu');
+
+      component.toggleUserMenu();
+      expect(component.activePopover()).toBeNull();
+    });
+
     it('should ensure popovers are mutually exclusive when toggled sequentially', () => {
       component.toggleScoreboard();
       expect(component.activePopover()).toBe('scoreboard');
@@ -151,6 +168,9 @@ describe('HeaderComponent', () => {
 
       component.toggleStats();
       expect(component.activePopover()).toBe('stats');
+
+      component.toggleUserMenu();
+      expect(component.activePopover()).toBe('userMenu');
     });
 
     it('should close popovers when closeAll() is called', () => {
@@ -177,6 +197,44 @@ describe('HeaderComponent', () => {
       const escapeEvent = new KeyboardEvent('keydown', { key: 'Escape', code: 'Escape' });
       document.dispatchEvent(escapeEvent);
 
+      expect(component.activePopover()).toBeNull();
+    });
+  });
+
+  describe('Auth & User Menu Functionality', () => {
+    it('should display login button when user is not logged in', () => {
+      authServiceMock.isLoggedIn.set(false);
+      fixture.detectChanges();
+
+      const loginBtn = fixture.nativeElement.querySelector('a[title="Accedi"]');
+      expect(loginBtn).toBeTruthy();
+    });
+
+    it('should display user menu button when user is logged in', () => {
+      authServiceMock.isLoggedIn.set(true);
+      authServiceMock.currentUser.set({ username: 'Mario' });
+      fixture.detectChanges();
+
+      const userBtn = fixture.nativeElement.querySelector('button[title="Profilo utente"]');
+      expect(userBtn).toBeTruthy();
+      expect(userBtn.textContent).toContain('Mario');
+    });
+
+    it('should open user menu popover and invoke logout when Esci button is clicked', () => {
+      authServiceMock.isLoggedIn.set(true);
+      authServiceMock.currentUser.set({ username: 'Mario' });
+      fixture.detectChanges();
+
+      component.toggleUserMenu();
+      fixture.detectChanges();
+
+      const logoutBtn = fixture.nativeElement.querySelector('.popover-dropdown button');
+      expect(logoutBtn).toBeTruthy();
+      expect(logoutBtn.textContent).toContain('Esci');
+
+      logoutBtn.click();
+
+      expect(authServiceMock.logout).toHaveBeenCalledTimes(1);
       expect(component.activePopover()).toBeNull();
     });
   });
@@ -211,8 +269,9 @@ describe('HeaderComponent', () => {
   });
 
   describe('Dependency Injection & Services', () => {
-    it('should inject ThemeService correctly', () => {
+    it('should inject ThemeService and AuthService correctly', () => {
       expect(component.themeService).toBeDefined();
+      expect(component.authService).toBeDefined();
     });
   });
 });

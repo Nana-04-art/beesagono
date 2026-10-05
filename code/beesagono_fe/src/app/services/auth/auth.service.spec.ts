@@ -20,9 +20,7 @@ describe('AuthService', () => {
   let router: Router;
   const baseUrl = 'http://localhost:8080/api/auth';
 
-  beforeEach(() => {
-    localStorage.clear();
-
+  const setupTestBed = () => {
     TestBed.configureTestingModule({
       providers: [
         AuthService,
@@ -37,7 +35,7 @@ describe('AuthService', () => {
     router = TestBed.inject(Router);
 
     vi.spyOn(router, 'navigate').mockResolvedValue(true);
-  });
+  };
 
   afterEach(() => {
     httpMock.verify();
@@ -46,6 +44,7 @@ describe('AuthService', () => {
   });
 
   it('should be created', () => {
+    setupTestBed();
     expect(service).toBeTruthy();
   });
 
@@ -53,22 +52,14 @@ describe('AuthService', () => {
     it('should initialize currentUser from localStorage on startup', () => {
       localStorage.setItem('username', 'existinguser');
 
-      TestBed.resetTestingModule();
-      TestBed.configureTestingModule({
-        providers: [
-          AuthService,
-          provideHttpClient(),
-          provideHttpClientTesting(),
-          provideRouter([]),
-        ],
-      });
+      setupTestBed();
 
-      const freshService = TestBed.inject(AuthService);
-
-      expect(freshService.currentUser()).toEqual({ username: 'existinguser' });
+      expect(service.currentUser()).toEqual({ username: 'existinguser' });
     });
 
     it('should update session and signals on setSession call', () => {
+      setupTestBed();
+
       const mockLoginResponse: LoginResponse = {
         accessToken: 'access-123',
         refreshToken: 'refresh-123',
@@ -89,6 +80,8 @@ describe('AuthService', () => {
     });
 
     it('should clear session and navigate to /login on clearSession', () => {
+      setupTestBed();
+
       localStorage.setItem('token', 'token-123');
       localStorage.setItem('refreshToken', 'refresh-123');
       localStorage.setItem('username', 'mario');
@@ -105,6 +98,8 @@ describe('AuthService', () => {
   });
 
   describe('register', () => {
+    beforeEach(() => setupTestBed());
+
     it('should send a POST request to register endpoint with user payload', () => {
       const mockRequest: RegisterRequest = {
         username: 'testuser',
@@ -152,6 +147,8 @@ describe('AuthService', () => {
   });
 
   describe('login', () => {
+    beforeEach(() => setupTestBed());
+
     it('should send a POST request to login endpoint and trigger setSession', () => {
       const setSessionSpy = vi.spyOn(service, 'setSession');
 
@@ -203,6 +200,8 @@ describe('AuthService', () => {
   });
 
   describe('logout', () => {
+    beforeEach(() => setupTestBed());
+
     it('should send a POST request to logout endpoint and clear session on success', () => {
       const clearSessionSpy = vi.spyOn(service, 'clearSession');
 
@@ -230,6 +229,8 @@ describe('AuthService', () => {
   });
 
   describe('checkGoogleUser', () => {
+    beforeEach(() => setupTestBed());
+
     it('should send a POST request to google check endpoint with Google payload', () => {
       const mockRequest: GoogleLoginRequest = {
         idToken: 'google-id-token',
@@ -277,6 +278,8 @@ describe('AuthService', () => {
   });
 
   describe('registerGoogleUser', () => {
+    beforeEach(() => setupTestBed());
+
     it('should send a POST request to google register endpoint and set session', () => {
       const setSessionSpy = vi.spyOn(service, 'setSession');
 

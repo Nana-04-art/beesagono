@@ -1,4 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { signal, WritableSignal } from '@angular/core';
 import { vi, describe, beforeEach, it, expect } from 'vitest';
 import { ToastContainerComponent } from './toast-container.component';
 import { ToastService } from '../../services/toast/toast.service';
@@ -7,14 +8,19 @@ import { ToastInfo } from '../../models/toast/toast.model';
 describe('ToastContainerComponent', () => {
   let component: ToastContainerComponent;
   let fixture: ComponentFixture<ToastContainerComponent>;
+
+  // We use WritableSignal to correctly simulate the service's read-only Signal
+  let toastsSignal: WritableSignal<ToastInfo[]>;
   let mockToastService: {
-    toasts: ToastInfo[];
+    toasts: WritableSignal<ToastInfo[]>;
     remove: ReturnType<typeof vi.fn>;
   };
 
   beforeEach(async () => {
+    toastsSignal = signal<ToastInfo[]>([]);
+
     mockToastService = {
-      toasts: [],
+      toasts: toastsSignal,
       remove: vi.fn(),
     };
 
@@ -36,21 +42,19 @@ describe('ToastContainerComponent', () => {
 
   it('should inject ToastService correctly', () => {
     fixture.detectChanges();
-    expect(component).toBeDefined();
-    expect(component.toastService.toasts).toEqual([]);
+    expect(component.toastService).toBeDefined();
+    expect(component.toastService.toasts()).toEqual([]);
   });
 
-  it('should expose toasts array from ToastService', () => {
+  it('should expose toasts array from ToastService signal', () => {
     const sampleToast: ToastInfo = { body: 'Test Toast', classname: 'bg-danger' };
 
-    // Assign data to the mock BEFORE the first change detection.
-    mockToastService.toasts = [sampleToast];
+    toastsSignal.set([sampleToast]);
 
-    // Now we perform the first detectChanges
     fixture.detectChanges();
 
-    expect(component.toastService.toasts.length).toBe(1);
-    expect(component.toastService.toasts[0]).toEqual(sampleToast);
+    expect(component.toastService.toasts().length).toBe(1);
+    expect(component.toastService.toasts()[0]).toEqual(sampleToast);
   });
 
   it('should call remove on ToastService when a toast is removed', () => {
