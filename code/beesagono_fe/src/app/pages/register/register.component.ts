@@ -1,8 +1,8 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, signal, OnInit } from '@angular/core';
 import { AbstractControl, FormControl, FormGroup, ReactiveFormsModule, ValidationErrors, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { NgClass } from '@angular/common';
-import { switchMap } from 'rxjs';
+import { switchMap, tap } from 'rxjs';
 import { AuthService } from '../../services/auth/auth.service';
 import { ToastService } from '../../services/toast/toast.service';
 import { RegisterRequest } from '../../models/auth/auth-dto.model';
@@ -14,7 +14,7 @@ import { RegisterRequest } from '../../models/auth/auth-dto.model';
   templateUrl: './register.component.html',
   styleUrls: ['./register.component.scss']
 })
-export class RegisterComponent {
+export class RegisterComponent implements OnInit {
   private readonly authService = inject(AuthService);
   private readonly toast = inject(ToastService);
   private readonly router = inject(Router);
@@ -48,6 +48,8 @@ export class RegisterComponent {
   }
 
   onRegister(): void {
+    if (this.registerForm.invalid) return;
+
     this.isLoading.set(true);
     const formValues = this.registerForm.getRawValue();
 
@@ -57,11 +59,16 @@ export class RegisterComponent {
       password: formValues.password
     };
 
+    let isRegistrationSuccessful = false;
+
     this.authService.register(requestPayload).pipe(
-      switchMap(() => {
+      tap(() => {
+        isRegistrationSuccessful = true;
         this.toast.show('Account creato! Accesso in corso...', {
           classname: 'bg-success text-white'
         });
+      }),
+      switchMap(() => {
         return this.authService.login({
           usernameOrEmail: formValues.username,
           password: formValues.password
@@ -79,15 +86,24 @@ export class RegisterComponent {
       },
       error: (error) => {
         this.isLoading.set(false);
-        let message = 'Registrazione non riuscita. L\'email o il nome utente potrebbero già esistere.';
 
-        if (error.status === 409) {
-          message = 'Nome utente o email già in uso.';
+        if (isRegistrationSuccessful) {
+          // Account was created successfully, but automatic login failed
+          this.toast.show('Account creato con successo! Accesso automatico fallito. Per favore accedi manualmente.', {
+            classname: 'bg-warning text-dark'
+          });
+          this.router.navigate(['/login']);
+        } else {
+          // Registration failed (e.g. username/email conflict or server error)
+          let message = 'Registrazione fallita. L\'email o lo username potrebbero già essere in uso.';
+          if (error.status === 409) {
+            message = 'Lo username o l\'email è già stato utilizzato.';
+          }
+
+          this.toast.show(message, {
+            classname: 'bg-danger text-white'
+          });
         }
-
-        this.toast.show(message, {
-          classname: 'bg-danger text-white'
-        });
       }
     });
   }

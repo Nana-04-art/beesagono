@@ -178,7 +178,7 @@ describe('RegisterComponent', () => {
         password: 'Password123!',
       });
 
-      // Verify that the component called setSession with the returned LoginResponse// Verifichiamo che il componente abbia chiamato setSession con il LoginResponse restituito
+      // Verify that the component called setSession with the returned LoginResponse
       expect(mockAuthService.setSession).toHaveBeenCalledWith(mockLoginResponse);
 
       expect(mockToastService.show).toHaveBeenCalledWith(
@@ -187,6 +187,38 @@ describe('RegisterComponent', () => {
       );
 
       expect(router.navigate).toHaveBeenCalledWith(['/']);
+    });
+
+    it('should notify account creation success and navigate to /login when registration succeeds but automatic login fails', () => {
+      component.registerForm.setValue(validFormValues);
+
+      // Registration succeeds, but login throws an error (e.g. 500 or network drop)
+      mockAuthService.register.mockReturnValue(of(mockRegisterResponse));
+      mockAuthService.login.mockReturnValue(throwError(() => ({ status: 500 })));
+
+      component.onRegister();
+
+      expect(component.isLoading()).toBe(false);
+      expect(mockAuthService.register).toHaveBeenCalledWith({
+        username: 'testuser',
+        email: 'test@example.com',
+        password: 'Password123!',
+      });
+
+      expect(mockAuthService.login).toHaveBeenCalledWith({
+        usernameOrEmail: 'testuser',
+        password: 'Password123!',
+      });
+
+      // Verify warning toast confirming registration success but manual login requirement
+      expect(mockToastService.show).toHaveBeenNthCalledWith(
+        2,
+        'Account creato con successo! Accesso automatico fallito. Per favore accedi manualmente.',
+        { classname: 'bg-warning text-dark' }
+      );
+
+      // Verify navigation redirected to /login instead of leaving user stuck
+      expect(router.navigate).toHaveBeenCalledWith(['/login']);
     });
 
     it('should handle 409 conflict error when username or email is already taken', () => {
@@ -200,7 +232,7 @@ describe('RegisterComponent', () => {
 
       expect(component.isLoading()).toBe(false);
       expect(mockToastService.show).toHaveBeenCalledWith(
-        'Nome utente o email già in uso.',
+        "Lo username o l'email è già stato utilizzato.",
         { classname: 'bg-danger text-white' }
       );
     });
@@ -216,7 +248,7 @@ describe('RegisterComponent', () => {
 
       expect(component.isLoading()).toBe(false);
       expect(mockToastService.show).toHaveBeenCalledWith(
-        "Registrazione non riuscita. L'email o il nome utente potrebbero già esistere.",
+        "Registrazione fallita. L'email o lo username potrebbero già essere in uso.",
         { classname: 'bg-danger text-white' }
       );
     });

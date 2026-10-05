@@ -1,14 +1,13 @@
-// header.interceptor.ts
 import { HttpErrorResponse, HttpInterceptorFn } from '@angular/common/http';
 import { inject } from '@angular/core';
-import { Router } from '@angular/router';
 import { catchError, throwError } from 'rxjs';
+import { AuthService } from '../services/auth/auth.service';
 
 export const headerInterceptor: HttpInterceptorFn = (request, next) => {
-    const router = inject(Router);
+    const authService = inject(AuthService);
     const token = localStorage.getItem('token');
 
-    // Prepariamo gli header di base
+    // Base headers setup
     const headers: Record<string, string> = {
         'Accept': 'application/json'
     };
@@ -25,11 +24,13 @@ export const headerInterceptor: HttpInterceptorFn = (request, next) => {
 
             if (error.status === 401 && !isLoginRequest) {
                 console.error('Token expired or invalid - Globally intercepted');
-                localStorage.removeItem('token');
-                router.navigate(['/login']);
+
+                // Clears both LocalStorage and reactive Signals (currentUser, token, etc.)
+                // and redirects to /login
+                authService.clearSession();
             }
 
-            // Rilancia sempre l'errore per far scattare il blocco error: () del componente
+            // Always rethrow the error for component-level handlers
             return throwError(() => error);
         })
     );
