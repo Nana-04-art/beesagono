@@ -10,6 +10,7 @@ import com.beesagono.backend.entity.DailyPuzzle;
 import com.beesagono.backend.entity.DictionaryWord;
 import com.beesagono.backend.entity.PuzzleWord;
 import com.beesagono.backend.entity.User;
+import com.beesagono.backend.enums.ErrorTypeCode;
 import com.beesagono.backend.mapper.DictionaryWordMapper;
 import com.beesagono.backend.repository.DailyPuzzleRepository;
 import com.beesagono.backend.repository.DictionaryWordRepository;
@@ -44,6 +45,7 @@ public class DictionaryServiceImpl implements DictionaryService {
 
     private final DictionaryWordRepository dictionaryWordRepository;
     private final DailyPuzzleRepository dailyPuzzleRepository;
+    private final DictionaryWordRepository dictionaryRepository;
     private final PuzzleWordRepository puzzleWordRepository;
     private final DictionaryWordMapper dictionaryWordMapper;
     private final ScoringService scoringService;
@@ -210,7 +212,7 @@ public class DictionaryServiceImpl implements DictionaryService {
             return WordValidationResponse.builder()
                     .word(rawWord)
                     .valid(false)
-                    .errorCode("TOO_SHORT")
+                    .errorCode(ErrorTypeCode.TOO_SHORT.name())
                     .errorMessage("La parola non può essere vuota.")
                     .build();
         }
@@ -228,7 +230,7 @@ public class DictionaryServiceImpl implements DictionaryService {
             return WordValidationResponse.builder()
                     .word(word)
                     .valid(false)
-                    .errorCode("TOO_SHORT")
+                    .errorCode(ErrorTypeCode.TOO_SHORT.name())
                     .errorMessage("La parola deve contenere almeno 4 lettere.")
                     .build();
         }
@@ -238,34 +240,60 @@ public class DictionaryServiceImpl implements DictionaryService {
             return WordValidationResponse.builder()
                     .word(word)
                     .valid(false)
-                    .errorCode("MISSING_CENTER")
+                    .errorCode(ErrorTypeCode.MISSING_CENTER.name())
                     .errorMessage("La parola non contiene la lettera centrale obbligatoria.")
                     .build();
         }
 
-        // Verify solution in DB via PuzzleWordRepository
+        // Check for valid letters (must contain only the center letter + outer
+        // letters)
+        String allowedLetters = puzzle.getCenterLetter() + puzzle.getOuterLetters();
+        for (char c : word.toCharArray()) {
+            if (allowedLetters.indexOf(c) == -1) {
+                return WordValidationResponse.builder()
+                        .word(word)
+                        .valid(false)
+                        .errorCode(ErrorTypeCode.INVALID_LETTERS.name())
+                        .errorMessage("La parola contiene lettere non presenti nell'alveare.")
+                        .build();
+            }
+        }
+
+        // Verify solution in current puzzle
         Optional<PuzzleWord> puzzleWordOpt = puzzleWordRepository.findByIdPuzzleIdAndIdWord(puzzle.getId(), word);
 
-        if (puzzleWordOpt.isEmpty()) {
+        if (puzzleWordOpt.isPresent()) {
+            PuzzleWord pw = puzzleWordOpt.get();
+            boolean isMielegramma = Boolean.TRUE.equals(pw.getIsMielegramma());
+            int points = scoringService.calculateWordScore(word, isMielegramma);
+
             return WordValidationResponse.builder()
                     .word(word)
-                    .valid(false)
-                    .errorCode("NOT_IN_DICTIONARY")
-                    .errorMessage("La parola non è presente nel dizionario ufficiale.")
+                    .valid(true)
+                    .pointsEarned(points)
+                    .isMielegramma(isMielegramma)
                     .build();
         }
 
-        // Valid word: extract pangram flag and calculate score
-        PuzzleWord pw = puzzleWordOpt.get();
-        boolean isMielegramma = Boolean.TRUE.equals(pw.getIsMielegramma());
-        int points = scoringService.calculateWordScore(word, isMielegramma);
+        // Global Dictionary check (Distinguishes between missing from puzzle vs
+        // missing from dictionary)
+        boolean existsInDictionary = dictionaryRepository.existsByWord(word);
 
-        return WordValidationResponse.builder()
-                .word(word)
-                .valid(true)
-                .pointsEarned(points)
-                .isMielegramma(isMielegramma)
-                .build();
+        if (existsInDictionary) {
+            return WordValidationResponse.builder()
+                    .word(word)
+                    .valid(false)
+                    .errorCode(ErrorTypeCode.NOT_IN_PUZZLE.name())
+                    .errorMessage("La parola non fa parte delle soluzioni del puzzle di oggi.")
+                    .build();
+        } else {
+            return WordValidationResponse.builder()
+                    .word(word)
+                    .valid(false)
+                    .errorCode(ErrorTypeCode.NOT_IN_DICTIONARY.name())
+                    .errorMessage("La parola non è presente nel dizionario ufficiale.")
+                    .build();
+        }
     }
 
 }
