@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { WordValidationRequest, WordValidationResponse } from '../../models/game/word-validation.model';
+import { WordValidationRequest, WordValidationResponse } from '../../models/game/game-dto.model';
 import { environment } from '../../environments/environment';
 
 @Injectable({ providedIn: 'root' })

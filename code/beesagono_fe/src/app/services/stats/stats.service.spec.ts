@@ -45,7 +45,7 @@ describe('StatsService', () => {
         expect(stats.currentStreak).toBe(0);
         expect(stats.maxStreak).toBe(0);
         expect(stats.lastPlayedDate).toBeNull();
-        expect(stats.currentSeason.year).toBe(new Date().getFullYear());
+        expect(stats.currentSeason?.year).toBe(new Date().getFullYear());
     });
 
     it('should record game started and update stats correctly for the first play', () => {
@@ -70,7 +70,7 @@ describe('StatsService', () => {
         expect(stats.currentStreak).toBe(2);
         expect(stats.maxStreak).toBe(2);
         expect(stats.lastPlayedDate).toBe('2026-08-13');
-        expect(stats.dailyRankDistribution['Buono']).toBe(1);
+        expect(stats.dailyRankDistribution?.['Buono']).toBe(1);
     });
 
     it('should reset streak to 1 if days are missed', () => {
@@ -94,18 +94,18 @@ describe('StatsService', () => {
         expect(stats.gamesPlayed).toBe(1);
         expect(stats.currentStreak).toBe(1);
         expect(stats.gamesCompleted).toBe(1);
-        expect(stats.currentSeason.basePointsEarned).toBe(20);
+        expect(stats.currentSeason?.basePointsEarned).toBe(20);
     });
 
     it('should handle rank promotion on the same day correctly', () => {
         service.recordProgress('2026-08-13', 10, false, 'Principiante');
-        expect(service.stats().dailyRankDistribution['Principiante']).toBe(1);
+        expect(service.stats().dailyRankDistribution?.['Principiante']).toBe(1);
 
         service.recordProgress('2026-08-13', 25, false, 'Eccellente');
 
         const stats = service.stats();
-        expect(stats.dailyRankDistribution['Principiante']).toBe(0);
-        expect(stats.dailyRankDistribution['Eccellente']).toBe(1);
+        expect(stats.dailyRankDistribution?.['Principiante']).toBe(0);
+        expect(stats.dailyRankDistribution?.['Eccellente']).toBe(1);
     });
 
     it('should award streak milestone bonus points when milestone is hit', () => {
@@ -114,22 +114,22 @@ describe('StatsService', () => {
 
         const stats = service.stats();
         expect(stats.currentStreak).toBe(3);
-        expect(stats.currentSeason.claimedStreakMilestones).toContain(3);
-        expect(stats.currentSeason.bonusStreakPoints).toBe(STREAK_MILESTONES[3]);
-        expect(stats.currentSeason.totalSeasonPoints).toBeGreaterThanOrEqual(STREAK_MILESTONES[3]);
+        expect(stats.currentSeason?.claimedStreakMilestones).toContain(3);
+        expect(stats.currentSeason?.bonusStreakPoints).toBe(STREAK_MILESTONES[3]);
+        expect(stats.currentSeason?.totalSeasonPoints).toBeGreaterThanOrEqual(STREAK_MILESTONES[3]);
     });
 
     it('should handle season/year rollover correctly', () => {
         service.recordProgress('2025-12-31', 50, true, 'Genio');
-        expect(service.stats().currentSeason.year).toBe(2025);
+        expect(service.stats().currentSeason?.year).toBe(2025);
 
         service.recordProgress('2026-01-01', 10, false, 'Principiante');
 
         const stats = service.stats();
-        expect(stats.currentSeason.year).toBe(2026);
-        expect(stats.seasonHistory[2025]).toBeDefined();
-        expect(stats.seasonHistory[2025].basePointsEarned).toBe(50);
-        expect(stats.currentSeason.basePointsEarned).toBe(10);
+        expect(stats.currentSeason?.year).toBe(2026);
+        expect(stats.seasonHistory?.[2025]).toBeDefined();
+        expect(stats.seasonHistory?.[2025]?.basePointsEarned).toBe(50);
+        expect(stats.currentSeason?.basePointsEarned).toBe(10);
     });
 
     it('should reset currentStreak on initialization if lastPlayedDate is older than 1 day', () => {
@@ -216,7 +216,35 @@ describe('StatsService', () => {
         expect(stats.gamesCompleted).toBe(1);
         expect(stats.maxStreak).toBe(2);
         expect(stats.lastPlayedDate).toBe('2026-08-11');
-        expect(stats.dailyRankDistribution['Buono']).toBe(1);
-        expect(stats.dailyRankDistribution['Genio']).toBe(1);
+       expect(stats.dailyRankDistribution?.['Buono']).toBe(1);
+        expect(stats.dailyRankDistribution?.['Genio']).toBe(1);
+    });
+
+    it('should synchronize with remote stats via syncWithRemoteStats', () => {
+        const remoteStatsPayload = {
+            userId: 'user-123',
+            gamesPlayed: 12,
+            gamesCompleted: 10,
+            currentStreak: 4,
+            maxStreak: 6,
+            lastPlayedDate: '2026-10-07',
+            currentSeason: {
+                year: 2026,
+                basePoints: 200,
+                bonusPoints: 50,
+                totalPoints: 250
+            }
+        };
+
+        service.syncWithRemoteStats(remoteStatsPayload);
+
+        const stats = service.stats();
+        expect(stats.gamesPlayed).toBe(12);
+        expect(stats.gamesCompleted).toBe(10);
+        expect(stats.currentStreak).toBe(4);
+        expect(stats.currentSeason?.basePointsEarned).toBe(200);
+        expect(stats.currentSeason?.bonusStreakPoints).toBe(50);
+        expect(stats.currentSeason?.totalSeasonPoints).toBe(250);
+        expect(mockStorageService.save).toHaveBeenCalled();
     });
 });

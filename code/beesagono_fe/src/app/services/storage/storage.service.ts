@@ -12,7 +12,6 @@ export class StorageService {
   private usingFallback = !this.isBrowser;
 
   // Persists generic data to localStorage or falls back to in-memory store
-
   save<T>(key: string, data: T): boolean {
     if (!key || data === undefined || data === null) {
       console.warn('[StorageService] Attempted to save invalid key or data.');

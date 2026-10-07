@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideHttpClient } from '@angular/common/http';
-import { vi, describe, beforeEach, afterEach, it, expect } from 'vitest';
+import { describe, beforeEach, afterEach, it, expect } from 'vitest';
 import { PuzzleService } from './puzzle.service';
 import { DailyPuzzleResponse } from '../../models/puzzle/daily-puzzle-response.model';
 import { GameBoard } from '../../models/game/game-board.model';
@@ -41,7 +41,9 @@ describe('PuzzleService', () => {
 
   afterEach(() => {
     // Verify that there are no outstanding HTTP requests after each test
-    httpMock.verify();
+    if (httpMock) {
+      httpMock.verify();
+    }
   });
 
   it('should be created', () => {
@@ -117,7 +119,7 @@ describe('PuzzleService', () => {
       expect(resultBoard?.seed).toBe(todayStr);
     });
 
-    it('should handle empty outerLetters, possibleWords, or mielegrammi gracefully', () => {
+    it('should handle empty outerLetters, validWords, or mielegrammi gracefully', () => {
       const emptyResponse: DailyPuzzleResponse = {
         id: 'puzzle-456',
         puzzleDate: todayStr,
