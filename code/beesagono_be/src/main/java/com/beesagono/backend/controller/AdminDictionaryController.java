@@ -11,7 +11,6 @@ import com.beesagono.backend.repository.UserRepository;
 import com.beesagono.backend.security.UserDetailsImpl;
 import com.beesagono.backend.service.AdminService;
 import com.beesagono.backend.service.DictionaryService;
-
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.ArraySchema;
@@ -19,7 +18,6 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
-import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -50,107 +48,112 @@ import java.util.List;
 @RequestMapping("/api/admin/dictionary")
 @RequiredArgsConstructor
 @PreAuthorize("hasRole('ADMIN')")
-@Tag(name = "Admin Dictionary Controller", description = "Administrative endpoints for managing dictionary entries, batch imports, and invalid word attempts")
-@SecurityRequirement(name = "bearerAuth")
+@Tag(name = "Dictionary Controller", description = "Endpoints for dictionary management, batch imports, text file processing, and invalid attempt audits")
 public class AdminDictionaryController {
 
-    private final DictionaryService dictionaryService;
-    private final UserRepository userRepository;
-    private final AdminService adminService;
+        private final DictionaryService dictionaryService;
+        private final UserRepository userRepository;
+        private final AdminService adminService;
 
-    @Operation(summary = "Add a single word to the dictionary", description = "Adds a single new word with its metadata to the global dictionary. Requires ADMIN role.")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "201", description = "Word added successfully", content = @Content(mediaType = "application/json", schema = @Schema(implementation = DictionaryWordResponse.class))),
-            @ApiResponse(responseCode = "400", description = "Bad Request - Validation error or word already exists in dictionary", content = @Content),
-            @ApiResponse(responseCode = "401", description = "Unauthorized - Missing or invalid JWT token", content = @Content),
-            @ApiResponse(responseCode = "403", description = "Forbidden - Requires ADMIN role", content = @Content)
-    })
-    @PostMapping("/word")
-    public ResponseEntity<DictionaryWordResponse> addWordToDictionary(
-            @RequestBody @Valid AddWordRequest request,
-            @Parameter(hidden = true) @AuthenticationPrincipal UserDetailsImpl userDetails) {
+        @Operation(summary = "Add a single word to the dictionary", description = "Adds a single new valid word along with its metadata into the system dictionary.")
+        @ApiResponses(value = {
+                        @ApiResponse(responseCode = "201", description = "Word added to dictionary successfully", content = @Content(mediaType = "application/json", schema = @Schema(implementation = DictionaryWordResponse.class))),
+                        @ApiResponse(responseCode = "400", description = "Invalid word payload or validation error", content = @Content),
+                        @ApiResponse(responseCode = "401", description = "Unauthorized user", content = @Content),
+                        @ApiResponse(responseCode = "403", description = "Access denied - ADMIN role required", content = @Content),
+                        @ApiResponse(responseCode = "404", description = "Admin user not found", content = @Content),
+                        @ApiResponse(responseCode = "409", description = "Word already exists in the dictionary", content = @Content),
+                        @ApiResponse(responseCode = "500", description = "Internal server error while adding word", content = @Content)
+        })
+        @PostMapping("/word")
+        public ResponseEntity<DictionaryWordResponse> addWordToDictionary(
+                        @Valid @RequestBody AddWordRequest request,
+                        @Parameter(hidden = true) @AuthenticationPrincipal UserDetailsImpl userDetails) {
+                User admin = getAdminUser(userDetails);
+                DictionaryWordResponse response = dictionaryService.addSingleWord(request, admin);
+                return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        }
 
-        User admin = getAdminUser(userDetails);
-        DictionaryWordResponse response = dictionaryService.addSingleWord(request, admin);
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
-    }
+        @Operation(summary = "Insert a list of words in batch mode", description = "Allows bulk insertion of multiple dictionary words in a single request payload.")
+        @ApiResponses(value = {
+                        @ApiResponse(responseCode = "201", description = "Batch insertion processed successfully", content = @Content(mediaType = "application/json", schema = @Schema(implementation = BatchUploadResponse.class))),
+                        @ApiResponse(responseCode = "400", description = "Invalid payload structure or empty word list", content = @Content),
+                        @ApiResponse(responseCode = "401", description = "Unauthorized user", content = @Content),
+                        @ApiResponse(responseCode = "403", description = "Access denied - ADMIN role required", content = @Content),
+                        @ApiResponse(responseCode = "404", description = "Admin user not found", content = @Content),
+                        @ApiResponse(responseCode = "500", description = "Internal server error during batch processing", content = @Content)
+        })
+        @PostMapping("/words/batch")
+        public ResponseEntity<BatchUploadResponse> addBatchWords(
+                        @Valid @RequestBody BatchAddWordRequest request,
+                        @Parameter(hidden = true) @AuthenticationPrincipal UserDetailsImpl userDetails) {
+                User admin = getAdminUser(userDetails);
+                return ResponseEntity.status(HttpStatus.CREATED).body(dictionaryService.addBatchWords(request, admin));
+        }
 
-    @Operation(summary = "Add a batch of words to the dictionary", description = "Performs a bulk insertion of multiple words into the global dictionary. Requires ADMIN role.")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "201", description = "Batch process completed successfully", content = @Content(mediaType = "application/json", schema = @Schema(implementation = BatchUploadResponse.class))),
-            @ApiResponse(responseCode = "400", description = "Bad Request - Validation failure or empty payload", content = @Content),
-            @ApiResponse(responseCode = "401", description = "Unauthorized - Missing or invalid JWT token", content = @Content),
-            @ApiResponse(responseCode = "403", description = "Forbidden - Requires ADMIN role", content = @Content)
-    })
-    @PostMapping("/words/batch")
-    public ResponseEntity<BatchUploadResponse> addBatchWords(
-            @Valid @RequestBody BatchAddWordRequest request,
-            @Parameter(hidden = true) @AuthenticationPrincipal UserDetailsImpl userDetails) {
+        @Operation(summary = "Upload and import words from a text file", description = "Parses a multipart text file containing words line-by-line and imports them into the system dictionary.")
+        @ApiResponses(value = {
+                        @ApiResponse(responseCode = "201", description = "File processed and words imported successfully", content = @Content(mediaType = "application/json", schema = @Schema(implementation = BatchUploadResponse.class))),
+                        @ApiResponse(responseCode = "400", description = "Missing or unsupported file format", content = @Content),
+                        @ApiResponse(responseCode = "401", description = "Unauthorized user", content = @Content),
+                        @ApiResponse(responseCode = "403", description = "Access denied - ADMIN role required", content = @Content),
+                        @ApiResponse(responseCode = "404", description = "Admin user not found", content = @Content),
+                        @ApiResponse(responseCode = "500", description = "Internal server error during file processing", content = @Content)
+        })
+        @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+        public ResponseEntity<BatchUploadResponse> uploadFromFile(
+                        @Parameter(description = "Text file (.txt) containing line-separated words to import", required = true) @RequestParam("file") MultipartFile file,
+                        @Parameter(hidden = true) @AuthenticationPrincipal UserDetailsImpl userDetails) {
+                User admin = getAdminUser(userDetails);
+                return ResponseEntity.status(HttpStatus.CREATED)
+                                .body(dictionaryService.uploadWordsFromFile(file, admin));
+        }
 
-        User admin = getAdminUser(userDetails);
-        return ResponseEntity.status(HttpStatus.CREATED).body(dictionaryService.addBatchWords(request, admin));
-    }
+        @Operation(summary = "Retrieve a paginated and filtered list of dictionary words", description = "Fetches dictionary entries with options to filter by prefix, minimum length, or validity status.")
+        @ApiResponses(value = {
+                        @ApiResponse(responseCode = "200", description = "Paginated dictionary words retrieved successfully", content = @Content(mediaType = "application/json", schema = @Schema(implementation = Page.class))),
+                        @ApiResponse(responseCode = "400", description = "Invalid filter parameters", content = @Content),
+                        @ApiResponse(responseCode = "401", description = "Unauthorized user", content = @Content),
+                        @ApiResponse(responseCode = "403", description = "Access denied - ADMIN role required", content = @Content),
+                        @ApiResponse(responseCode = "500", description = "Internal server error while retrieving words", content = @Content)
+        })
+        @GetMapping
+        public ResponseEntity<Page<DictionaryWordResponse>> getWords(
+                        @ModelAttribute DictionaryFilterRequest filterRequest,
+                        @Parameter(description = "Pagination parameters (page, size, sort)") @PageableDefault(size = 20, sort = "word", direction = Sort.Direction.ASC) Pageable pageable) {
+                return ResponseEntity.ok(dictionaryService.getWords(filterRequest, pageable));
+        }
 
-    @Operation(summary = "Upload words from a file", description = "Imports dictionary words in bulk by uploading a text/CSV file. Requires ADMIN role.")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "201", description = "File processed and words imported successfully", content = @Content(mediaType = "application/json", schema = @Schema(implementation = BatchUploadResponse.class))),
-            @ApiResponse(responseCode = "400", description = "Bad Request - Invalid or unreadable file format", content = @Content),
-            @ApiResponse(responseCode = "401", description = "Unauthorized - Missing or invalid JWT token", content = @Content),
-            @ApiResponse(responseCode = "403", description = "Forbidden - Requires ADMIN role", content = @Content)
-    })
-    @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<BatchUploadResponse> uploadFromFile(
-            @Parameter(description = "Multipart file containing words to import (.txt, .csv)", required = true) @RequestParam("file") MultipartFile file,
-            @Parameter(hidden = true) @AuthenticationPrincipal UserDetailsImpl userDetails) {
+        @Operation(summary = "Statistics on the most played invalid words by users", description = "Returns aggregated statistical metrics regarding invalid words attempted by players, useful for dictionary expansion candidates.")
+        @ApiResponses(value = {
+                        @ApiResponse(responseCode = "200", description = "Invalid word statistics retrieved successfully", content = @Content(mediaType = "application/json", array = @ArraySchema(schema = @Schema(implementation = InvalidWordAttemptStatResponse.class)))),
+                        @ApiResponse(responseCode = "401", description = "Unauthorized user", content = @Content),
+                        @ApiResponse(responseCode = "403", description = "Access denied - ADMIN role required", content = @Content),
+                        @ApiResponse(responseCode = "500", description = "Internal server error while generating attempt statistics", content = @Content)
+        })
+        @GetMapping("/invalid-attempts")
+        public ResponseEntity<List<InvalidWordAttemptStatResponse>> getTopSuggestedWords() {
+                return ResponseEntity.ok(adminService.getTopSuggestedWordsFromAttempts());
+        }
 
-        User admin = getAdminUser(userDetails);
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(dictionaryService.uploadWordsFromFile(file, admin));
-    }
+        @Operation(summary = "Permanently remove a word from the dictionary", description = "Deletes a specific word entry permanently from the system dictionary.")
+        @ApiResponses(value = {
+                        @ApiResponse(responseCode = "204", description = "Word deleted successfully (No Content)"),
+                        @ApiResponse(responseCode = "401", description = "Unauthorized user", content = @Content),
+                        @ApiResponse(responseCode = "403", description = "Access denied - ADMIN role required", content = @Content),
+                        @ApiResponse(responseCode = "404", description = "Word not found in dictionary", content = @Content),
+                        @ApiResponse(responseCode = "500", description = "Internal server error during word removal", content = @Content)
+        })
+        @DeleteMapping("/word/{word}")
+        public ResponseEntity<Void> removeWordFromDictionary(
+                        @Parameter(description = "Word to be removed from the dictionary", required = true, example = "CASA") @PathVariable String word) {
+                adminService.removeWordFromDictionary(word);
+                return ResponseEntity.noContent().build();
+        }
 
-    @Operation(summary = "Retrieve paginated list of dictionary words", description = "Fetches a paginated and optionally filtered list of words currently stored in the global dictionary. Requires ADMIN role.")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Dictionary words page retrieved successfully", content = @Content(mediaType = "application/json", schema = @Schema(implementation = Page.class))),
-            @ApiResponse(responseCode = "401", description = "Unauthorized - Missing or invalid JWT token", content = @Content),
-            @ApiResponse(responseCode = "403", description = "Forbidden - Requires ADMIN role", content = @Content)
-    })
-    @GetMapping
-    public ResponseEntity<Page<DictionaryWordResponse>> getWords(
-            @ModelAttribute DictionaryFilterRequest filterRequest,
-            @Parameter(description = "Pagination and sorting parameters (e.g., page=0, size=20, sort=word,asc)") @PageableDefault(size = 20, sort = "word", direction = Sort.Direction.ASC) Pageable pageable) {
-
-        Page<DictionaryWordResponse> page = dictionaryService.getWords(filterRequest, pageable);
-        return ResponseEntity.ok(page);
-    }
-
-    @Operation(summary = "Get top invalid word attempts statistics", description = "Retrieves statistics on the most frequently submitted invalid words across game sessions to help admins spot potential dictionary omissions. Requires ADMIN role.")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Statistics retrieved successfully", content = @Content(mediaType = "application/json", array = @ArraySchema(schema = @Schema(implementation = InvalidWordAttemptStatResponse.class)))),
-            @ApiResponse(responseCode = "401", description = "Unauthorized - Missing or invalid JWT token", content = @Content),
-            @ApiResponse(responseCode = "403", description = "Forbidden - Requires ADMIN role", content = @Content)
-    })
-    @GetMapping("/invalid-attempts")
-    public ResponseEntity<List<InvalidWordAttemptStatResponse>> getTopSuggestedWords() {
-        return ResponseEntity.ok(adminService.getTopSuggestedWordsFromAttempts());
-    }
-
-    @Operation(summary = "Remove a word from the dictionary", description = "Deletes a word from the global dictionary by name. Requires ADMIN role.")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "204", description = "Word removed successfully"),
-            @ApiResponse(responseCode = "401", description = "Unauthorized - Missing or invalid JWT token", content = @Content),
-            @ApiResponse(responseCode = "403", description = "Forbidden - Requires ADMIN role", content = @Content),
-            @ApiResponse(responseCode = "404", description = "Word not found in dictionary", content = @Content)
-    })
-    @DeleteMapping("/word/{word}")
-    public ResponseEntity<Void> removeWordFromDictionary(
-            @Parameter(description = "The target word string to remove", example = "PAROLA") @PathVariable String word) {
-
-        adminService.removeWordFromDictionary(word);
-        return ResponseEntity.noContent().build();
-    }
-
-    private User getAdminUser(UserDetailsImpl userDetails) {
-        return userRepository.findById(userDetails.getId())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Utente admin non trovato."));
-    }
+        private User getAdminUser(UserDetailsImpl userDetails) {
+                return userRepository.findById(userDetails.getId())
+                                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                                                "Utente admin non trovato."));
+        }
 }

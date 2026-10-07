@@ -13,7 +13,13 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.oauth2.core.DelegatingOAuth2TokenValidator;
+import org.springframework.security.oauth2.core.OAuth2TokenValidator;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.jwt.JwtClaimNames;
+import org.springframework.security.oauth2.jwt.JwtClaimValidator;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.security.oauth2.jwt.JwtValidators;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
@@ -40,6 +46,9 @@ public class SecurityConfig {
 
     @Value("${cors.allowed-methods}")
     private List<String> allowedMethods;
+
+    @Value("${google.client-id}")
+    private String googleClientId;
 
     /**
      * Exposes the Spring {@link AuthenticationManager} bean from authentication
@@ -111,9 +120,29 @@ public class SecurityConfig {
         return source;
     }
 
+    /**
+     * Configures a JwtDecoder specifically for Google ID Tokens with Audience and
+     * Issuer validation.
+     * Rejects tokens issued for other OAuth clients or invalid issuers.
+     */
     @Bean
     public JwtDecoder googleJwtDecoder() {
-        // Dynamically retrieve Google's public keys to validate the token signature
-        return NimbusJwtDecoder.withJwkSetUri("https://www.googleapis.com/oauth2/v3/certs").build();
+        NimbusJwtDecoder jwtDecoder = NimbusJwtDecoder
+                .withJwkSetUri("https://www.googleapis.com/oauth2/v3/certs")
+                .build();
+
+        // Validate that issuer is Google
+        OAuth2TokenValidator<Jwt> withIssuer = JwtValidators.createDefaultWithIssuer("https://accounts.google.com");
+
+        // Validate that audience matches our application's Google Client ID
+        OAuth2TokenValidator<Jwt> withAudience = new JwtClaimValidator<List<String>>(
+                JwtClaimNames.AUD,
+                aud -> aud != null && aud.contains(googleClientId));
+
+        // Combine validators
+        OAuth2TokenValidator<Jwt> combinedValidator = new DelegatingOAuth2TokenValidator<>(withIssuer, withAudience);
+        jwtDecoder.setJwtValidator(combinedValidator);
+
+        return jwtDecoder;
     }
 }

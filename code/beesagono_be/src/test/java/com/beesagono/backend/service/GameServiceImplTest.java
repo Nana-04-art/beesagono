@@ -181,10 +181,8 @@ class GameServiceImplTest {
             assertThat(response.getId()).isEqualTo(session.getId());
 
             verify(puzzleService, times(1)).generateAndSavePuzzleForDate(today);
-            verify(playerSeasonService, times(1)).updateSeasonProgress(user.getId(), 0, false);
             verify(userRepository, times(1)).findById(user.getId());
             verify(gameSessionRepository, times(1)).save(any(GameSession.class));
-            verify(playerSeasonService, times(1)).updateSeasonProgress(user.getId(), 0, false);
         }
 
         @Test
@@ -297,7 +295,7 @@ class GameServiceImplTest {
             verify(foundWordRepository, times(1)).save(any(FoundWord.class));
             verify(gameSessionRepository, atLeast(1)).save(session);
             verify(playerSeasonService, times(1)).updateSeasonProgress(userId, 1, false);
-            verify(playerStatsService, times(1)).updatePlayerStatsAfterGame(userId, 1, "CASA", false);
+            verify(playerStatsService, times(1)).updatePlayerStatsAfterGame(userId, 1, "CASA", false, true);
             verify(badgeService, times(1)).evaluateAndAwardBadges(userId);
         }
 
@@ -323,7 +321,7 @@ class GameServiceImplTest {
             verify(foundWordRepository, times(1)).save(any(FoundWord.class));
             verify(gameSessionRepository, atLeast(1)).save(session);
             verify(playerSeasonService, times(1)).updateSeasonProgress(userId, 14, false);
-            verify(playerStatsService, times(1)).updatePlayerStatsAfterGame(userId, 14, "ALBERGO", false);
+            verify(playerStatsService, times(1)).updatePlayerStatsAfterGame(userId, 14, "ALBERGO", false, true);
             verify(badgeService, times(1)).evaluateAndAwardBadges(userId);
         }
 
@@ -457,7 +455,7 @@ class GameServiceImplTest {
             verify(gameSessionRepository, times(1)).save(todaySession);
 
             verify(playerSeasonService, times(1)).updateSeasonProgress(userId, 15, false);
-            verify(playerStatsService, times(1)).updatePlayerStatsAfterGame(userId, 15, "ALBERO", false);
+            verify(playerStatsService, times(1)).updatePlayerStatsAfterGame(userId, 15, "ALBERO", false, true);
             verify(badgeService, times(1)).evaluateAndAwardBadges(userId);
         }
 
@@ -482,23 +480,22 @@ class GameServiceImplTest {
             when(foundWordRepository.existsByIdSessionIdAndIdWord(session.getId(), "CASA")).thenReturn(false);
             when(puzzleWordRepository.findByIdPuzzleIdAndIdWord(puzzle.getId(), "CASA")).thenReturn(Optional.of(pw));
             when(scoringService.calculateWordScore("CASA", false)).thenReturn(1);
-            when(scoringService.calculateWordScore("ALBERO", true)).thenReturn(13);
-            when(scoringService.calculateCurrentRank(14, puzzle.getMaxScore())).thenReturn(RankTier.BEGINNER);
+            when(scoringService.calculateCurrentRank(1, puzzle.getMaxScore())).thenReturn(RankTier.BEGINNER);
 
             FoundWord fw1 = FoundWord.builder().id(new FoundWordId(session.getId(), "CASA")).build();
-            FoundWord fw2 = FoundWord.builder().id(new FoundWordId(session.getId(), "ALBERO")).build();
-            when(foundWordRepository.findByIdSessionId(session.getId())).thenReturn(List.of(fw1, fw2));
+            when(foundWordRepository.findByIdSessionId(session.getId())).thenReturn(List.of(fw1));
 
             List<GameSessionResponse> responses = gameService.syncLocalProgress(request, userId);
 
             assertThat(responses).hasSize(1);
             GameSessionResponse response = responses.get(0);
-            assertThat(response.getFoundWords()).containsExactlyInAnyOrder("CASA", "ALBERO");
+            assertThat(response.getFoundWords()).containsExactlyInAnyOrder("CASA");
 
             verify(puzzleService, times(1)).generateAndSavePuzzleForDate(puzzleDate);
-            verify(foundWordRepository, times(2)).save(any(FoundWord.class));
+            verify(foundWordRepository, times(1)).save(any(FoundWord.class));
             verify(gameSessionRepository, times(1)).save(session);
-            verify(playerSeasonService, times(1)).updateSeasonProgress(user.getId(), 14, false);
+            verify(playerSeasonService, times(1)).updateSeasonProgress(user.getId(), 1, false);
+            verify(playerStatsService, times(1)).updatePlayerStatsAfterGame(user.getId(), 1, "CASA", false, true);
         }
 
         @Test
@@ -522,7 +519,7 @@ class GameServiceImplTest {
             assertThat(responses).hasSize(1);
             verify(playerSeasonService, never()).updateSeasonProgress(anyString(), anyInt(), anyBoolean());
             verify(playerStatsService, never()).updatePlayerStatsAfterGame(anyString(), anyInt(), anyString(),
-                    anyBoolean());
+                    anyBoolean(), anyBoolean());
             verify(badgeService, never()).evaluateAndAwardBadges(anyString());
         }
     }

@@ -38,8 +38,7 @@ public class PlayerSeasonServiceImpl implements PlayerSeasonService {
     private final UserRepository userRepository;
     private final ScoringService scoringService;
 
-    // Estimated annual points target for calculating the percentage of
-    // CareerTier
+    // Estimated annual points target for calculating the percentage of CareerTier
     private static final int ANNUAL_TARGET_POINTS = 80000;
 
     @Override
@@ -64,8 +63,14 @@ public class PlayerSeasonServiceImpl implements PlayerSeasonService {
                 .orElseGet(() -> createInitialSeason(userId, currentYear));
 
         PlayerStats stats = playerStatsRepository.findById(userId)
-                .orElseGet(() -> PlayerStats.builder().userId(userId).build());
-
+                .orElseGet(() -> {
+                    User user = userRepository.findById(userId)
+                            .orElseThrow(() -> new RuntimeException("Utente non trovato con ID: " + userId));
+                    return PlayerStats.builder()
+                            .userId(user.getId())
+                            .user(user)
+                            .build();
+                });
         // Update base points
         season.setBasePoints(season.getBasePoints() + pointsEarned);
 
@@ -177,13 +182,26 @@ public class PlayerSeasonServiceImpl implements PlayerSeasonService {
         return playerSeasonRepository.save(season);
     }
 
+    private List<Integer> mapLastMilestoneToClaimedList(Integer lastClaimed) {
+        if (lastClaimed == null || lastClaimed <= 0) {
+            return List.of();
+        }
+
+        // Retrieves the streak milestone thresholds defined in GameConstants
+        return GameConstants.STREAK_MILESTONES.keySet().stream()
+                .filter(threshold -> threshold <= lastClaimed)
+                .sorted()
+                .collect(Collectors.toList());
+    }
+
     private PlayerSeasonResponse mapToResponse(PlayerSeason season, PlayerStats stats) {
-        // We safely handle both the case where stats is null and any
-        // null values ​​in the fields.
+        // We safely handle both the case where stats is null and any null values in the
+        // fields
         int gamesPlayed = (stats != null && stats.getGamesPlayed() != null) ? stats.getGamesPlayed() : 0;
         int gamesCompleted = (stats != null && stats.getGamesCompleted() != null) ? stats.getGamesCompleted() : 0;
         int currentStreak = (stats != null && stats.getCurrentStreak() != null) ? stats.getCurrentStreak() : 0;
         int maxStreak = (stats != null && stats.getMaxStreak() != null) ? stats.getMaxStreak() : 0;
+        Integer lastClaimed = (stats != null) ? stats.getLastStreakMilestoneClaimed() : null;
 
         return PlayerSeasonResponse.builder()
                 .year(season.getId() != null ? season.getId().getSeasonYear() : null)
@@ -195,6 +213,7 @@ public class PlayerSeasonServiceImpl implements PlayerSeasonService {
                 .basePoints(season.getBasePoints())
                 .bonusPoints(season.getBonusPoints())
                 .totalPoints(season.getTotalPoints())
+                .claimedStreakMilestones(mapLastMilestoneToClaimedList(lastClaimed))
                 .build();
     }
 }

@@ -3,8 +3,10 @@ package com.beesagono.backend.entity;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.OneToOne;
@@ -53,7 +55,7 @@ public class User {
 	@OneToMany(mappedBy = "user")
 	private List<RankHistogram> rankHistogramEntries;
 
-	@OneToOne(mappedBy = "user")
+	@OneToOne(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
 	private PlayerStats playerStats;
 
 	@Id
@@ -76,4 +78,12 @@ public class User {
 	@CreationTimestamp
 	@Column(name = "registered_at", updatable = false, nullable = false)
 	private LocalDateTime registeredAt;
+
+	// -- Helper Method --
+	public void setPlayerStats(PlayerStats playerStats) {
+		this.playerStats = playerStats;
+		if (playerStats != null && playerStats.getUser() != this) {
+			playerStats.setUser(this);
+		}
+	}
 }

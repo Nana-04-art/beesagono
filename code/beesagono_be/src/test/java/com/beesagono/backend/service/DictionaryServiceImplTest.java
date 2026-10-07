@@ -6,10 +6,8 @@ import com.beesagono.backend.dto.dictionary.BatchUploadResponse;
 import com.beesagono.backend.dto.dictionary.DictionaryFilterRequest;
 import com.beesagono.backend.dto.dictionary.DictionaryWordResponse;
 import com.beesagono.backend.dto.dictionary.WordValidationResponse;
-import com.beesagono.backend.entity.DailyPuzzle;
-import com.beesagono.backend.entity.DictionaryWord;
-import com.beesagono.backend.entity.PuzzleWord;
-import com.beesagono.backend.entity.User;
+import com.beesagono.backend.entity.*;
+import com.beesagono.backend.entity.id.PuzzleOuterLetterId;
 import com.beesagono.backend.mapper.DictionaryWordMapper;
 import com.beesagono.backend.repository.DailyPuzzleRepository;
 import com.beesagono.backend.repository.DictionaryWordRepository;
@@ -211,10 +209,23 @@ class DictionaryServiceImplTest {
         String rawWord = "casa";
         String cleanWord = "CASA";
 
+        PuzzleOuterLetterId idC = new PuzzleOuterLetterId();
+        idC.setLetter("C");
+
+        PuzzleOuterLetterId idS = new PuzzleOuterLetterId();
+        idS.setLetter("S");
+
+        PuzzleOuterLetter letter1 = new PuzzleOuterLetter();
+        letter1.setId(idC);
+
+        PuzzleOuterLetter letter2 = new PuzzleOuterLetter();
+        letter2.setId(idS);
+
         DailyPuzzle puzzle = DailyPuzzle.builder()
                 .id("puzzle-1")
                 .puzzleDate(puzzleDate)
                 .centerLetter("A")
+                .outerLetters(List.of(letter1, letter2))
                 .build();
 
         PuzzleWord puzzleWord = PuzzleWord.builder()
@@ -295,10 +306,23 @@ class DictionaryServiceImplTest {
         String puzzleDateStr = "2026-10-02";
         LocalDate puzzleDate = LocalDate.parse(puzzleDateStr);
 
+        PuzzleOuterLetterId idC = new PuzzleOuterLetterId();
+        idC.setLetter("C");
+
+        PuzzleOuterLetterId idS = new PuzzleOuterLetterId();
+        idS.setLetter("S");
+
+        PuzzleOuterLetter letter1 = new PuzzleOuterLetter();
+        letter1.setId(idC);
+
+        PuzzleOuterLetter letter2 = new PuzzleOuterLetter();
+        letter2.setId(idS);
+
         DailyPuzzle puzzle = DailyPuzzle.builder()
                 .id("puzzle-1")
                 .puzzleDate(puzzleDate)
                 .centerLetter("A")
+                .outerLetters(List.of(letter1, letter2))
                 .build();
 
         when(dailyPuzzleRepository.findByPuzzleDate(puzzleDate)).thenReturn(Optional.of(puzzle));
@@ -336,8 +360,7 @@ class DictionaryServiceImplTest {
         return request;
     }
 
-    private DictionaryWord createDictionaryWord(String word, int length, int uniqueLetters, boolean isPangram,
-            User user) {
+    private DictionaryWord createDictionaryWord(String word, int length, int uniqueLetters, boolean isPangram, User user) {
         return DictionaryWord.builder()
                 .word(word)
                 .wordLength(length)
@@ -347,8 +370,7 @@ class DictionaryServiceImplTest {
                 .build();
     }
 
-    private DictionaryWordResponse createDictionaryWordResponse(String word, int length, int uniqueLetters,
-            boolean isPangram) {
+    private DictionaryWordResponse createDictionaryWordResponse(String word, int length, int uniqueLetters, boolean isPangram) {
         return DictionaryWordResponse.builder()
                 .word(word)
                 .wordLength(length)

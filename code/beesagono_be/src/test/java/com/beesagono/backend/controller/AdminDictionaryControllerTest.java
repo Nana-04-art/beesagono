@@ -18,6 +18,7 @@ import com.beesagono.backend.service.DictionaryService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.TestConfiguration;
@@ -36,6 +37,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.web.bind.support.WebDataBinderFactory;
@@ -62,7 +64,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(AdminDictionaryController.class)
-@Import({ GlobalExceptionHandler.class, AdminDictionaryControllerTest.TestConfig.class })
+@Import({GlobalExceptionHandler.class, AdminDictionaryControllerTest.TestConfig.class})
 @AutoConfigureMockMvc(addFilters = false)
 class AdminDictionaryControllerTest {
 
@@ -105,208 +107,244 @@ class AdminDictionaryControllerTest {
 
     // --- POST /api/admin/dictionary/word ---
 
-    @Test
-    @DisplayName("POST /api/admin/dictionary/word - Success")
-    void addSingleWord_Success() throws Exception {
-        AddWordRequest request = createAddWordRequest("CASA");
-        DictionaryWordResponse response = createDictionaryWordResponse("CASA", 4, 3, false);
+    @Nested
+    @DisplayName("POST /api/admin/dictionary/word Tests")
+    @ContextConfiguration(classes = TestConfig.class)
+    class AddSingleWordTests {
 
-        when(userRepository.findById("admin-1")).thenReturn(Optional.of(adminUser));
-        when(dictionaryService.addSingleWord(any(AddWordRequest.class), eq(adminUser))).thenReturn(response);
+        @Test
+        @DisplayName("POST /api/admin/dictionary/word - Success")
+        void addSingleWord_Success() throws Exception {
+            AddWordRequest request = createAddWordRequest("CASA");
+            DictionaryWordResponse response = createDictionaryWordResponse("CASA", 4, 3, false);
 
-        mockMvc.perform(post("/api/admin/dictionary/word")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.word").value("CASA"))
-                .andExpect(jsonPath("$.wordLength").value(4));
+            when(userRepository.findById("admin-1")).thenReturn(Optional.of(adminUser));
+            when(dictionaryService.addSingleWord(any(AddWordRequest.class), eq(adminUser))).thenReturn(response);
 
-        verify(dictionaryService, times(1)).addSingleWord(any(AddWordRequest.class), eq(adminUser));
-    }
+            mockMvc.perform(post("/api/admin/dictionary/word")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isCreated())
+                    .andExpect(jsonPath("$.word").value("CASA"))
+                    .andExpect(jsonPath("$.wordLength").value(4));
 
-    @Test
-    @DisplayName("POST /api/admin/dictionary/word - Admin Not Found Throws 404")
-    void addSingleWord_AdminNotFound() throws Exception {
-        AddWordRequest request = createAddWordRequest("CASA");
+            verify(dictionaryService, times(1)).addSingleWord(any(AddWordRequest.class), eq(adminUser));
+        }
 
-        when(userRepository.findById("admin-1")).thenReturn(Optional.empty());
+        @Test
+        @DisplayName("POST /api/admin/dictionary/word - Admin Not Found Throws 404")
+        void addSingleWord_AdminNotFound() throws Exception {
+            AddWordRequest request = createAddWordRequest("CASA");
 
-        mockMvc.perform(post("/api/admin/dictionary/word")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.status").value(404))
-                .andExpect(jsonPath("$.message").value("Utente admin non trovato."));
-    }
+            when(userRepository.findById("admin-1")).thenReturn(Optional.empty());
 
-    @Test
-    @DisplayName("POST /api/admin/dictionary/word - Word Already Exists Throws 409")
-    void addSingleWord_Conflict() throws Exception {
-        AddWordRequest request = createAddWordRequest("CASA");
+            mockMvc.perform(post("/api/admin/dictionary/word")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isNotFound())
+                    .andExpect(jsonPath("$.status").value(404))
+                    .andExpect(jsonPath("$.message").value("Utente admin non trovato."));
+        }
 
-        when(userRepository.findById("admin-1")).thenReturn(Optional.of(adminUser));
-        when(dictionaryService.addSingleWord(any(AddWordRequest.class), eq(adminUser)))
-                .thenThrow(new ResponseStatusException(HttpStatus.CONFLICT, "Parola già presente nel dizionario"));
+        @Test
+        @DisplayName("POST /api/admin/dictionary/word - Word Already Exists Throws 409")
+        void addSingleWord_Conflict() throws Exception {
+            AddWordRequest request = createAddWordRequest("CASA");
 
-        mockMvc.perform(post("/api/admin/dictionary/word")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.status").value(409))
-                .andExpect(jsonPath("$.message").value("Parola già presente nel dizionario"));
+            when(userRepository.findById("admin-1")).thenReturn(Optional.of(adminUser));
+            when(dictionaryService.addSingleWord(any(AddWordRequest.class), eq(adminUser)))
+                    .thenThrow(new ResponseStatusException(HttpStatus.CONFLICT, "Parola già presente nel dizionario"));
+
+            mockMvc.perform(post("/api/admin/dictionary/word")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isConflict())
+                    .andExpect(jsonPath("$.status").value(409))
+                    .andExpect(jsonPath("$.message").value("Parola già presente nel dizionario"));
+        }
     }
 
     // --- POST /api/admin/dictionary/words/batch ---
 
-    @Test
-    @DisplayName("POST /api/admin/dictionary/words/batch - Success")
-    void addBatchWords_Success() throws Exception {
-        BatchAddWordRequest request = createBatchAddWordRequest(List.of("CASA", "ALBERO"));
-        BatchUploadResponse response = createBatchUploadResponse(2, 2, 0, "Inserite 2 parole.");
+    @Nested
+    @DisplayName("POST /api/admin/dictionary/words/batch Tests")
+    @ContextConfiguration(classes = TestConfig.class)
+    class AddBatchWordsTests {
 
-        when(userRepository.findById("admin-1")).thenReturn(Optional.of(adminUser));
-        when(dictionaryService.addBatchWords(any(BatchAddWordRequest.class), eq(adminUser))).thenReturn(response);
+        @Test
+        @DisplayName("POST /api/admin/dictionary/words/batch - Success")
+        void addBatchWords_Success() throws Exception {
+            BatchAddWordRequest request = createBatchAddWordRequest(List.of("CASA", "ALBERO"));
+            BatchUploadResponse response = createBatchUploadResponse(2, 2, 0, "Inserite 2 parole.");
 
-        mockMvc.perform(post("/api/admin/dictionary/words/batch")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.totalProcessed").value(2))
-                .andExpect(jsonPath("$.addedCount").value(2));
+            when(userRepository.findById("admin-1")).thenReturn(Optional.of(adminUser));
+            when(dictionaryService.addBatchWords(any(BatchAddWordRequest.class), eq(adminUser))).thenReturn(response);
 
-        verify(dictionaryService, times(1)).addBatchWords(any(BatchAddWordRequest.class), eq(adminUser));
-    }
+            mockMvc.perform(post("/api/admin/dictionary/words/batch")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isCreated())
+                    .andExpect(jsonPath("$.totalProcessed").value(2))
+                    .andExpect(jsonPath("$.addedCount").value(2));
 
-    @Test
-    @DisplayName("POST /api/admin/dictionary/words/batch - Admin Not Found Throws 404")
-    void addBatchWords_AdminNotFound() throws Exception {
-        BatchAddWordRequest request = createBatchAddWordRequest(List.of("CASA", "ALBERO"));
+            verify(dictionaryService, times(1)).addBatchWords(any(BatchAddWordRequest.class), eq(adminUser));
+        }
 
-        when(userRepository.findById("admin-1")).thenReturn(Optional.empty());
+        @Test
+        @DisplayName("POST /api/admin/dictionary/words/batch - Admin Not Found Throws 404")
+        void addBatchWords_AdminNotFound() throws Exception {
+            BatchAddWordRequest request = createBatchAddWordRequest(List.of("CASA", "ALBERO"));
 
-        mockMvc.perform(post("/api/admin/dictionary/words/batch")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.status").value(404));
+            when(userRepository.findById("admin-1")).thenReturn(Optional.empty());
+
+            mockMvc.perform(post("/api/admin/dictionary/words/batch")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isNotFound())
+                    .andExpect(jsonPath("$.status").value(404));
+        }
     }
 
     // --- POST /api/admin/dictionary/upload ---
 
-    @Test
-    @DisplayName("POST /api/admin/dictionary/upload - Success")
-    void uploadFromFile_Success() throws Exception {
-        MockMultipartFile file = createMockMultipartFile("words.txt", MediaType.TEXT_PLAIN_VALUE,
-                "casa\nalbero".getBytes());
-        BatchUploadResponse response = createBatchUploadResponse(2, 2, 0, "Inserite 2 parole.");
+    @Nested
+    @DisplayName("POST /api/admin/dictionary/upload Tests")
+    @ContextConfiguration(classes = TestConfig.class)
+    class UploadFromFileTests {
 
-        when(userRepository.findById("admin-1")).thenReturn(Optional.of(adminUser));
-        when(dictionaryService.uploadWordsFromFile(any(), eq(adminUser))).thenReturn(response);
+        @Test
+        @DisplayName("POST /api/admin/dictionary/upload - Success")
+        void uploadFromFile_Success() throws Exception {
+            MockMultipartFile file = createMockMultipartFile("words.txt", MediaType.TEXT_PLAIN_VALUE,
+                    "casa\nalbero".getBytes());
+            BatchUploadResponse response = createBatchUploadResponse(2, 2, 0, "Inserite 2 parole.");
 
-        mockMvc.perform(multipart("/api/admin/dictionary/upload")
-                .file(file))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.addedCount").value(2));
+            when(userRepository.findById("admin-1")).thenReturn(Optional.of(adminUser));
+            when(dictionaryService.uploadWordsFromFile(any(), eq(adminUser))).thenReturn(response);
 
-        verify(dictionaryService, times(1)).uploadWordsFromFile(any(), eq(adminUser));
-    }
+            mockMvc.perform(multipart("/api/admin/dictionary/upload")
+                            .file(file))
+                    .andExpect(status().isCreated())
+                    .andExpect(jsonPath("$.addedCount").value(2));
 
-    @Test
-    @DisplayName("POST /api/admin/dictionary/upload - Invalid File Format Throws 400")
-    void uploadFromFile_BadRequest() throws Exception {
-        MockMultipartFile file = createMockMultipartFile("image.png", MediaType.IMAGE_PNG_VALUE, new byte[0]);
+            verify(dictionaryService, times(1)).uploadWordsFromFile(any(), eq(adminUser));
+        }
 
-        when(userRepository.findById("admin-1")).thenReturn(Optional.of(adminUser));
-        when(dictionaryService.uploadWordsFromFile(any(), eq(adminUser)))
-                .thenThrow(new ResponseStatusException(HttpStatus.BAD_REQUEST, "Formato file non supportato"));
+        @Test
+        @DisplayName("POST /api/admin/dictionary/upload - Invalid File Format Throws 400")
+        void uploadFromFile_BadRequest() throws Exception {
+            MockMultipartFile file = createMockMultipartFile("image.png", MediaType.IMAGE_PNG_VALUE, new byte[0]);
 
-        mockMvc.perform(multipart("/api/admin/dictionary/upload")
-                .file(file))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.status").value(400))
-                .andExpect(jsonPath("$.message").value("Formato file non supportato"));
+            when(userRepository.findById("admin-1")).thenReturn(Optional.of(adminUser));
+            when(dictionaryService.uploadWordsFromFile(any(), eq(adminUser)))
+                    .thenThrow(new ResponseStatusException(HttpStatus.BAD_REQUEST, "Formato file non supportato"));
+
+            mockMvc.perform(multipart("/api/admin/dictionary/upload")
+                            .file(file))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.status").value(400))
+                    .andExpect(jsonPath("$.message").value("Formato file non supportato"));
+        }
     }
 
     // --- GET /api/admin/dictionary ---
 
-    @Test
-    @DisplayName("GET /api/admin/dictionary - Success")
-    void getWords_Success() throws Exception {
-        DictionaryWordResponse wordResponse = createDictionaryWordResponse("CASA", 4, 3, false);
-        Page<DictionaryWordResponse> page = new PageImpl<>(List.of(wordResponse));
+    @Nested
+    @DisplayName("GET /api/admin/dictionary Tests")
+    @ContextConfiguration(classes = TestConfig.class)
+    class GetWordsTests {
 
-        when(dictionaryService.getWords(any(DictionaryFilterRequest.class), any(Pageable.class))).thenReturn(page);
+        @Test
+        @DisplayName("GET /api/admin/dictionary - Success")
+        void getWords_Success() throws Exception {
+            DictionaryWordResponse wordResponse = createDictionaryWordResponse("CASA", 4, 3, false);
+            Page<DictionaryWordResponse> page = new PageImpl<>(List.of(wordResponse));
 
-        mockMvc.perform(get("/api/admin/dictionary"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.content[0].word").value("CASA"));
+            when(dictionaryService.getWords(any(DictionaryFilterRequest.class), any(Pageable.class))).thenReturn(page);
 
-        verify(dictionaryService, times(1)).getWords(any(DictionaryFilterRequest.class), any(Pageable.class));
-    }
+            mockMvc.perform(get("/api/admin/dictionary"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.content[0].word").value("CASA"));
 
-    @Test
-    @DisplayName("GET /api/admin/dictionary - Internal Server Error Throws 500")
-    void getWords_InternalServerError() throws Exception {
-        when(dictionaryService.getWords(any(DictionaryFilterRequest.class), any(Pageable.class)))
-                .thenThrow(new RuntimeException("Database error"));
+            verify(dictionaryService, times(1)).getWords(any(DictionaryFilterRequest.class), any(Pageable.class));
+        }
 
-        mockMvc.perform(get("/api/admin/dictionary"))
-                .andExpect(status().isInternalServerError())
-                .andExpect(jsonPath("$.status").value(500))
-                .andExpect(jsonPath("$.message").value("Si è verificato un errore interno al server."));
+        @Test
+        @DisplayName("GET /api/admin/dictionary - Internal Server Error Throws 500")
+        void getWords_InternalServerError() throws Exception {
+            when(dictionaryService.getWords(any(DictionaryFilterRequest.class), any(Pageable.class)))
+                    .thenThrow(new RuntimeException("Database error"));
+
+            mockMvc.perform(get("/api/admin/dictionary"))
+                    .andExpect(status().isInternalServerError())
+                    .andExpect(jsonPath("$.status").value(500))
+                    .andExpect(jsonPath("$.message").value("Si è verificato un errore interno al server."));
+        }
     }
 
     // --- GET /api/admin/dictionary/invalid-attempts ---
 
-    @Test
-    @DisplayName("GET /api/admin/dictionary/invalid-attempts - Success")
-    void getTopSuggestedWords_Success() throws Exception {
-        InvalidWordAttemptStatResponse statResponse = createInvalidAttemptStatResponse("ERRATA", 5L);
+    @Nested
+    @DisplayName("GET /api/admin/dictionary/invalid-attempts Tests")
+    @ContextConfiguration(classes = TestConfig.class)
+    class GetTopSuggestedWordsTests {
 
-        when(adminService.getTopSuggestedWordsFromAttempts()).thenReturn(List.of(statResponse));
+        @Test
+        @DisplayName("GET /api/admin/dictionary/invalid-attempts - Success")
+        void getTopSuggestedWords_Success() throws Exception {
+            InvalidWordAttemptStatResponse statResponse = createInvalidAttemptStatResponse("ERRATA", 5L);
 
-        mockMvc.perform(get("/api/admin/dictionary/invalid-attempts"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].word").value("ERRATA"))
-                .andExpect(jsonPath("$[0].attemptCount").value(5));
+            when(adminService.getTopSuggestedWordsFromAttempts()).thenReturn(List.of(statResponse));
 
-        verify(adminService, times(1)).getTopSuggestedWordsFromAttempts();
-    }
+            mockMvc.perform(get("/api/admin/dictionary/invalid-attempts"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$[0].word").value("ERRATA"))
+                    .andExpect(jsonPath("$[0].attemptCount").value(5));
 
-    @Test
-    @DisplayName("GET /api/admin/dictionary/invalid-attempts - Internal Server Error Throws 500")
-    void getTopSuggestedWords_InternalServerError() throws Exception {
-        when(adminService.getTopSuggestedWordsFromAttempts())
-                .thenThrow(new RuntimeException("Database error"));
+            verify(adminService, times(1)).getTopSuggestedWordsFromAttempts();
+        }
 
-        mockMvc.perform(get("/api/admin/dictionary/invalid-attempts"))
-                .andExpect(status().isInternalServerError())
-                .andExpect(jsonPath("$.status").value(500));
+        @Test
+        @DisplayName("GET /api/admin/dictionary/invalid-attempts - Internal Server Error Throws 500")
+        void getTopSuggestedWords_InternalServerError() throws Exception {
+            when(adminService.getTopSuggestedWordsFromAttempts())
+                    .thenThrow(new RuntimeException("Database error"));
+
+            mockMvc.perform(get("/api/admin/dictionary/invalid-attempts"))
+                    .andExpect(status().isInternalServerError())
+                    .andExpect(jsonPath("$.status").value(500));
+        }
     }
 
     // --- DELETE /api/admin/dictionary/word/{word} ---
 
-    @Test
-    @DisplayName("DELETE /api/admin/dictionary/word/{word} - Success")
-    void removeWordFromDictionary_Success() throws Exception {
-        mockMvc.perform(delete("/api/admin/dictionary/word/CASA"))
-                .andExpect(status().isNoContent());
+    @Nested
+    @DisplayName("DELETE /api/admin/dictionary/word/{word} Tests")
+    @ContextConfiguration(classes = TestConfig.class)
+    class RemoveWordFromDictionaryTests {
 
-        verify(adminService, times(1)).removeWordFromDictionary("CASA");
-    }
+        @Test
+        @DisplayName("DELETE /api/admin/dictionary/word/{word} - Success")
+        void removeWordFromDictionary_Success() throws Exception {
+            mockMvc.perform(delete("/api/admin/dictionary/word/CASA"))
+                    .andExpect(status().isNoContent());
 
-    @Test
-    @DisplayName("DELETE /api/admin/dictionary/word/{word} - Word Not Found Throws 404")
-    void removeWordFromDictionary_NotFound() throws Exception {
-        doThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "Parola non trovata nel dizionario"))
-                .when(adminService).removeWordFromDictionary("INESISTENTE");
+            verify(adminService, times(1)).removeWordFromDictionary("CASA");
+        }
 
-        mockMvc.perform(delete("/api/admin/dictionary/word/INESISTENTE"))
-                .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.status").value(404))
-                .andExpect(jsonPath("$.message").value("Parola non trovata nel dizionario"));
+        @Test
+        @DisplayName("DELETE /api/admin/dictionary/word/{word} - Word Not Found Throws 404")
+        void removeWordFromDictionary_NotFound() throws Exception {
+            doThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "Parola non trovata nel dizionario"))
+                    .when(adminService).removeWordFromDictionary("INESISTENTE");
 
-        verify(adminService, times(1)).removeWordFromDictionary("INESISTENTE");
+            mockMvc.perform(delete("/api/admin/dictionary/word/INESISTENTE"))
+                    .andExpect(status().isNotFound())
+                    .andExpect(jsonPath("$.status").value(404))
+                    .andExpect(jsonPath("$.message").value("Parola non trovata nel dizionario"));
+
+            verify(adminService, times(1)).removeWordFromDictionary("INESISTENTE");
+        }
     }
 
     // --- Private Helper Methods ---
@@ -341,7 +379,7 @@ class AdminDictionaryControllerTest {
     }
 
     private DictionaryWordResponse createDictionaryWordResponse(String word, int length, int uniqueLetters,
-            boolean isPangram) {
+                                                                boolean isPangram) {
         return DictionaryWordResponse.builder()
                 .word(word)
                 .wordLength(length)
@@ -384,7 +422,7 @@ class AdminDictionaryControllerTest {
 
                 @Override
                 public Object resolveArgument(MethodParameter parameter, ModelAndViewContainer mavContainer,
-                        NativeWebRequest webRequest, WebDataBinderFactory binderFactory) {
+                                              NativeWebRequest webRequest, WebDataBinderFactory binderFactory) {
                     if (SecurityContextHolder.getContext().getAuthentication() != null) {
                         return SecurityContextHolder.getContext().getAuthentication().getPrincipal();
                     }

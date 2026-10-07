@@ -5,6 +5,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.List;
+
 /**
  * Data Transfer Object representing a player's performance breakdown for a specific season,
  * detailing base points, bonus points, combined score, and current tier status.
@@ -28,4 +30,6 @@ public class PlayerSeasonResponse {
     private Integer basePoints; // Total points earned from words
     private Integer bonusPoints; // Bonus points from streak milestones
     private Integer totalPoints; // basePoints + bonusPoints
+
+    private List<Integer> claimedStreakMilestones; // Redeemed streak milestones
 }

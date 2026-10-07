@@ -27,78 +27,78 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(DictionaryController.class)
-@Import({ GlobalExceptionHandler.class, ObjectMapper.class })
+@Import({GlobalExceptionHandler.class, ObjectMapper.class})
 @AutoConfigureMockMvc(addFilters = false)
 class DictionaryControllerTest {
 
-        @Autowired
-        private MockMvc mockMvc;
+    @Autowired
+    private MockMvc mockMvc;
 
-        @Autowired
-        private ObjectMapper objectMapper;
+    @Autowired
+    private ObjectMapper objectMapper;
 
-        @MockitoBean
-        private DictionaryService dictionaryService;
+    @MockitoBean
+    private DictionaryService dictionaryService;
 
-        @MockitoBean
-        private JwtUtils jwtUtils;
+    @MockitoBean
+    private JwtUtils jwtUtils;
 
-        @MockitoBean
-        private JwtAuthenticationFilter jwtAuthenticationFilter;
+    @MockitoBean
+    private JwtAuthenticationFilter jwtAuthenticationFilter;
 
-        @MockitoBean
-        private TokenBlacklist tokenBlacklist;
+    @MockitoBean
+    private TokenBlacklist tokenBlacklist;
 
-        @Test
-        @DisplayName("POST /api/dictionary/validate - Should return 200 OK when word validation succeeds")
-        void validateWordGuest_Success() throws Exception {
-                String puzzleDate = "2026-10-02";
-                WordValidationRequest request = new WordValidationRequest(puzzleDate, "CASA");
+    @Test
+    @DisplayName("POST /api/dictionary/validate - Should return 200 OK when word validation succeeds")
+    void validateWordGuest_Success() throws Exception {
+        String puzzleDate = "2026-10-02";
+        WordValidationRequest request = new WordValidationRequest(puzzleDate, "CASA");
 
-                WordValidationResponse mockResponse = WordValidationResponse.builder()
-                                .valid(true)
-                                .word("CASA")
-                                .pointsEarned(1)
-                                .isMielegramma(false)
-                                .build();
+        WordValidationResponse mockResponse = WordValidationResponse.builder()
+                .valid(true)
+                .word("CASA")
+                .pointsEarned(1)
+                .isMielegramma(false)
+                .build();
 
-                when(dictionaryService.validateWordForGuest(eq(puzzleDate), eq("CASA")))
-                                .thenReturn(mockResponse);
+        when(dictionaryService.validateWordForGuest(eq(puzzleDate), eq("CASA")))
+                .thenReturn(mockResponse);
 
-                mockMvc.perform(post("/api/dictionary/validate")
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .content(objectMapper.writeValueAsString(request)))
-                                .andExpect(status().isOk())
-                                .andExpect(jsonPath("$.valid").value(true))
-                                .andExpect(jsonPath("$.word").value("CASA"))
-                                .andExpect(jsonPath("$.pointsEarned").value(1))
-                                .andExpect(jsonPath("$.mielegramma").value(false));
-        }
+        mockMvc.perform(post("/api/dictionary/validate")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.valid").value(true))
+                .andExpect(jsonPath("$.word").value("CASA"))
+                .andExpect(jsonPath("$.pointsEarned").value(1))
+                .andExpect(jsonPath("$.mielegramma").value(false));
+    }
 
-        @Test
-        @DisplayName("POST /api/dictionary/validate - Should return 400 BAD REQUEST on validation failure (invalid body)")
-        void validateWordGuest_InvalidRequestPayload() throws Exception {
-                WordValidationRequest invalidRequest = new WordValidationRequest("2026-10-02", "SOL");
+    @Test
+    @DisplayName("POST /api/dictionary/validate - Should return 400 BAD REQUEST on validation failure (invalid body)")
+    void validateWordGuest_InvalidRequestPayload() throws Exception {
+        WordValidationRequest invalidRequest = new WordValidationRequest(null, null);
 
-                mockMvc.perform(post("/api/dictionary/validate")
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .content(objectMapper.writeValueAsString(invalidRequest)))
-                                .andExpect(status().isBadRequest());
-        }
+        mockMvc.perform(post("/api/dictionary/validate")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(invalidRequest)))
+                .andExpect(status().isBadRequest());
+    }
 
-        @Test
-        @DisplayName("POST /api/dictionary/validate - Should return 404 NOT FOUND if puzzle for date does not exist")
-        void validateWordGuest_PuzzleNotFound() throws Exception {
-                String puzzleDate = "2026-10-02";
-                WordValidationRequest request = new WordValidationRequest(puzzleDate, "CASA");
+    @Test
+    @DisplayName("POST /api/dictionary/validate - Should return 404 NOT FOUND if puzzle for date does not exist")
+    void validateWordGuest_PuzzleNotFound() throws Exception {
+        String puzzleDate = "2026-10-02";
+        WordValidationRequest request = new WordValidationRequest(puzzleDate, "CASA");
 
-                when(dictionaryService.validateWordForGuest(eq(puzzleDate), eq("CASA")))
-                                .thenThrow(new ResponseStatusException(HttpStatus.NOT_FOUND,
-                                                "Puzzle not found for date"));
+        when(dictionaryService.validateWordForGuest(eq(puzzleDate), eq("CASA")))
+                .thenThrow(new ResponseStatusException(HttpStatus.NOT_FOUND,
+                        "Puzzle not found for date"));
 
-                mockMvc.perform(post("/api/dictionary/validate")
-                                .contentType(MediaType.APPLICATION_JSON)
-                                .content(objectMapper.writeValueAsString(request)))
-                                .andExpect(status().isNotFound());
-        }
+        mockMvc.perform(post("/api/dictionary/validate")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isNotFound());
+    }
 }
