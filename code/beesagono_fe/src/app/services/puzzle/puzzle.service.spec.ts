@@ -1,10 +1,11 @@
 import { TestBed } from '@angular/core/testing';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideHttpClient } from '@angular/common/http';
-import { vi, describe, beforeEach, afterEach, it, expect } from 'vitest';
+import { describe, beforeEach, afterEach, it, expect } from 'vitest';
 import { PuzzleService } from './puzzle.service';
 import { DailyPuzzleResponse } from '../../models/puzzle/daily-puzzle-response.model';
 import { GameBoard } from '../../models/game/game-board.model';
+import { environment } from '../../environments/environment';
 
 describe('PuzzleService', () => {
   let service: PuzzleService;
@@ -15,7 +16,7 @@ describe('PuzzleService', () => {
     puzzleDate: '2026-09-30',
     centerLetter: 'a',
     outerLetters: ['b', 'c', 'd', 'e', 'f', 'g'],
-    possibleWords: ['ABBA', 'CABA', 'BABE'],
+    validWords: ['ABBA', 'CABA', 'BABE'],
     mielegrammi: ['BABCADEG'],
     maxScore: 100,
   };
@@ -34,8 +35,9 @@ describe('PuzzleService', () => {
   });
 
   afterEach(() => {
-    // Verifica che non ci siano chiamate HTTP pendenti o non gestite
-    httpMock.verify();
+    if (httpMock) {
+      httpMock.verify();
+    }
   });
 
   it('should be created', () => {
@@ -50,14 +52,11 @@ describe('PuzzleService', () => {
         resultBoard = board;
       });
 
-      // Intercetta la chiamata GET
-      const req = httpMock.expectOne('http://localhost:8080/api/puzzles/today');
+      const req = httpMock.expectOne(`${environment.apiBaseUrl}/puzzles/today`);
       expect(req.request.method).toBe('GET');
 
-      // Risponde con il DTO mockato
       req.flush(mockPuzzleResponse);
 
-      // Verifiche sul GameBoard trasformato
       expect(resultBoard).toBeDefined();
       expect(resultBoard?.date).toBe('2026-09-30');
       expect(resultBoard?.seed).toBe('puzzle-123');
@@ -65,19 +64,16 @@ describe('PuzzleService', () => {
       expect(resultBoard?.possibleWords).toEqual(['ABBA', 'CABA', 'BABE']);
       expect(resultBoard?.mielegrammi).toEqual(['BABCADEG']);
 
-      // Verifica mappatura delle celle (7 celle totali: 1 centrale + 6 esterne)
       expect(resultBoard?.cells).toHaveLength(7);
 
-      // Cella centrale (hex-0)
       const centerCell = resultBoard?.cells[0];
       expect(centerCell).toEqual({
         id: 'hex-0',
-        letter: 'A', // Deve essere maiuscola
+        letter: 'A',
         position: 0,
         isCenter: true,
       });
 
-      // Celle esterne (hex-1 a hex-6)
       const outerCells = resultBoard?.cells.slice(1);
       expect(outerCells).toHaveLength(6);
 
@@ -103,19 +99,19 @@ describe('PuzzleService', () => {
         resultBoard = board;
       });
 
-      const req = httpMock.expectOne('http://localhost:8080/api/puzzles/today');
+      const req = httpMock.expectOne(`${environment.apiBaseUrl}/puzzles/today`);
       req.flush(responseWithoutId);
 
       expect(resultBoard?.seed).toBe('2026-09-30');
     });
 
-    it('should handle empty outerLetters, possibleWords, or mielegrammi gracefully', () => {
+    it('should handle empty outerLetters, validWords, or mielegrammi gracefully', () => {
       const emptyResponse: DailyPuzzleResponse = {
         id: 'puzzle-456',
         puzzleDate: '2026-09-30',
         centerLetter: 'x',
         outerLetters: [],
-        possibleWords: [],
+        validWords: [],
         mielegrammi: [],
         maxScore: 0,
       };
@@ -126,10 +122,10 @@ describe('PuzzleService', () => {
         resultBoard = board;
       });
 
-      const req = httpMock.expectOne('http://localhost:8080/api/puzzles/today');
+      const req = httpMock.expectOne(`${environment.apiBaseUrl}/puzzles/today`);
       req.flush(emptyResponse);
 
-      expect(resultBoard?.cells).toHaveLength(1); // Solo la cella centrale
+      expect(resultBoard?.cells).toHaveLength(1);
       expect(resultBoard?.cells[0].letter).toBe('X');
       expect(resultBoard?.possibleWords).toEqual([]);
       expect(resultBoard?.mielegrammi).toEqual([]);
@@ -145,7 +141,7 @@ describe('PuzzleService', () => {
         },
       });
 
-      const req = httpMock.expectOne('http://localhost:8080/api/puzzles/today');
+      const req = httpMock.expectOne(`${environment.apiBaseUrl}/puzzles/today`);
       req.flush('Internal Server Error', {
         status: 500,
         statusText: 'Server Error',

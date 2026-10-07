@@ -3,7 +3,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { vi, describe, beforeEach, afterEach, it, expect } from 'vitest';
 import { DictionaryService } from './dictionary.service';
-import { WordValidationRequest, WordValidationResponse } from '../../models/game/word-validation.model';
+import { WordValidationRequest, WordValidationResponse } from '../../models/game/game-dto.model';
 import { environment } from '../../environments/environment';
 
 describe('DictionaryService', () => {
@@ -26,7 +26,9 @@ describe('DictionaryService', () => {
   });
 
   afterEach(() => {
-    httpMock.verify();
+    if (httpMock) {
+      httpMock.verify();
+    }
     vi.restoreAllMocks();
   });
 

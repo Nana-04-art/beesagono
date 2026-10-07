@@ -3,7 +3,11 @@ import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting, HttpTestingController } from '@angular/common/http/testing';
 import { provideRouter, Router } from '@angular/router';
 import { describe, beforeEach, afterEach, it, expect, vi } from 'vitest';
+import { of, throwError } from 'rxjs';
+
 import { AuthService } from './auth.service';
+import { SyncService } from '../sync/sync.service';
+import { GameFacadeService } from '../game/game-facade.service';
 import {
   RegisterRequest,
   RegisterResponse,
@@ -13,20 +17,35 @@ import {
   GoogleCheckResponse,
   GoogleRegisterRequest,
 } from '../../models/auth/auth-dto.model';
+import { environment } from '../../environments/environment';
 
 describe('AuthService', () => {
   let service: AuthService;
   let httpMock: HttpTestingController;
   let router: Router;
-  const baseUrl = 'http://localhost:8080/api/auth';
+
+  let syncServiceMock: { syncLocalProgressWithServer: ReturnType<typeof vi.fn> };
+  let gameFacadeMock: { loadDailyGame: ReturnType<typeof vi.fn> };
+
+  const baseUrl = `${environment.apiBaseUrl}/auth`;
 
   const setupTestBed = () => {
+    syncServiceMock = {
+      syncLocalProgressWithServer: vi.fn().mockReturnValue(of({}))
+    };
+
+    gameFacadeMock = {
+      loadDailyGame: vi.fn()
+    };
+
     TestBed.configureTestingModule({
       providers: [
         AuthService,
         provideHttpClient(),
         provideHttpClientTesting(),
         provideRouter([]),
+        { provide: SyncService, useValue: syncServiceMock },
+        { provide: GameFacadeService, useValue: gameFacadeMock }
       ],
     });
 
@@ -57,7 +76,7 @@ describe('AuthService', () => {
       expect(service.currentUser()).toEqual({ username: 'existinguser' });
     });
 
-    it('should update session and signals on setSession call', () => {
+    it('should update session, trigger sync and load daily game on setSession success', () => {
       setupTestBed();
 
       const mockLoginResponse: LoginResponse = {
@@ -77,9 +96,35 @@ describe('AuthService', () => {
       expect(localStorage.getItem('username')).toBe('mario');
       expect(service.currentUser()).toEqual({ username: 'mario' });
       expect(service.isLoggedIn()).toBe(true);
+
+      expect(syncServiceMock.syncLocalProgressWithServer).toHaveBeenCalled();
+      expect(gameFacadeMock.loadDailyGame).toHaveBeenCalled();
     });
 
-    it('should clear session and navigate to /login on clearSession', () => {
+    it('should still load daily game on setSession if sync fails', () => {
+      setupTestBed();
+
+      syncServiceMock.syncLocalProgressWithServer.mockReturnValue(
+        throwError(() => new Error('Sync failed'))
+      );
+
+      const mockLoginResponse: LoginResponse = {
+        accessToken: 'access-123',
+        refreshToken: 'refresh-123',
+        tokenType: 'Bearer',
+        id: '1',
+        username: 'mario',
+        email: 'mario@example.com',
+        role: 'USER',
+      };
+
+      service.setSession(mockLoginResponse);
+
+      expect(syncServiceMock.syncLocalProgressWithServer).toHaveBeenCalled();
+      expect(gameFacadeMock.loadDailyGame).toHaveBeenCalled();
+    });
+
+    it('should clear session, load daily game, and navigate to /login on clearSession', () => {
       setupTestBed();
 
       localStorage.setItem('token', 'token-123');
@@ -93,6 +138,7 @@ describe('AuthService', () => {
       expect(localStorage.getItem('username')).toBeNull();
       expect(service.currentUser()).toBeNull();
       expect(service.isLoggedIn()).toBe(false);
+      expect(gameFacadeMock.loadDailyGame).toHaveBeenCalled();
       expect(router.navigate).toHaveBeenCalledWith(['/login']);
     });
   });

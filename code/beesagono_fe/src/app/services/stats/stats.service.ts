@@ -2,7 +2,7 @@ import { Injectable, computed, inject, signal } from '@angular/core';
 import { PlayerStats, SeasonStats } from '../../models/stats/stats.model';
 import { StorageService } from '../storage/storage.service';
 import { CAREER_TIERS, STREAK_MILESTONES } from '../../config/career-tiers.constant';
-import { getTodayIsoString } from '../game/game.service';
+import { getTodayIsoString } from '../../utils/game-input.utils';
 import { isValidGameState, isValidIsoDate } from '../../utils/game-state.validator';
 
 @Injectable({
@@ -20,9 +20,30 @@ export class StatsService {
     // Derived data
     readonly currentTier = computed(() => this.calculateTier(this._stats()));
 
-    constructor() { }
+    public syncWithRemoteStats(remoteStats: any): void {
+        if (!remoteStats) return;
 
-    // Records the start of a game day without altering the score or rank distribution.
+        const today = getTodayIsoString(new Date());
+
+        // Normalize payload to ensure nested structures and arrays exist
+        const normalized = this.normalizeStatsPayload(remoteStats);
+
+        // Verify streak continuity relative to today's date
+        this.checkStreakContinuity(normalized, today);
+
+        // Recalculate updated career tier
+        if (normalized.currentSeason) {
+            normalized.currentSeason.highestTierAchieved = this.calculateTier(normalized);
+        }
+
+        // Update local Signal and persist snapshot to LocalStorage
+        this._stats.set(normalized);
+        this.saveStats(normalized);
+    }
+
+    /**
+     * Records the start of a game day without altering the score or rank distribution.
+     */
     recordGameStarted(currentDate: string): void {
         this.recordProgress(currentDate, 0, false, null);
     }
@@ -41,20 +62,27 @@ export class StatsService {
         dailyRank: string | null
     ): void {
         this._stats.update(currentStats => {
+            const currentSeason = currentStats.currentSeason ?? this.createEmptySeason(new Date().getFullYear());
+            const seasonHistory = currentStats.seasonHistory ?? {};
+            const dailyRankDistribution = currentStats.dailyRankDistribution ?? {};
+
             // Deep clone of nested objects and arrays to protect state immutability
             const stats: PlayerStats = {
                 ...currentStats,
                 currentSeason: {
-                    ...currentStats.currentSeason,
-                    claimedStreakMilestones: [...currentStats.currentSeason.claimedStreakMilestones]
+                    ...currentSeason,
+                    claimedStreakMilestones: [...(currentSeason.claimedStreakMilestones || [])]
                 },
-                dailyRankDistribution: { ...currentStats.dailyRankDistribution },
-                seasonHistory: Object.keys(currentStats.seasonHistory || {}).reduce((acc, year) => {
+                dailyRankDistribution: { ...dailyRankDistribution },
+                seasonHistory: Object.keys(seasonHistory).reduce((acc, year) => {
                     const yr = Number(year);
-                    acc[yr] = {
-                        ...currentStats.seasonHistory[yr],
-                        claimedStreakMilestones: [...currentStats.seasonHistory[yr].claimedStreakMilestones]
-                    };
+                    const histSeason = seasonHistory[yr];
+                    if (histSeason) {
+                        acc[yr] = {
+                            ...histSeason,
+                            claimedStreakMilestones: [...(histSeason.claimedStreakMilestones || [])]
+                        };
+                    }
                     return acc;
                 }, {} as Record<number, SeasonStats>)
             };
@@ -62,9 +90,9 @@ export class StatsService {
             const todayYear = parseInt(currentDate.split('-')[0], 10);
 
             // Year Rollover Handling (Season Reset)
-            if (stats.currentSeason.year !== todayYear) {
+            if (stats.currentSeason && stats.currentSeason.year !== todayYear) {
                 stats.seasonHistory = {
-                    ...stats.seasonHistory,
+                    ...(stats.seasonHistory ?? {}),
                     [stats.currentSeason.year]: {
                         ...stats.currentSeason,
                         claimedStreakMilestones: [...stats.currentSeason.claimedStreakMilestones]
@@ -82,23 +110,22 @@ export class StatsService {
                 if (this.isConsecutiveDay(stats.lastPlayedDate, currentDate)) {
                     stats.currentStreak++;
                 } else {
-                    stats.currentStreak = 1; // First play ever or broken streak
+                    stats.currentStreak = 1;
                 }
 
                 stats.maxStreak = Math.max(stats.maxStreak, stats.currentStreak);
                 stats.lastPlayedDate = currentDate;
 
-                // Reset daily tracking helpers for a new day
-                stats.currentSeason._lastRecordedDailyScore = 0;
-                stats.currentSeason._isCompletedToday = false;
-                stats.currentSeason._lastRecordedRankToday = null;
-
-                // Milestone bonus assignment (now mutation of claimedStreakMilestones happens on a cloned array)
-                this.checkStreakMilestones(stats.currentStreak, stats.currentSeason);
+                if (stats.currentSeason) {
+                    stats.currentSeason._lastRecordedDailyScore = 0;
+                    stats.currentSeason._isCompletedToday = false;
+                    stats.currentSeason._lastRecordedRankToday = null;
+                    // Milestone bonus assignment
+                    this.checkStreakMilestones(stats.currentStreak, stats.currentSeason);
+                }
             }
 
-            // Season Score (Cumulative sum of seasonal points)
-            if (dailyScore >= 0) {
+            if (dailyScore >= 0 && stats.currentSeason) {
                 const previousDailyScore = stats.currentSeason._lastRecordedDailyScore || 0;
                 const scoreDiff = dailyScore - previousDailyScore;
 
@@ -111,30 +138,30 @@ export class StatsService {
                     stats.currentSeason.basePointsEarned + stats.currentSeason.bonusStreakPoints;
             }
 
-            // Completion Check (Increments on transition to complete state)
-            if (isCompletedToday && !stats.currentSeason._isCompletedToday) {
+            if (isCompletedToday && stats.currentSeason && !stats.currentSeason._isCompletedToday) {
                 stats.gamesCompleted++;
                 stats.currentSeason._isCompletedToday = true;
             }
 
-            // Replaces/Updates rank when a higher/new rank is achieved
-            if (dailyRank && dailyRank.trim() !== '') {
+            if (dailyRank && dailyRank.trim() !== '' && stats.currentSeason) {
                 const prevRank = stats.currentSeason._lastRecordedRankToday;
 
                 if (prevRank !== dailyRank) {
-                    // Decrement counter for previous rank if reached earlier today
-                    if (prevRank && stats.dailyRankDistribution[prevRank]) {
+                    if (prevRank && stats.dailyRankDistribution && stats.dailyRankDistribution[prevRank]) {
                         stats.dailyRankDistribution[prevRank] = Math.max(0, stats.dailyRankDistribution[prevRank] - 1);
                     }
 
-                    // Increment counter for the newly achieved rank
+                    if (!stats.dailyRankDistribution) {
+                        stats.dailyRankDistribution = {};
+                    }
                     stats.dailyRankDistribution[dailyRank] = (stats.dailyRankDistribution[dailyRank] || 0) + 1;
                     stats.currentSeason._lastRecordedRankToday = dailyRank;
                 }
             }
 
-            // Update highest tier achieved in the current season
-            stats.currentSeason.highestTierAchieved = this.calculateTier(stats);
+            if (stats.currentSeason) {
+                stats.currentSeason.highestTierAchieved = this.calculateTier(stats);
+            }
 
             return stats;
         });
@@ -144,7 +171,7 @@ export class StatsService {
 
     private checkStreakMilestones(streak: number, season: SeasonStats): void {
         const bonus = STREAK_MILESTONES[streak];
-        if (bonus && !season.claimedStreakMilestones.includes(streak)) {
+        if (bonus && season.claimedStreakMilestones && !season.claimedStreakMilestones.includes(streak)) {
             season.bonusStreakPoints += bonus;
             season.totalSeasonPoints += bonus;
             season.claimedStreakMilestones.push(streak);
@@ -152,24 +179,11 @@ export class StatsService {
     }
 
     private calculateTier(stats: PlayerStats): string {
-        let refDate: Date;
-
-        if (stats.lastPlayedDate && isValidIsoDate(stats.lastPlayedDate)) {
-            const [y, m, d] = stats.lastPlayedDate.split('-').map(Number);
-            refDate = new Date(y, m - 1, d);
-        } else {
-            refDate = new Date();
-        }
-
-        const startOfYear = new Date(refDate.getFullYear(), 0, 1);
-        const dayOfYear = Math.floor((refDate.getTime() - startOfYear.getTime()) / (1000 * 60 * 60 * 24)) + 1;
-
-        // Estimated maximum achievable points up to this day of the year
-        const maxPossibleGlobalPoints = dayOfYear * 25;
-
-        if (maxPossibleGlobalPoints === 0) return CAREER_TIERS[0].name;
-
-        const percentage = (stats.currentSeason.totalSeasonPoints / maxPossibleGlobalPoints) * 100;
+        const ANNUAL_TARGET_POINTS = 80000;
+        const totalPoints = stats.currentSeason?.totalSeasonPoints ?? 0;
+        
+        // Percentage calculation based on the backend's annual target
+        const percentage = (totalPoints / ANNUAL_TARGET_POINTS) * 100;
 
         let currentTier = CAREER_TIERS[0].name;
         for (const tier of CAREER_TIERS) {
@@ -201,8 +215,8 @@ export class StatsService {
 
         let stats: PlayerStats;
 
-        if (saved) {
-            stats = saved;
+        if (saved && typeof saved === 'object') {
+            stats = this.normalizeStatsPayload(saved);
             this.checkStreakContinuity(stats, today);
         } else {
             // If stats are rebuilt from storage GameStates, save the result immediately
@@ -211,6 +225,42 @@ export class StatsService {
             this.saveStats(stats);
         }
         return stats;
+    }
+
+    private normalizeStatsPayload(payload: any): PlayerStats {
+        const currentYear = new Date().getFullYear();
+        const currentSeasonRaw = payload.currentSeason ?? {};
+
+        // Map both standard frontend properties and backend fields (basePoints, bonusPoints, totalPoints)
+        const normalizedSeason: SeasonStats = {
+            year: currentSeasonRaw.year ?? currentYear,
+            basePointsEarned: currentSeasonRaw.basePointsEarned ?? currentSeasonRaw.basePoints ?? 0,
+            bonusStreakPoints: currentSeasonRaw.bonusStreakPoints ?? currentSeasonRaw.bonusPoints ?? 0,
+            totalSeasonPoints: currentSeasonRaw.totalSeasonPoints ?? currentSeasonRaw.totalPoints ?? 0,
+            highestTierAchieved: currentSeasonRaw.highestTierAchieved ?? CAREER_TIERS[0]?.name ?? 'Initiated',
+            claimedStreakMilestones: Array.isArray(currentSeasonRaw.claimedStreakMilestones)
+                ? [...currentSeasonRaw.claimedStreakMilestones]
+                : [],
+            _lastRecordedDailyScore: currentSeasonRaw._lastRecordedDailyScore ?? 0,
+            _isCompletedToday: currentSeasonRaw._isCompletedToday ?? false,
+            _lastRecordedRankToday: currentSeasonRaw._lastRecordedRankToday ?? null
+        };
+
+        return {
+            userId: payload.userId,
+            gamesPlayed: payload.gamesPlayed ?? 0,
+            gamesCompleted: payload.gamesCompleted ?? 0,
+            currentStreak: payload.currentStreak ?? 0,
+            maxStreak: payload.maxStreak ?? 0,
+            lastPlayedDate: payload.lastPlayedDate ?? null,
+            longestWordFound: payload.longestWordFound ?? null,
+            totalScoreEarned: payload.totalScoreEarned ?? 0,
+            averageScorePerGame: payload.averageScorePerGame ?? 0,
+            completionRate: payload.completionRate ?? 0,
+            currentSeason: normalizedSeason,
+            seasonHistory: payload.seasonHistory ? { ...payload.seasonHistory } : {},
+            dailyRankDistribution: payload.dailyRankDistribution ? { ...payload.dailyRankDistribution } : {}
+        };
     }
 
     private checkStreakContinuity(stats: PlayerStats, today: string): void {
@@ -316,6 +366,9 @@ export class StatsService {
             }
 
             if (entry.rankLabel) {
+                if (!newStats.dailyRankDistribution) {
+                    newStats.dailyRankDistribution = {};
+                }
                 newStats.dailyRankDistribution[entry.rankLabel] = (newStats.dailyRankDistribution[entry.rankLabel] || 0) + 1;
             }
 
@@ -360,11 +413,16 @@ export class StatsService {
             newStats.currentSeason = this.createEmptySeason(currentYear);
         }
 
+        if (!newStats.seasonHistory) {
+            newStats.seasonHistory = {};
+        }
         seasonsMap.forEach((season, yr) => {
-            newStats.seasonHistory[yr] = season;
+            newStats.seasonHistory![yr] = season;
         });
 
-        newStats.currentSeason.highestTierAchieved = this.calculateTier(newStats);
+        if (newStats.currentSeason) {
+            newStats.currentSeason.highestTierAchieved = this.calculateTier(newStats);
+        }
 
         return newStats;
     }

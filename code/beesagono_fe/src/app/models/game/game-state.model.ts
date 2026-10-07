@@ -8,6 +8,12 @@ export interface GameState {
   /** Accumulated player points */
   score: number;
 
+  /** Center letter for the puzzle */
+  centerLetter?: string;
+
+  /** Outer letters for the puzzle */
+  outerLetters?: string[];
+
   /** List of words successfully found today */
   foundWords: string[];
 
@@ -17,6 +23,9 @@ export interface GameState {
   /** List of Mielegrammi (pangrams) found today */
   foundMielegrammi: string[];
 
+  /** Completion percentage of the puzzle (0.0 to 1.0) */
+  completionPercentage?: number;
+
   /** True if all possible target words have been found */
   isCompleted: boolean;
 
@@ -24,5 +33,6 @@ export interface GameState {
   startTime: number;
   lastUpdated: number;
 
+  /** Optional rank label for the puzzle */
   rankLabel?: string;
 }
