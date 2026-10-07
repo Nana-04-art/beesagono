@@ -33,20 +33,20 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc(addFilters = false)
 class DictionaryControllerTest {
 
-        @Autowired
-        private MockMvc mockMvc;
+    @Autowired
+    private MockMvc mockMvc;
 
-        @Autowired
-        private ObjectMapper objectMapper;
+    @Autowired
+    private ObjectMapper objectMapper;
 
-        @MockitoBean
-        private DictionaryService dictionaryService;
+    @MockitoBean
+    private DictionaryService dictionaryService;
 
-        @MockitoBean
-        private JwtUtils jwtUtils;
+    @MockitoBean
+    private JwtUtils jwtUtils;
 
-        @MockitoBean
-        private JwtAuthenticationFilter jwtAuthenticationFilter;
+    @MockitoBean
+    private JwtAuthenticationFilter jwtAuthenticationFilter;
 
     @MockitoBean
     private TokenBlacklist tokenBlacklist;

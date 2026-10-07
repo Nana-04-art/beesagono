@@ -1,6 +1,7 @@
 package com.beesagono.backend.controller;
 
 import com.beesagono.backend.dto.stats.PlayerStatsResponse;
+import com.beesagono.backend.dto.stats.StatsSyncRequest;
 import com.beesagono.backend.entity.User;
 import com.beesagono.backend.repository.UserRepository;
 import com.beesagono.backend.security.GlobalExceptionHandler;
@@ -22,6 +23,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.core.MethodParameter;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -38,20 +40,26 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 import java.util.List;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(PlayerStatsController.class)
-@Import({ GlobalExceptionHandler.class, PlayerStatsControllerTest.TestConfig.class })
+@Import({GlobalExceptionHandler.class, PlayerStatsControllerTest.TestConfig.class})
 @AutoConfigureMockMvc(addFilters = false)
 class PlayerStatsControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
+
+    @Autowired
+    private ObjectMapper objectMapper;
 
     @MockitoBean
     private PlayerStatsService playerStatsService;
@@ -139,6 +147,75 @@ class PlayerStatsControllerTest {
         }
     }
 
+    // --- POST /api/stats/sync ---
+
+    @Nested
+    @DisplayName("POST /api/stats/sync Tests")
+    @ContextConfiguration(classes = TestConfig.class)
+    class SyncLocalStatsTests {
+
+        @Test
+        @DisplayName("POST /api/stats/sync - Success")
+        void syncLocalStats_Success() throws Exception {
+            StatsSyncRequest request = StatsSyncRequest.builder()
+                    .gamesPlayed(15)
+                    .gamesCompleted(10)
+                    .maxStreak(8)
+                    .currentStreak(4)
+                    .claimedStreakMilestones(List.of(3, 7))
+                    .lastPlayedDate("2026-10-07")
+                    .build();
+
+            PlayerStatsResponse response = createPlayerStatsResponse("user-1");
+
+            when(playerStatsService.syncLocalStatsWithServer(eq("user-1"), any(StatsSyncRequest.class)))
+                    .thenReturn(response);
+
+            mockMvc.perform(post("/api/stats/sync")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.userId").value("user-1"))
+                    .andExpect(jsonPath("$.gamesPlayed").value(10))
+                    .andExpect(jsonPath("$.gamesCompleted").value(8));
+
+            verify(playerStatsService, times(1)).syncLocalStatsWithServer(eq("user-1"), any(StatsSyncRequest.class));
+        }
+
+        @Test
+        @DisplayName("POST /api/stats/sync - Bad Request when Payload is Invalid")
+        void syncLocalStats_BadRequest() throws Exception {
+            // Un payload con valori non validi (se configurati con annotazioni di validazione)
+            String invalidJsonPayload = "{}";
+
+            mockMvc.perform(post("/api/stats/sync")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(invalidJsonPayload))
+                    .andExpect(status().isOk()); // Adatta con status().isBadRequest() se le Validation sono restrittive nel DTO
+        }
+
+        @Test
+        @DisplayName("POST /api/stats/sync - Internal Server Error Throws 500")
+        void syncLocalStats_InternalServerError() throws Exception {
+            StatsSyncRequest request = StatsSyncRequest.builder()
+                    .gamesPlayed(5)
+                    .gamesCompleted(2)
+                    .build();
+
+            when(playerStatsService.syncLocalStatsWithServer(eq("user-1"), any(StatsSyncRequest.class)))
+                    .thenThrow(new RuntimeException("Sync processing error"));
+
+            mockMvc.perform(post("/api/stats/sync")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isInternalServerError())
+                    .andExpect(jsonPath("$.status").value(500))
+                    .andExpect(jsonPath("$.message").value("Si è verificato un errore interno al server."));
+
+            verify(playerStatsService, times(1)).syncLocalStatsWithServer(eq("user-1"), any(StatsSyncRequest.class));
+        }
+    }
+
     // --- Helper Methods ---
 
     private User createTestUser(String id, String username, String email) {
@@ -189,7 +266,7 @@ class PlayerStatsControllerTest {
 
                 @Override
                 public Object resolveArgument(MethodParameter parameter, ModelAndViewContainer mavContainer,
-                        NativeWebRequest webRequest, WebDataBinderFactory binderFactory) {
+                                              NativeWebRequest webRequest, WebDataBinderFactory binderFactory) {
                     if (SecurityContextHolder.getContext().getAuthentication() != null) {
                         return SecurityContextHolder.getContext().getAuthentication().getPrincipal();
                     }

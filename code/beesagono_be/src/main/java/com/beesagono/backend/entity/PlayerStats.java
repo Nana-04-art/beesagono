@@ -78,8 +78,19 @@ public class PlayerStats {
     private String longestWordFound;
 
     @Column(name = "total_score_earned")
-    private Integer totalScoreEarned; // Utilizzato per calcolare la media punti
+    private Integer totalScoreEarned; // Used to calculate the points average
 
     @Column(name = "total_puzzles_completed")
-    private Integer totalPuzzlesCompleted; // Contatore alveari completati al 100%
+    private Integer totalPuzzlesCompleted;
+
+    // -- Helper Method --
+    public void setUser(User user) {
+        this.user = user;
+        if (user != null) {
+            this.userId = user.getId();
+            if (user.getPlayerStats() != this) {
+                user.setPlayerStats(this);
+            }
+        }
+    }
 }

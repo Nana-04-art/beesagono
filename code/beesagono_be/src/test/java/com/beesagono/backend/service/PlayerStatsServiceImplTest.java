@@ -1,6 +1,7 @@
 package com.beesagono.backend.service;
 
 import com.beesagono.backend.dto.stats.PlayerStatsResponse;
+import com.beesagono.backend.dto.stats.StatsSyncRequest;
 import com.beesagono.backend.entity.PlayerStats;
 import com.beesagono.backend.entity.User;
 import com.beesagono.backend.repository.GameSessionRepository;
@@ -97,7 +98,7 @@ class PlayerStatsServiceImplTest {
             User mockUser = User.builder().id(userId).username("testuser").build();
 
             when(playerStatsRepository.findById(userId)).thenReturn(Optional.empty());
-            when(userRepository.getReferenceById(userId)).thenReturn(mockUser);
+            when(userRepository.findById(userId)).thenReturn(Optional.of(mockUser));
             when(gameSessionRepository.findDistinctPlayedPuzzleDatesByUserId(userId))
                     .thenReturn(Collections.emptyList());
             when(playerStatsRepository.save(any(PlayerStats.class)))
@@ -114,7 +115,7 @@ class PlayerStatsServiceImplTest {
             assertThat(response.getAverageScorePerGame()).isEqualTo(0.0);
             assertThat(response.getCompletionRate()).isEqualTo(0.0);
 
-            verify(playerStatsRepository, times(1)).save(any(PlayerStats.class));
+            verify(playerStatsRepository, times(2)).save(any(PlayerStats.class));
         }
 
         @Test
@@ -150,8 +151,12 @@ class PlayerStatsServiceImplTest {
 
             when(playerStatsRepository.findById(userId)).thenReturn(Optional.of(existingStats));
             when(gameSessionRepository.findDistinctPlayedPuzzleDatesByUserId(userId)).thenReturn(playedDates);
+            when(playerStatsRepository.saveAndFlush(any(PlayerStats.class)))
+                    .thenAnswer(invocation -> invocation.getArgument(0));
+            when(playerStatsRepository.save(any(PlayerStats.class)))
+                    .thenAnswer(invocation -> invocation.getArgument(0));
 
-            playerStatsService.updatePlayerStatsAfterGame(userId, 150, "MIELEGRAMMA", true);
+            playerStatsService.updatePlayerStatsAfterGame(userId, 150, "MIELEGRAMMA", true, true);
 
             ArgumentCaptor<PlayerStats> captor = ArgumentCaptor.forClass(PlayerStats.class);
             verify(playerStatsRepository, times(1)).save(captor.capture());
@@ -171,8 +176,12 @@ class PlayerStatsServiceImplTest {
             when(playerStatsRepository.findById(userId)).thenReturn(Optional.of(existingStats));
             when(gameSessionRepository.findDistinctPlayedPuzzleDatesByUserId(userId))
                     .thenReturn(Collections.emptyList());
+            when(playerStatsRepository.saveAndFlush(any(PlayerStats.class)))
+                    .thenAnswer(invocation -> invocation.getArgument(0));
+            when(playerStatsRepository.save(any(PlayerStats.class)))
+                    .thenAnswer(invocation -> invocation.getArgument(0));
 
-            playerStatsService.updatePlayerStatsAfterGame(userId, 20, "CASA", false);
+            playerStatsService.updatePlayerStatsAfterGame(userId, 20, "CASA", false, true);
 
             ArgumentCaptor<PlayerStats> captor = ArgumentCaptor.forClass(PlayerStats.class);
             verify(playerStatsRepository, times(1)).save(captor.capture());
@@ -181,6 +190,41 @@ class PlayerStatsServiceImplTest {
             assertThat(savedStats.getLongestWordFound()).isEqualTo("ALBERO");
             assertThat(savedStats.getGamesPlayed()).isEqualTo(11);
             assertThat(savedStats.getGamesCompleted()).isEqualTo(8);
+        }
+    }
+
+    // --- syncLocalStatsWithServer Tests ---
+
+    @Nested
+    @DisplayName("syncLocalStatsWithServer Tests")
+    class SyncLocalStatsWithServerTests {
+
+        @Test
+        @DisplayName("Should synchronize conservative local values with server stats")
+        void shouldSyncLocalStatsConservatively() {
+            StatsSyncRequest request = StatsSyncRequest.builder()
+                    .gamesPlayed(15)
+                    .gamesCompleted(10)
+                    .maxStreak(8)
+                    .currentStreak(4)
+                    .claimedStreakMilestones(List.of(3, 7))
+                    .lastPlayedDate("2026-10-07")
+                    .build();
+
+            when(playerStatsRepository.findById(userId)).thenReturn(Optional.of(existingStats));
+            when(gameSessionRepository.findDistinctPlayedPuzzleDatesByUserId(userId))
+                    .thenReturn(Collections.emptyList());
+            when(playerStatsRepository.save(any(PlayerStats.class)))
+                    .thenAnswer(invocation -> invocation.getArgument(0));
+
+            PlayerStatsResponse response = playerStatsService.syncLocalStatsWithServer(userId, request);
+
+            assertThat(response).isNotNull();
+            verify(playerStatsRepository, times(1)).save(any(PlayerStats.class));
+            assertThat(existingStats.getGamesPlayed()).isEqualTo(15);
+            assertThat(existingStats.getGamesCompleted()).isEqualTo(10);
+            assertThat(existingStats.getMaxStreak()).isEqualTo(8);
+            assertThat(existingStats.getLastStreakMilestoneClaimed()).isEqualTo(7);
         }
     }
 }

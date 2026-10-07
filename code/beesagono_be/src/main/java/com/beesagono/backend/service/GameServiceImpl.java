@@ -105,7 +105,7 @@ public class GameServiceImpl implements GameService {
 
         String rawWord = request.getWord();
 
-        // Minimum Length Validation
+        // Syntactic input validation (Minimum length)
         if (rawWord == null || rawWord.isBlank() || rawWord.trim().length() < 4) {
             recordInvalidAttempt(session, rawWord, ErrorTypeCode.TOO_SHORT);
             return buildErrorResponse(rawWord, session, ErrorTypeCode.TOO_SHORT,
@@ -114,20 +114,20 @@ public class GameServiceImpl implements GameService {
 
         String word = rawWord.trim().toUpperCase();
 
-        // Duplicate word check in session
+        // Duplicate word check in session (Prevents invalid points accumulation)
         if (foundWordRepository.existsByIdSessionIdAndIdWord(session.getId(), word)) {
             recordInvalidAttempt(session, word, ErrorTypeCode.ALREADY_FOUND);
             return buildErrorResponse(word, session, ErrorTypeCode.ALREADY_FOUND, "Hai già trovato questa parola!");
         }
 
-        // Center Letter Validation
+        // Mandatory center letter check
         if (!word.contains(session.getPuzzle().getCenterLetter())) {
             recordInvalidAttempt(session, word, ErrorTypeCode.MISSING_CENTER);
             return buildErrorResponse(word, session, ErrorTypeCode.MISSING_CENTER,
                     "La parola non contiene la lettera centrale obbligatoria.");
         }
 
-        // Verification in Today's Puzzle
+        // Solution verification in daily puzzle and score calculation
         Optional<PuzzleWord> puzzleWord = puzzleWordRepository.findByIdPuzzleIdAndIdWord(session.getPuzzle().getId(),
                 word);
 
@@ -156,7 +156,9 @@ public class GameServiceImpl implements GameService {
 
             // Atomic season update (annual career, streak, points, and completion)
             playerSeasonService.updateSeasonProgress(userId, pointsEarned, isCompletedNow);
-            playerStatsService.updatePlayerStatsAfterGame(userId, pointsEarned, word, isCompletedNow);
+
+            // Passed fifth parameter hasPlayedWords = true since a valid word was found
+            playerStatsService.updatePlayerStatsAfterGame(userId, pointsEarned, word, isCompletedNow, true);
 
             // Automatic badge evaluation and awarding
             badgeService.evaluateAndAwardBadges(userId);
@@ -206,28 +208,39 @@ public class GameServiceImpl implements GameService {
         int totalNewPointsInBulk = 0;
         String longestWordInBulk = null;
         boolean anyCompletedInBulk = false;
+        boolean hasPlayedWordsInBulk = false;
 
         for (GameSyncRequest singleSync : sortedGames) {
 
+            // Retrieve or generate the official BE puzzle for that date
             puzzleService.generateAndSavePuzzleForDate(singleSync.getPuzzleDate());
             DailyPuzzle puzzle = dailyPuzzleRepository.findByPuzzleDate(singleSync.getPuzzleDate())
                     .orElseThrow(() -> new ResponseStatusException(
                             HttpStatus.NOT_FOUND,
                             "Errore nel recupero del puzzle per la data: " + singleSync.getPuzzleDate()));
 
-            // Check Inconsistencies: If center letter doesn't match, ignore FE payload
-            if (StringUtils.hasText(singleSync.getCenterLetter()) &&
-                    !singleSync.getCenterLetter().trim().equalsIgnoreCase(puzzle.getCenterLetter())) {
-                continue;
-            }
-
+            // Retrieve or create the game session in DB
             GameSession session = gameSessionRepository.findByUserIdAndPuzzleId(userId, puzzle.getId())
                     .orElseGet(() -> createNewSession(userId, puzzle));
 
-            int newPointsEarnedInSync = 0;
+            // UPDATE SESSION TIMESTAMPS FROM CLIENT IF APPLICABLE
+            if (singleSync.getStartTime() != null && singleSync.getStartTime() > 0) {
+                Date clientStartTime = new Date(singleSync.getStartTime());
+                if (session.getStartTime() == null || clientStartTime.before(session.getStartTime())) {
+                    session.setStartTime(clientStartTime);
+                }
+            }
 
-            // CASE 1: Multi-Device Sync with compatible dictionary (Merge unique words)
-            // Process and merge VALID found words
+            if (singleSync.getLastUpdated() != null && singleSync.getLastUpdated() > 0) {
+                Date clientLastUpdated = new Date(singleSync.getLastUpdated());
+                if (session.getLastUpdated() == null || clientLastUpdated.after(session.getLastUpdated())) {
+                    session.setLastUpdated(clientLastUpdated);
+                }
+            }
+
+            int newPointsEarnedInSession = 0;
+
+            // PROCESSING VALID FOUND WORDS
             if (singleSync.getFoundWords() != null && !singleSync.getFoundWords().isEmpty()) {
                 for (String rawWord : singleSync.getFoundWords()) {
                     if (!StringUtils.hasText(rawWord)) {
@@ -235,18 +248,29 @@ public class GameServiceImpl implements GameService {
                     }
                     String word = rawWord.trim().toUpperCase();
 
-                    // If the word has not been saved in this session yet
+                    // Check if word wasn't already credited in this session
                     if (!foundWordRepository.existsByIdSessionIdAndIdWord(session.getId(), word)) {
+                        hasPlayedWordsInBulk = true;
                         Optional<PuzzleWord> pwOpt = puzzleWordRepository.findByIdPuzzleIdAndIdWord(puzzle.getId(),
                                 word);
+                        boolean isValidWord = false;
+                        boolean isMiele = false;
 
-                        // Verify that the word officially exists in the DB for this puzzle
                         if (pwOpt.isPresent()) {
-                            PuzzleWord pw = pwOpt.get();
-                            boolean isMiele = Boolean.TRUE.equals(pw.getIsMielegramma());
-                            int pointsEarned = scoringService.calculateWordScore(word, isMiele);
+                            // CASE A: Standard Official Puzzle Solution
+                            isValidWord = true;
+                            isMiele = Boolean.TRUE.equals(pwOpt.get().getIsMielegramma());
+                        } else if (dictionaryRepository.existsByWord(word)) {
+                            // CASE B: Historical Migration Fallback (Valid dictionary word from offline seed)
+                            isValidWord = true;
+                            isMiele = singleSync.getFoundMielegrammi() != null
+                                    && singleSync.getFoundMielegrammi().contains(word);
+                        }
 
-                            newPointsEarnedInSync += pointsEarned;
+                        // Strictly recalculate score server-side
+                        if (isValidWord) {
+                            int pointsEarned = scoringService.calculateWordScore(word, isMiele);
+                            newPointsEarnedInSession += pointsEarned;
 
                             // Track the longest word found across the entire batch
                             if (longestWordInBulk == null || word.length() > longestWordInBulk.length()) {
@@ -265,7 +289,7 @@ public class GameServiceImpl implements GameService {
                 }
             }
 
-            // Process and save INVALID word attempts
+            // PROCESSING INVALID WORDS
             if (singleSync.getInvalidWords() != null && !singleSync.getInvalidWords().isEmpty()) {
                 List<String> existingInvalidWords = invalidWordAttemptRepository
                         .findDistinctAttemptedWordsBySessionId(session.getId());
@@ -279,6 +303,7 @@ public class GameServiceImpl implements GameService {
                     String invalidWord = rawInvalidWord.trim().toUpperCase();
 
                     if (!existingSet.contains(invalidWord)) {
+                        hasPlayedWordsInBulk = true;
                         ErrorTypeCode reason = determineErrorReason(invalidWord, puzzle);
 
                         InvalidWordAttempt attempt = InvalidWordAttempt.builder()
@@ -293,31 +318,49 @@ public class GameServiceImpl implements GameService {
                 }
             }
 
-            // Update current session if new progress was made
-            if (newPointsEarnedInSync > 0) {
-                int updatedSessionScore = session.getCurrentScore() + newPointsEarnedInSync;
+            // SECURE COMPLETION COMPUTATION
+            int updatedSessionScore = session.getCurrentScore() + newPointsEarnedInSession;
+            boolean wasAlreadyCompleted = Boolean.TRUE.equals(session.getIsCompleted());
+
+            // A) Check server max score
+            boolean reachedServerMaxScore = updatedSessionScore >= puzzle.getMaxScore();
+
+            // B) Secure Legacy Fallback (requires verified valid Mielegramma or >= 5 valid words)
+            boolean hasValidMielegramma = singleSync.getFoundMielegrammi() != null
+                    && !singleSync.getFoundMielegrammi().isEmpty()
+                    && singleSync.getFoundMielegrammi().stream().anyMatch(dictionaryRepository::existsByWord);
+
+            boolean isLegitimateLegacyCompletion = Boolean.TRUE.equals(singleSync.getIsCompleted())
+                    && (hasValidMielegramma
+                    || (singleSync.getFoundWords() != null && singleSync.getFoundWords().size() >= 5));
+
+            boolean isCompletedNow = !wasAlreadyCompleted && (reachedServerMaxScore || isLegitimateLegacyCompletion);
+
+            // SAVE SESSION STATE
+            if (newPointsEarnedInSession > 0 || isCompletedNow || singleSync.getStartTime() != null) {
                 session.setCurrentScore(updatedSessionScore);
 
-                boolean isCompletedNow = !Boolean.TRUE.equals(session.getIsCompleted())
-                        && updatedSessionScore >= puzzle.getMaxScore();
+                if (isCompletedNow) {
+                    session.setIsCompleted(true);
+                    anyCompletedInBulk = true;
+                }
 
                 updateSessionRankAndCompletion(session, updatedSessionScore);
                 gameSessionRepository.save(session);
 
-                totalNewPointsInBulk += newPointsEarnedInSync;
-                if (isCompletedNow) {
-                    anyCompletedInBulk = true;
-                }
+                totalNewPointsInBulk += newPointsEarnedInSession;
             }
 
             responses.add(buildGameSessionResponse(session));
         }
 
-        // Global side effects executed ONLY ONCE at the end of the Bulk Sync
-        if (totalNewPointsInBulk > 0 || anyCompletedInBulk) {
+        // Global side-effects driven ONLY by verified server math
+        if (totalNewPointsInBulk > 0 || anyCompletedInBulk || hasPlayedWordsInBulk) {
             playerSeasonService.updateSeasonProgress(userId, totalNewPointsInBulk, anyCompletedInBulk);
+
+            // Pass hasPlayedWordsInBulk to verify if the user actually submitted words in the batch
             playerStatsService.updatePlayerStatsAfterGame(userId, totalNewPointsInBulk, longestWordInBulk,
-                    anyCompletedInBulk);
+                    anyCompletedInBulk, hasPlayedWordsInBulk);
 
             // Uniform badge calculation for the bulk request
             badgeService.evaluateAndAwardBadges(userId);
@@ -330,11 +373,8 @@ public class GameServiceImpl implements GameService {
 
     private GameSession createNewSession(String userId, DailyPuzzle puzzle) {
         User user = userRepository.findById(userId)
-                 .orElseThrow(() -> new ResponseStatusException(
+                .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "Utente non trovato con ID: " + userId));
-
-        // Record that the user started today's match
-        playerSeasonService.updateSeasonProgress(userId, 0, false);
 
         Date now = new Date();
 
@@ -384,10 +424,12 @@ public class GameServiceImpl implements GameService {
 
         // Notify today's activity to PlayerSeasonService (0 points earned, but played day)
         playerSeasonService.updateSeasonProgress(session.getUser().getId(), 0, false);
+
+        // Notify playerStatsService indicating that the user played (hasPlayedWords = true)
+        playerStatsService.updatePlayerStatsAfterGame(session.getUser().getId(), 0, null, false, true);
     }
 
-    private SubmitWordResponse buildErrorResponse(String word, GameSession session, ErrorTypeCode code,
-            String message) {
+    private SubmitWordResponse buildErrorResponse(String word, GameSession session, ErrorTypeCode code, String message) {
         return SubmitWordResponse.builder()
                 .success(false)
                 .word(word)
@@ -441,18 +483,15 @@ public class GameServiceImpl implements GameService {
 
         String normalizedWord = word.trim().toUpperCase();
 
-        // Check minimum length (e.g., 4 characters)
         if (normalizedWord.length() < 4) {
             return ErrorTypeCode.TOO_SHORT;
         }
 
-        // Check presence of the mandatory center letter
         String center = puzzle.getCenterLetter().toUpperCase();
         if (!normalizedWord.contains(center)) {
             return ErrorTypeCode.MISSING_CENTER;
         }
 
-        // Extract all valid letters (Center + Outer Letters from EmbeddedId)
         Set<Character> allowedChars = new HashSet<>();
         allowedChars.add(center.charAt(0));
 
@@ -467,14 +506,12 @@ public class GameServiceImpl implements GameService {
             }
         }
 
-        // Verify that the word contains only allowed characters
         for (char c : normalizedWord.toCharArray()) {
             if (!allowedChars.contains(c)) {
                 return ErrorTypeCode.INVALID_LETTERS;
             }
         }
 
-        // If it satisfies all composition rules but is not in the dictionary
         return ErrorTypeCode.NOT_IN_DICTIONARY;
     }
 }
