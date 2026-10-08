@@ -14,6 +14,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
@@ -40,7 +41,7 @@ public class PuzzleGeneratorServiceImpl implements PuzzleGeneratorService {
     private static final int RECENT_CENTER_LETTERS_LIMIT = 3;
 
     @Override
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void generateAndSavePuzzleForDate(LocalDate date) {
         String dateStr = date.toString();
         if (dailyPuzzleRepository.existsByPuzzleDate(date)) {
