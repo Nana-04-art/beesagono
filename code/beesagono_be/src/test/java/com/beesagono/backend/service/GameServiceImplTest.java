@@ -64,6 +64,8 @@ class GameServiceImplTest {
     private DictionaryWordRepository dictionaryRepository;
     @Mock
     private PuzzleGeneratorService puzzleService;
+    @Mock
+    private ScoringService scoringService;
 
     @InjectMocks
     private GameServiceImpl gameService;
@@ -204,8 +206,7 @@ class GameServiceImplTest {
         @Test
         @DisplayName("Should fail when word misses center letter")
         void shouldFailWhenWordMissesCenterLetter() {
-            SubmitWordRequest request = new SubmitWordRequest(session.getId(), "EDILIZIA"); // Doesn't contain 'A'
-                                                                                            // (center is 'A')
+            SubmitWordRequest request = new SubmitWordRequest(session.getId(), "EDILIZIA");
 
             session.getPuzzle().setCenterLetter("X");
             when(gameSessionRepository.findById(session.getId())).thenReturn(Optional.of(session));
@@ -242,6 +243,7 @@ class GameServiceImplTest {
             when(foundWordRepository.existsByIdSessionIdAndIdWord(session.getId(), "CASA")).thenReturn(false);
             when(puzzleWordRepository.findByIdPuzzleIdAndIdWord(puzzle.getId(), "CASA"))
                     .thenReturn(Optional.of(puzzleWord));
+            when(scoringService.calculateWordScore("CASA", false)).thenReturn(1);
 
             SubmitWordResponse response = gameService.validateAndScoreWord(request, user.getId());
 
@@ -265,6 +267,7 @@ class GameServiceImplTest {
             when(foundWordRepository.existsByIdSessionIdAndIdWord(session.getId(), "ALBERGO")).thenReturn(false);
             when(puzzleWordRepository.findByIdPuzzleIdAndIdWord(puzzle.getId(), "ALBERGO"))
                     .thenReturn(Optional.of(puzzleWord));
+            when(scoringService.calculateWordScore("ALBERGO", true)).thenReturn(14);
 
             SubmitWordResponse response = gameService.validateAndScoreWord(request, user.getId());
 
@@ -293,8 +296,6 @@ class GameServiceImplTest {
         @Test
         @DisplayName("Should fail with NOT_IN_DICTIONARY when word is not in dictionary")
         void shouldFailWhenWordNotInDictionary() {
-            // We use "ZZZA" because it contains the central letter 'A' and has a length of
-            // 4 or greater
             SubmitWordRequest request = new SubmitWordRequest(session.getId(), "ZZZA");
 
             when(gameSessionRepository.findById(session.getId())).thenReturn(Optional.of(session));
@@ -346,6 +347,9 @@ class GameServiceImplTest {
 
             when(puzzleWordRepository.findByIdPuzzleIdAndIdWord(puzzle.getId(), "CASA")).thenReturn(Optional.of(pw1));
             when(puzzleWordRepository.findByIdPuzzleIdAndIdWord(puzzle.getId(), "ALBERO")).thenReturn(Optional.of(pw2));
+
+            when(scoringService.calculateWordScore("CASA", false)).thenReturn(1);
+            when(scoringService.calculateWordScore("ALBERO", true)).thenReturn(13);
 
             FoundWord fw1 = FoundWord.builder().id(new FoundWordId(session.getId(), "CASA")).build();
             FoundWord fw2 = FoundWord.builder().id(new FoundWordId(session.getId(), "ALBERO")).build();

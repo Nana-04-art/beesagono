@@ -50,6 +50,7 @@ public class GameServiceImpl implements GameService {
     private final UserRepository userRepository;
     private final DictionaryWordRepository dictionaryRepository;
     private final PuzzleGeneratorService puzzleService;
+    private final ScoringService scoringService;
 
     @Override
     @Transactional
@@ -60,7 +61,8 @@ public class GameServiceImpl implements GameService {
         puzzleService.generateAndSavePuzzleForDate(today);
 
         DailyPuzzle todayPuzzle = dailyPuzzleRepository.findByPuzzleDate(today)
-                .orElseThrow(() -> new RuntimeException("Puzzle per la data " + today + " non trovato."));
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Puzzle per la data " + today + " non trovato."));
 
         GameSession session = gameSessionRepository.findByUserIdAndPuzzleId(userId, todayPuzzle.getId())
                 .orElseGet(() -> createNewSession(userId, todayPuzzle));
@@ -71,8 +73,7 @@ public class GameServiceImpl implements GameService {
     @Override
     @Transactional
     public SubmitWordResponse validateAndScoreWord(SubmitWordRequest request, String userId) {
-        // Session and Puzzle existence check (Highest priority -> HTTP 404
-        // ResponseStatusException)
+        // Session and Puzzle existence check
         GameSession session = gameSessionRepository.findById(request.getSessionId())
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "Sessione di gioco non trovata con ID: " + request.getSessionId()));
@@ -82,12 +83,14 @@ public class GameServiceImpl implements GameService {
                     HttpStatus.NOT_FOUND, "Puzzle non trovato per la sessione di gioco indicata.");
         }
 
-        // User Authorization Check (HTTP 403 Forbidden if session does not belong to
-        // user)
+        // User Authorization Check
         if (!session.getUser().getId().equals(userId)) {
             throw new ResponseStatusException(
                     HttpStatus.FORBIDDEN, "Non sei autorizzato a modificare questa sessione di gioco.");
         }
+
+        // Every word submission attempt records today's play for the streak
+        session.setLastUpdated(new Date());
 
         String rawWord = request.getWord();
 
@@ -100,7 +103,7 @@ public class GameServiceImpl implements GameService {
 
         String word = rawWord.trim().toUpperCase();
 
-        // Duplicate word check in session (Prevents invalid points accumulation)
+        // Duplicate word check in session
         if (foundWordRepository.existsByIdSessionIdAndIdWord(session.getId(), word)) {
             recordInvalidAttempt(session, word, ErrorTypeCode.ALREADY_FOUND);
             return buildErrorResponse(word, session, ErrorTypeCode.ALREADY_FOUND, "Hai già trovato questa parola!");
@@ -120,8 +123,9 @@ public class GameServiceImpl implements GameService {
         if (puzzleWord.isPresent()) {
             PuzzleWord pw = puzzleWord.get();
             boolean isMiele = Boolean.TRUE.equals(pw.getIsMielegramma());
-            int basePoints = word.length() == 4 ? 1 : word.length();
-            int pointsEarned = isMiele ? basePoints + 7 : basePoints;
+
+            // Centralized scoring calculation using ScoringService
+            int pointsEarned = scoringService.calculateWordScore(word, isMiele);
 
             FoundWord foundWord = FoundWord.builder()
                     .id(new FoundWordId(session.getId(), word))
@@ -149,8 +153,7 @@ public class GameServiceImpl implements GameService {
                     .build();
         }
 
-        // Global Dictionary check (Distinguishes between missing from puzzle vs missing
-        // from dictionary)
+        // Global Dictionary check
         boolean existsInDictionary = dictionaryRepository.existsByWord(word);
 
         if (existsInDictionary) {
@@ -182,10 +185,11 @@ public class GameServiceImpl implements GameService {
             puzzleService.generateAndSavePuzzleForDate(singleSync.getPuzzleDate());
 
             DailyPuzzle puzzle = dailyPuzzleRepository.findByPuzzleDate(singleSync.getPuzzleDate())
-                    .orElseThrow(() -> new RuntimeException(
+                    .orElseThrow(() -> new ResponseStatusException(
+                            HttpStatus.NOT_FOUND,
                             "Errore nel recupero del puzzle per la data: " + singleSync.getPuzzleDate()));
 
-            // Check Inconsistencies: If center letter doesn't match, ignore FE payload
+            // Check Inconsistencies
             if (StringUtils.hasText(singleSync.getCenterLetter()) &&
                     !singleSync.getCenterLetter().trim().equalsIgnoreCase(puzzle.getCenterLetter())) {
                 continue;
@@ -195,7 +199,7 @@ public class GameServiceImpl implements GameService {
             GameSession session = gameSessionRepository.findByUserIdAndPuzzleId(userId, puzzle.getId())
                     .orElseGet(() -> createNewSession(userId, puzzle));
 
-            // Process and validate words submitted by FE
+            // Process and validate words submitted by FE (invalid words discarded silently)
             if (singleSync.getFoundWords() != null && !singleSync.getFoundWords().isEmpty()) {
                 for (String rawWord : singleSync.getFoundWords()) {
                     if (rawWord == null || rawWord.isBlank()) {
@@ -206,8 +210,7 @@ public class GameServiceImpl implements GameService {
                     if (!foundWordRepository.existsByIdSessionIdAndIdWord(session.getId(), word)) {
                         puzzleWordRepository.findByIdPuzzleIdAndIdWord(puzzle.getId(), word).ifPresent(pw -> {
                             boolean isMiele = Boolean.TRUE.equals(pw.getIsMielegramma());
-                            int basePoints = word.length() == 4 ? 1 : word.length();
-                            int pointsEarned = isMiele ? basePoints + 7 : basePoints;
+                            int pointsEarned = scoringService.calculateWordScore(word, isMiele);
 
                             FoundWord foundWord = FoundWord.builder()
                                     .id(new FoundWordId(session.getId(), word))
@@ -236,7 +239,8 @@ public class GameServiceImpl implements GameService {
 
     private GameSession createNewSession(String userId, DailyPuzzle puzzle) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("Utente non trovato con ID: " + userId));
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Utente non trovato con ID: " + userId));
 
         Date now = new Date();
 
@@ -246,7 +250,6 @@ public class GameServiceImpl implements GameService {
                 .currentScore(0)
                 .currentRankLabel(RankTier.BEGINNER.getLabel())
                 .isCompleted(false)
-                .startTime(now)
                 .lastUpdated(now)
                 .build();
 
