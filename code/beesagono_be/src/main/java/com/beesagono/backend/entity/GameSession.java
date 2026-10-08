@@ -20,6 +20,8 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.ToString;
 import lombok.experimental.SuperBuilder;
+
+import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 import org.hibernate.annotations.UuidGenerator;
 
@@ -73,7 +75,8 @@ public class GameSession {
     @Column(name = "is_completed", nullable = false)
     private Boolean isCompleted = false;
 
-    @Column(name = "start_time", nullable = false)
+    @CreationTimestamp
+    @Column(name = "start_time", nullable = false, updatable = false)
     private Date startTime;
 
     @UpdateTimestamp
