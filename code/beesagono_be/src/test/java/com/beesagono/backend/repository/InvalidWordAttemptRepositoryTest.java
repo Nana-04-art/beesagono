@@ -67,4 +67,12 @@ class InvalidWordAttemptRepositoryTest {
                 assertThat(attempts).hasSize(1);
                 assertThat(attempts.get(0).getAttemptedWord()).isEqualTo("SOL");
         }
+
+        @Test
+        @DisplayName("findBySessionId - Should return empty list when no attempts exist for sessionId")
+        void shouldReturnEmptyWhenNoAttemptsFound() {
+                List<InvalidWordAttempt> attempts = invalidWordAttemptRepository.findBySessionId("nonexistent-session");
+
+                assertThat(attempts).isEmpty();
+        }
 }

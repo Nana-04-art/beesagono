@@ -55,7 +55,7 @@ class DictionaryServiceImplTest {
 
     @Test
     @DisplayName("addSingleWord - Success")
-    void addSingleWord_Success() {
+    void shouldAddSingleWordSuccessfully() {
         AddWordRequest request = new AddWordRequest();
         request.setWord("àlbero");
 
@@ -86,7 +86,7 @@ class DictionaryServiceImplTest {
 
     @Test
     @DisplayName("addSingleWord - Throws Exception when word length < 4")
-    void addSingleWord_TooShort() {
+    void shouldThrowExceptionWhenWordTooShort() {
         AddWordRequest request = new AddWordRequest();
         request.setWord("SOL");
 
@@ -97,7 +97,7 @@ class DictionaryServiceImplTest {
 
     @Test
     @DisplayName("addSingleWord - Throws Exception when word already exists")
-    void addSingleWord_AlreadyExists() {
+    void shouldThrowExceptionWhenWordAlreadyExists() {
         AddWordRequest request = new AddWordRequest();
         request.setWord("CASA");
 
@@ -110,7 +110,7 @@ class DictionaryServiceImplTest {
 
     @Test
     @DisplayName("addSingleWord - Throws Exception when unique letters > 7")
-    void addSingleWord_TooManyUniqueLetters() {
+    void shouldThrowExceptionWhenTooManyUniqueLetters() {
         AddWordRequest request = new AddWordRequest();
         request.setWord("ABCDEFGHI");
 
@@ -121,7 +121,7 @@ class DictionaryServiceImplTest {
 
     @Test
     @DisplayName("addBatchWords - Success")
-    void addBatchWords_Success() {
+    void shouldAddBatchWordsSuccessfully() {
         BatchAddWordRequest request = new BatchAddWordRequest();
         request.setWords(List.of("casa", "albero", "duplicata"));
 
@@ -138,7 +138,7 @@ class DictionaryServiceImplTest {
 
     @Test
     @DisplayName("uploadWordsFromFile - Success")
-    void uploadWordsFromFile_Success() {
+    void shouldUploadWordsFromFileSuccessfully() {
         MockMultipartFile file = new MockMultipartFile(
                 "file",
                 "test.txt",
@@ -156,7 +156,7 @@ class DictionaryServiceImplTest {
 
     @Test
     @DisplayName("uploadWordsFromFile - Empty file throws Exception")
-    void uploadWordsFromFile_EmptyFile() {
+    void shouldThrowExceptionWhenUploadedFileIsEmpty() {
         MockMultipartFile file = new MockMultipartFile("file", "empty.txt", "text/plain", new byte[0]);
 
         assertThatThrownBy(() -> dictionaryService.uploadWordsFromFile(file, adminUser))
@@ -167,7 +167,7 @@ class DictionaryServiceImplTest {
     @Test
     @DisplayName("getWords - Success")
     @SuppressWarnings("unchecked")
-    void getWords_Success() {
+    void shouldGetWordsSuccessfully() {
         DictionaryFilterRequest filterRequest = new DictionaryFilterRequest();
         Pageable pageable = Pageable.unpaged();
 

@@ -21,6 +21,8 @@ class RoleRepositoryTest {
     @Autowired
     private TestEntityManager entityManager;
 
+    // --- findByName ---
+
     @Test
     @DisplayName("findByName - Should return Role when role name exists")
     void shouldFindByName() {
@@ -34,5 +36,13 @@ class RoleRepositoryTest {
 
         assertThat(found).isPresent();
         assertThat(found.get().getName()).isEqualTo(RoleName.ROLE_USER);
+    }
+
+    @Test
+    @DisplayName("findByName - Should return empty Optional when role name does not exist")
+    void shouldReturnEmptyWhenRoleNameNotFound() {
+        Optional<Role> found = roleRepository.findByName(RoleName.ROLE_ADMIN);
+
+        assertThat(found).isEmpty();
     }
 }

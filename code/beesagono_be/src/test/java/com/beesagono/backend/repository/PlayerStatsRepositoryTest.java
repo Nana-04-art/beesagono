@@ -45,4 +45,12 @@ class PlayerStatsRepositoryTest {
         assertThat(found.get().getCurrentStreak()).isEqualTo(5);
         assertThat(found.get().getTotalPoints()).isEqualTo(1200);
     }
+
+    @Test
+    @DisplayName("findById - Should return empty Optional when stats do not exist for user")
+    void shouldReturnEmptyWhenStatsNotFound() {
+        Optional<PlayerStats> found = playerStatsRepository.findById("nonexistent-user");
+
+        assertThat(found).isEmpty();
+    }
 }
