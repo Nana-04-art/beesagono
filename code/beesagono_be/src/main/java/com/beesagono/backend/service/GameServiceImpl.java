@@ -89,12 +89,9 @@ public class GameServiceImpl implements GameService {
                     HttpStatus.FORBIDDEN, "Non sei autorizzato a modificare questa sessione di gioco.");
         }
 
-        // Every word submission attempt records today's play for the streak
-        session.setLastUpdated(new Date());
-
         String rawWord = request.getWord();
-
-        // Syntactic input validation (Minimum length)
+        
+        // Minimum Length Validation
         if (rawWord == null || rawWord.isBlank() || rawWord.trim().length() < 4) {
             recordInvalidAttempt(session, rawWord, ErrorTypeCode.TOO_SHORT);
             return buildErrorResponse(rawWord, session, ErrorTypeCode.TOO_SHORT,
@@ -103,20 +100,26 @@ public class GameServiceImpl implements GameService {
 
         String word = rawWord.trim().toUpperCase();
 
-        // Duplicate word check in session
+        // Duplicate word check in session (Prevents invalid points accumulation)
         if (foundWordRepository.existsByIdSessionIdAndIdWord(session.getId(), word)) {
             recordInvalidAttempt(session, word, ErrorTypeCode.ALREADY_FOUND);
             return buildErrorResponse(word, session, ErrorTypeCode.ALREADY_FOUND, "Hai già trovato questa parola!");
         }
 
-        // Mandatory center letter check
+        // Center Letter Validation
         if (!word.contains(session.getPuzzle().getCenterLetter())) {
             recordInvalidAttempt(session, word, ErrorTypeCode.MISSING_CENTER);
             return buildErrorResponse(word, session, ErrorTypeCode.MISSING_CENTER,
                     "La parola non contiene la lettera centrale obbligatoria.");
         }
 
-        // Solution verification in daily puzzle and score calculation
+        // Duplicate Check in Session
+        if (foundWordRepository.existsByIdSessionIdAndIdWord(session.getId(), word)) {
+            recordInvalidAttempt(session, word, ErrorTypeCode.ALREADY_FOUND);
+            return buildErrorResponse(word, session, ErrorTypeCode.ALREADY_FOUND, "Hai già trovato questa parola!");
+        }
+
+        // Verification in Today's Puzzle
         Optional<PuzzleWord> puzzleWord = puzzleWordRepository.findByIdPuzzleIdAndIdWord(session.getPuzzle().getId(),
                 word);
 
@@ -153,7 +156,7 @@ public class GameServiceImpl implements GameService {
                     .build();
         }
 
-        // Global Dictionary check
+        // Global Dictionary check 
         boolean existsInDictionary = dictionaryRepository.existsByWord(word);
 
         if (existsInDictionary) {

@@ -13,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -41,5 +42,18 @@ public class PuzzleServiceImpl implements PuzzleService {
                         HttpStatus.NOT_FOUND, "Puzzle del giorno non trovato"));
 
         return dailyPuzzleMapper.toDailyPuzzleResponse(puzzle);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<String> getValidWordsByDate(LocalDate date) {
+        DailyPuzzle puzzle = dailyPuzzleRepository.findByPuzzleDate(date)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Puzzle non trovato per la data: " + date));
+
+        return puzzle.getPuzzleWords().stream()
+                .map(pw -> pw.getId().getWord())
+                .toList();
     }
 }

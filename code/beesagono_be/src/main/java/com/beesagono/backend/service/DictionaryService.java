@@ -9,6 +9,7 @@ import com.beesagono.backend.dto.dictionary.BatchAddWordRequest;
 import com.beesagono.backend.dto.dictionary.BatchUploadResponse;
 import com.beesagono.backend.dto.dictionary.DictionaryFilterRequest;
 import com.beesagono.backend.dto.dictionary.DictionaryWordResponse;
+import com.beesagono.backend.dto.dictionary.WordValidationResponse;
 import com.beesagono.backend.entity.User;
 
 public interface DictionaryService {
@@ -20,4 +21,6 @@ public interface DictionaryService {
     BatchUploadResponse uploadWordsFromFile(MultipartFile file, User adminUser);
 
     Page<DictionaryWordResponse> getWords(DictionaryFilterRequest filterRequest, Pageable pageable);
+
+    WordValidationResponse validateWordForGuest(String rawWord);
 }

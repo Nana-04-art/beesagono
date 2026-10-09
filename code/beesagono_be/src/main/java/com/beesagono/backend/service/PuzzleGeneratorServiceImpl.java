@@ -12,7 +12,7 @@ import com.beesagono.backend.repository.PuzzleOuterLetterRepository;
 import com.beesagono.backend.repository.PuzzleWordRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -38,20 +38,18 @@ public class PuzzleGeneratorServiceImpl implements PuzzleGeneratorService {
     private static final int MIN_TARGET_WORDS_COUNT = 20;
     private static final int MIN_MIELEGRAMMI_COUNT = 1;
     private static final int MAX_GENERATION_ATTEMPTS = 50;
-    private static final int RECENT_CENTER_LETTERS_LIMIT = 3;
 
     @Override
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void generateAndSavePuzzleForDate(LocalDate date) {
+    public DailyPuzzle generateAndSavePuzzleForDate(LocalDate date) {
         String dateStr = date.toString();
         if (dailyPuzzleRepository.existsByPuzzleDate(date)) {
             log.info("Puzzle per la data {} già esistente a database.", dateStr);
-            return;
+            return dailyPuzzleRepository.findByPuzzleDate(date).orElse(null);
         }
 
         // Retrieve the middle letters of the last 3 puzzles to avoid repetitions
-        List<String> recentCenterLetters = dailyPuzzleRepository
-                .findAllByOrderByPuzzleDateDesc(PageRequest.of(0, RECENT_CENTER_LETTERS_LIMIT))
+        List<String> recentCenterLetters = dailyPuzzleRepository.findAllByOrderByPuzzleDateDesc(Pageable.unpaged())
                 .stream()
                 .map(DailyPuzzle::getCenterLetter)
                 .toList();
@@ -85,14 +83,16 @@ public class PuzzleGeneratorServiceImpl implements PuzzleGeneratorService {
             // If all the letters of the pangram have been used recently, use the full set.
             List<String> candidateLetters = preferredLetters.isEmpty() ? uniqueLetters : preferredLetters;
 
-            String centerLetter = candidateLetters.get((int) Math.floor(rng.get() * candidateLetters.size()));
+            String centerLetter = candidateLetters
+                    .get((int) Math.floor(rng.get() * candidateLetters.size()));
 
             // Calculation of Bitmasks
             int puzzleMask = calculateMaskFromString(targetPangram);
             int centerBit = 1 << (centerLetter.charAt(0) - 'A');
 
             // JPQL bitwise query to retrieve valid words
-            List<DictionaryWord> validWordsFromDb = dictionaryWordRepository.findValidWordsForPuzzle(centerBit,
+            List<DictionaryWord> validWordsFromDb = dictionaryWordRepository.findValidWordsForPuzzle(
+                    centerBit,
                     puzzleMask);
 
             List<PuzzleWordData> targetWords = new ArrayList<>();
@@ -106,7 +106,7 @@ public class PuzzleGeneratorServiceImpl implements PuzzleGeneratorService {
                     mielegrammi.add(word);
                 }
 
-                // Using the centralized service
+                // Using the centralized scoring service
                 int score = scoringService.calculateWordScore(word, isMielegramma);
 
                 targetWords.add(new PuzzleWordData(dw, isMielegramma, score));
@@ -119,13 +119,12 @@ public class PuzzleGeneratorServiceImpl implements PuzzleGeneratorService {
                     baseSeed + "_" + attempt);
 
             // Quality Gate check
-            if (targetWords.size() >= MIN_TARGET_WORDS_COUNT && mielegrammi.size() >= MIN_MIELEGRAMMI_COUNT) {
+            if (targetWords.size() >= MIN_TARGET_WORDS_COUNT
+                    && mielegrammi.size() >= MIN_MIELEGRAMMI_COUNT) {
                 selectedBoard = currentBoard;
                 break;
             }
 
-            // If no board passes the Quality Gate within 50 attempts, fallbackBoard will
-            // always contain the best option found during the entire process
             if (fallbackBoard == null || currentBoard.words().size() > fallbackBoard.words().size()) {
                 fallbackBoard = currentBoard;
             }
@@ -133,14 +132,13 @@ public class PuzzleGeneratorServiceImpl implements PuzzleGeneratorService {
 
         GeneratedBoard boardToSave = selectedBoard != null ? selectedBoard : fallbackBoard;
 
-        // Edge case check: ensure that a board with at least one valid word was
-        // generated
         if (boardToSave == null || boardToSave.words().isEmpty()) {
             log.error(
                     "Impossibile generare un puzzle per la data {}: tutti i {} tentativi hanno prodotto 0 parole valide.",
                     date, MAX_GENERATION_ATTEMPTS);
             throw new IllegalStateException(
-                    "Generazione puzzle fallita per la data " + date + ": nessun tabellone valido trovato.");
+                    "Generazione puzzle fallita per la data " + date
+                            + ": nessun tabellone valido trovato.");
         }
 
         int maxScore = boardToSave.words().stream().mapToInt(PuzzleWordData::score).sum();
@@ -163,9 +161,6 @@ public class PuzzleGeneratorServiceImpl implements PuzzleGeneratorService {
                         .build())
                 .collect(Collectors.toList());
 
-        puzzleOuterLetterRepository.saveAll(outerLetters);
-
-        // Batch saving of valid words in the puzzle
         List<PuzzleWord> puzzleWords = boardToSave.words().stream()
                 .map(pwd -> PuzzleWord.builder()
                         .id(new PuzzleWordId(savedPuzzle.getId(), pwd.dictEntity().getWord()))
@@ -175,11 +170,62 @@ public class PuzzleGeneratorServiceImpl implements PuzzleGeneratorService {
                         .build())
                 .collect(Collectors.toList());
 
+        puzzleOuterLetterRepository.saveAll(outerLetters);
         puzzleWordRepository.saveAll(puzzleWords);
+
+        savedPuzzle.setOuterLetters(outerLetters);
+        savedPuzzle.setPuzzleWords(puzzleWords);
 
         log.info(
                 ">>> DailyPuzzle per il {} generato con successo! (Centro: {}, Seed: {}, MaxScore: {}, Parole: {})",
-                date, boardToSave.centerLetter(), boardToSave.seed(), maxScore, boardToSave.words().size());
+                date, boardToSave.centerLetter(), boardToSave.seed(), maxScore,
+                boardToSave.words().size());
+
+        return savedPuzzle;
+    }
+
+    @Override
+    @Transactional
+    public void recalculatePuzzleWords(DailyPuzzle puzzle) {
+        if (puzzle == null || puzzle.getCenterLetter() == null) {
+            return;
+        }
+
+        StringBuilder lettersBuilder = new StringBuilder(puzzle.getCenterLetter());
+        if (puzzle.getOuterLetters() != null) {
+            puzzle.getOuterLetters().forEach(pol -> lettersBuilder.append(pol.getId().getLetter()));
+        }
+
+        int puzzleMask = calculateMaskFromString(lettersBuilder.toString());
+        int centerBit = 1 << (puzzle.getCenterLetter().charAt(0) - 'A');
+
+        List<DictionaryWord> validWordsFromDb = dictionaryWordRepository.findValidWordsForPuzzle(centerBit,
+                puzzleMask);
+
+        if (puzzle.getPuzzleWords() != null) {
+            puzzle.getPuzzleWords().clear();
+        }
+
+        int newMaxScore = 0;
+        List<PuzzleWord> newPuzzleWords = new ArrayList<>();
+
+        for (DictionaryWord dw : validWordsFromDb) {
+            String word = dw.getWord().toUpperCase();
+            boolean isMielegramma = dw.getUniqueLettersCount() == REQUIRED_LETTERS_COUNT;
+
+            int score = scoringService.calculateWordScore(word, isMielegramma);
+            newMaxScore += score;
+
+            newPuzzleWords.add(PuzzleWord.builder()
+                    .id(new PuzzleWordId(puzzle.getId(), dw.getWord()))
+                    .puzzle(puzzle)
+                    .dictionaryWord(dw)
+                    .isMielegramma(isMielegramma)
+                    .build());
+        }
+
+        puzzle.setMaxScore(newMaxScore);
+        puzzleWordRepository.saveAll(newPuzzleWords);
     }
 
     // --- Utility Bitmask and PRNG Algorithms ---
