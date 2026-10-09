@@ -22,5 +22,5 @@ public interface DictionaryService {
 
     Page<DictionaryWordResponse> getWords(DictionaryFilterRequest filterRequest, Pageable pageable);
 
-    WordValidationResponse validateWordForGuest(String puzzleDate, String rawWord);
+    WordValidationResponse validateWordForGuest(String rawWord);
 }

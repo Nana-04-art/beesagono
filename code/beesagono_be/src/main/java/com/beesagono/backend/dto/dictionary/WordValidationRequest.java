@@ -12,8 +12,6 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class WordValidationRequest {
 
-    private String puzzleDate;
-
     @Size(min = 4, message = "La parola deve contenere almeno 4 lettere")
     private String word;
 }

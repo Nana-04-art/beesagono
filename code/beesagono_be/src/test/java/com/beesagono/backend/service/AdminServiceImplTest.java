@@ -8,7 +8,6 @@ import com.beesagono.backend.dto.puzzle.UpdatePuzzleLettersRequest;
 import com.beesagono.backend.dto.puzzle.UpdatePuzzleWordsRequest;
 import com.beesagono.backend.entity.DailyPuzzle;
 import com.beesagono.backend.entity.DictionaryWord;
-import com.beesagono.backend.entity.InvalidWordAttempt;
 import com.beesagono.backend.entity.PuzzleOuterLetter;
 import com.beesagono.backend.entity.PuzzleWord;
 import com.beesagono.backend.entity.Role;
@@ -27,6 +26,7 @@ import com.beesagono.backend.repository.PuzzleWordRepository;
 import com.beesagono.backend.repository.RoleRepository;
 import com.beesagono.backend.repository.UserRepository;
 import com.beesagono.backend.repository.UserRoleRepository;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -49,10 +49,13 @@ import java.util.Set;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class AdminServiceImplTest {
@@ -90,8 +93,22 @@ class AdminServiceImplTest {
     @Mock
     private PuzzleGeneratorService puzzleGeneratorService;
 
+    @Mock
+    private ScoringService scoringService;
+
     @InjectMocks
     private AdminServiceImpl adminService;
+
+    @BeforeEach
+    void setUp() {
+        lenient().when(scoringService.calculateWordScore(anyString(), anyBoolean()))
+                .thenAnswer(invocation -> {
+                    String word = invocation.getArgument(0);
+                    boolean isMiele = invocation.getArgument(1);
+                    if (word == null || word.length() < 4) return 0;
+                    return word.length() + (isMiele ? 7 : 0);
+                });
+    }
 
     // --- User Management Tests ---
 
@@ -286,7 +303,7 @@ class AdminServiceImplTest {
         DailyPuzzle p1 = createDailyPuzzle("p1", LocalDate.now(), "A", null, null);
         DailyPuzzle p2 = createDailyPuzzle("p2", LocalDate.now().minusDays(1), "B", null, null);
 
-        when(dailyPuzzleRepository.findAllByOrderByPuzzleDateDesc()).thenReturn(List.of(p1, p2));
+        when(dailyPuzzleRepository.findAllByOrderByPuzzleDateDesc(Pageable.unpaged())).thenReturn(List.of(p1, p2));
         mockSessionCounts("p1", 0L, 0L);
         mockSessionCounts("p2", 0L, 0L);
 
@@ -376,20 +393,17 @@ class AdminServiceImplTest {
     @Test
     @DisplayName("getTopSuggestedWordsFromAttempts - Success")
     void shouldGetTopSuggestedWordsFromAttemptsSuccessfully() {
-        InvalidWordAttempt attempt1 = createInvalidWordAttempt("WORD1", ErrorTypeCode.NOT_IN_DICTIONARY);
-        InvalidWordAttempt attempt2 = createInvalidWordAttempt("WORD1", ErrorTypeCode.NOT_IN_DICTIONARY);
-        InvalidWordAttempt attempt3 = createInvalidWordAttempt("WORD2", ErrorTypeCode.NOT_IN_DICTIONARY);
-        InvalidWordAttempt attempt4 = createInvalidWordAttempt("WORD3", ErrorTypeCode.TOO_SHORT);
+        InvalidWordAttemptStatResponse stat1 = createStatResponse("PAROLA1", 5L);
+        InvalidWordAttemptStatResponse stat2 = createStatResponse("PAROLA2", 2L);
 
-        when(invalidWordAttemptRepository.findAll()).thenReturn(List.of(attempt1, attempt2, attempt3, attempt4));
+        when(invalidWordAttemptRepository.findWordAttemptStatsByReason(ErrorTypeCode.NOT_IN_DICTIONARY))
+                .thenReturn(List.of(stat1, stat2));
 
         List<InvalidWordAttemptStatResponse> stats = adminService.getTopSuggestedWordsFromAttempts();
 
         assertThat(stats).hasSize(2);
-        assertThat(stats.get(0).getWord()).isEqualTo("WORD1");
-        assertThat(stats.get(0).getAttemptCount()).isEqualTo(2L);
-        assertThat(stats.get(1).getWord()).isEqualTo("WORD2");
-        assertThat(stats.get(1).getAttemptCount()).isEqualTo(1L);
+        assertThat(stats.get(0).getWord()).isEqualTo("PAROLA1");
+        assertThat(stats.get(0).getAttemptCount()).isEqualTo(5L);
     }
 
     @Test
@@ -397,12 +411,18 @@ class AdminServiceImplTest {
     void shouldRemoveWordFromDictionarySuccessfully() {
         String word = "casa";
         DictionaryWord dictWord = createDictionaryWord("CASA", 4, 3);
+        LocalDate today = LocalDate.now();
+
+        DailyPuzzle futurePuzzle = createDailyPuzzle("p-futuro", today.plusDays(1), "A", null, new ArrayList<>());
+        PuzzleWord pw = createPuzzleWord("p-futuro", dictWord, false);
+        futurePuzzle.getPuzzleWords().add(pw);
 
         when(dictionaryWordRepository.findById("CASA")).thenReturn(Optional.of(dictWord));
+        when(dailyPuzzleRepository.findAllByPuzzleDateAfter(any(LocalDate.class))).thenReturn(List.of(futurePuzzle));
 
         adminService.removeWordFromDictionary(word);
 
-        verify(puzzleWordRepository, times(1)).deleteByIdWord("CASA");
+        verify(puzzleWordRepository, times(1)).deleteAll(any());
         verify(dictionaryWordRepository, times(1)).delete(dictWord);
     }
 
@@ -418,7 +438,6 @@ class AdminServiceImplTest {
                 .extracting(e -> ((ResponseStatusException) e).getStatusCode())
                 .isEqualTo(HttpStatus.NOT_FOUND);
 
-        verify(puzzleWordRepository, never()).deleteByIdWord(any());
         verify(dictionaryWordRepository, never()).delete(any(DictionaryWord.class));
     }
 
@@ -505,12 +524,9 @@ class AdminServiceImplTest {
                 .build();
     }
 
-    private InvalidWordAttempt createInvalidWordAttempt(String word, ErrorTypeCode errorReason) {
-        return InvalidWordAttempt.builder()
-                .attemptedWord(word)
-                .errorReason(errorReason)
-                .build();
-    }
+    private InvalidWordAttemptStatResponse createStatResponse(String word, Long count) {
+    return new InvalidWordAttemptStatResponse(word, count);
+}
 
     private void mockSessionCounts(String puzzleId, Long active, Long completed) {
         when(gameSessionRepository.countByPuzzleIdAndIsCompletedFalse(puzzleId)).thenReturn(active);

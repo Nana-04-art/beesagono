@@ -205,7 +205,7 @@ public class DictionaryServiceImpl implements DictionaryService {
 
     @Override
     @Transactional(readOnly = true)
-    public WordValidationResponse validateWordForGuest(String puzzleDate, String rawWord) {
+    public WordValidationResponse validateWordForGuest(String rawWord) {
         if (rawWord == null || rawWord.isBlank()) {
             return WordValidationResponse.builder()
                     .word(rawWord)
@@ -216,12 +216,14 @@ public class DictionaryServiceImpl implements DictionaryService {
         }
 
         String word = rawWord.trim().toUpperCase();
-        LocalDate date = LocalDate.parse(puzzleDate);
 
-        // Fetch DailyPuzzle for the specified date
-        DailyPuzzle puzzle = dailyPuzzleRepository.findByPuzzleDate(date)
+        // Always enforce the current server date to prevent exploits on pre-generated future puzzles
+        LocalDate today = LocalDate.now();
+
+        // Fetch DailyPuzzle for today's date
+        DailyPuzzle puzzle = dailyPuzzleRepository.findByPuzzleDate(today)
                 .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND, "Puzzle non trovato per la data: " + puzzleDate));
+                        HttpStatus.NOT_FOUND, "Puzzle non trovato per la data odierna: " + today));
 
         // Syntax check: minimum length (4 letters)
         if (word.length() < 4) {
@@ -251,7 +253,7 @@ public class DictionaryServiceImpl implements DictionaryService {
                     .word(word)
                     .valid(false)
                     .errorCode("NOT_IN_DICTIONARY")
-                    .errorMessage("La parola non è presente nel dizionario ufficiale.")
+                    .errorMessage("La parola non fa parte delle soluzioni del puzzle di oggi.")
                     .build();
         }
 

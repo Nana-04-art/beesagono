@@ -7,7 +7,10 @@ import lombok.Data;
 
 import java.util.Set;
 
+import com.beesagono.backend.validation.DistinctPuzzleLetters;
+
 @Data
+@DistinctPuzzleLetters
 public class UpdatePuzzleLettersRequest {
     @NotBlank
     @Size(min = 1, max = 1)

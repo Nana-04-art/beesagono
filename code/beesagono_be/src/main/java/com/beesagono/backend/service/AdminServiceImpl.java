@@ -8,7 +8,6 @@ import com.beesagono.backend.dto.puzzle.UpdatePuzzleLettersRequest;
 import com.beesagono.backend.dto.puzzle.UpdatePuzzleWordsRequest;
 import com.beesagono.backend.entity.DailyPuzzle;
 import com.beesagono.backend.entity.DictionaryWord;
-import com.beesagono.backend.entity.InvalidWordAttempt;
 import com.beesagono.backend.entity.PuzzleOuterLetter;
 import com.beesagono.backend.entity.PuzzleWord;
 import com.beesagono.backend.entity.Role;
@@ -39,7 +38,6 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -61,8 +59,9 @@ public class AdminServiceImpl implements AdminService {
         private final PuzzleWordRepository puzzleWordRepository;
 
         private final PuzzleGeneratorService puzzleGeneratorService;
+        private final ScoringService scoringService;
 
-        // -- User Managment --
+        // -- User Management --
 
         @Override
         @Transactional
@@ -126,7 +125,7 @@ public class AdminServiceImpl implements AdminService {
                 return userRepository.findAll(pageable).map(userMapper::toUserResponse);
         }
 
-        // -- Puzzle Managment & Inspection --
+        // -- Puzzle Management & Inspection --
 
         @Override
         @Transactional
@@ -150,7 +149,7 @@ public class AdminServiceImpl implements AdminService {
         @Override
         @Transactional(readOnly = true)
         public List<PuzzleAdminResponse> getAllPuzzlesOverview() {
-                return dailyPuzzleRepository.findAllByOrderByPuzzleDateDesc().stream()
+                return dailyPuzzleRepository.findAllByOrderByPuzzleDateDesc(Pageable.unpaged()).stream()
                                 .map(this::mapToPuzzleAdminResponse)
                                 .collect(Collectors.toList());
         }
@@ -235,18 +234,10 @@ public class AdminServiceImpl implements AdminService {
                         }
                 }
 
-                // Recalculate the updated maximum score based on the words present
-                int updatedMaxScore = puzzle.getPuzzleWords().stream()
-                                .mapToInt(pw -> {
-                                        String w = pw.getDictionaryWord().getWord();
-                                        int base = w.length() == 4 ? 1 : w.length();
-                                        int bonus = Boolean.TRUE.equals(pw.getIsMielegramma()) ? 7 : 0;
-                                        return base + bonus;
-                                }).sum();
+                // Recalculate maxScore via centralized ScoringService
+                recalculateAndSaveMaxScore(puzzle);
 
-                puzzle.setMaxScore(updatedMaxScore);
                 DailyPuzzle updated = dailyPuzzleRepository.save(puzzle);
-
                 return mapToPuzzleAdminResponse(updated);
         }
 
@@ -279,20 +270,8 @@ public class AdminServiceImpl implements AdminService {
         @Override
         @Transactional(readOnly = true)
         public List<InvalidWordAttemptStatResponse> getTopSuggestedWordsFromAttempts() {
-                // Retrieve rejected attempts for 'NOT_IN_DICTIONARY' and group them in
-                // Java for maximum compatibility
-                List<InvalidWordAttempt> attempts = invalidWordAttemptRepository.findAll().stream()
-                                .filter(a -> ErrorTypeCode.NOT_IN_DICTIONARY.equals(a.getErrorReason()))
-                                .toList();
-
-                return attempts.stream()
-                                .collect(Collectors.groupingBy(InvalidWordAttempt::getAttemptedWord,
-                                                Collectors.counting()))
-                                .entrySet().stream()
-                                .map(entry -> new InvalidWordAttemptStatResponse(entry.getKey(), entry.getValue()))
-                                .sorted(Comparator.comparing(InvalidWordAttemptStatResponse::getAttemptCount)
-                                                .reversed())
-                                .toList();
+                // Direct aggregate query on DB without loading all attempts into RAM
+                return invalidWordAttemptRepository.findWordAttemptStatsByReason(ErrorTypeCode.NOT_IN_DICTIONARY);
         }
 
         @Override
@@ -303,13 +282,42 @@ public class AdminServiceImpl implements AdminService {
                                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
                                                 "Parola non trovata nel dizionario: " + cleanWord));
 
-                // Removes the word from the puzzles where it is used before deleting it from the dictionary
-                puzzleWordRepository.deleteByIdWord(cleanWord);
+                LocalDate today = LocalDate.now();
 
+                // Retrieve only FUTURE puzzles that contain this word
+                List<DailyPuzzle> futurePuzzlesContainingWord = dailyPuzzleRepository
+                                .findAllByPuzzleDateAfter(today).stream()
+                                .filter(p -> p.getPuzzleWords().stream()
+                                                .anyMatch(pw -> pw.getDictionaryWord().getWord()
+                                                                .equalsIgnoreCase(cleanWord)))
+                                .toList();
+
+                // Remove the word and recalculate maxScore only for future puzzles
+                for (DailyPuzzle futurePuzzle : futurePuzzlesContainingWord) {
+                        List<PuzzleWord> wordsToRemove = futurePuzzle.getPuzzleWords().stream()
+                                        .filter(pw -> pw.getDictionaryWord().getWord().equalsIgnoreCase(cleanWord))
+                                        .toList();
+
+                        futurePuzzle.getPuzzleWords().removeAll(wordsToRemove);
+                        puzzleWordRepository.deleteAll(wordsToRemove);
+
+                        recalculateAndSaveMaxScore(futurePuzzle);
+                }
+
+                // Delete the word from the general dictionary
                 dictionaryWordRepository.delete(dictionaryWord);
         }
 
         // -- Private Helper Methods --
+
+        private void recalculateAndSaveMaxScore(DailyPuzzle puzzle) {
+                int updatedMaxScore = puzzle.getPuzzleWords().stream()
+                                .mapToInt(pw -> scoringService.calculateWordScore(
+                                                pw.getDictionaryWord().getWord(),
+                                                Boolean.TRUE.equals(pw.getIsMielegramma())))
+                                .sum();
+                puzzle.setMaxScore(updatedMaxScore);
+        }
 
         private DailyPuzzle getPuzzleAndValidateEditable(String puzzleId) {
                 DailyPuzzle puzzle = dailyPuzzleRepository.findById(puzzleId)

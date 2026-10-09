@@ -3,7 +3,6 @@ package com.beesagono.backend.controller;
 import com.beesagono.backend.dto.dictionary.WordValidationRequest;
 import com.beesagono.backend.dto.dictionary.WordValidationResponse;
 import com.beesagono.backend.service.DictionaryService;
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -19,13 +18,7 @@ public class DictionaryController {
     private final DictionaryService dictionaryService;
 
     @PostMapping("/validate")
-    public ResponseEntity<WordValidationResponse> validateWordGuest(
-            @Valid @RequestBody WordValidationRequest request) {
-
-        WordValidationResponse response = dictionaryService.validateWordForGuest(
-                request.getPuzzleDate(),
-                request.getWord());
-
-        return ResponseEntity.ok(response);
+    public ResponseEntity<WordValidationResponse> validateWordForGuest(@RequestBody WordValidationRequest request) {
+        return ResponseEntity.ok(dictionaryService.validateWordForGuest(request.getWord()));
     }
 }

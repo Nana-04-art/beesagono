@@ -1,6 +1,7 @@
 package com.beesagono.backend.repository;
 
 import com.beesagono.backend.dto.dictionary.InvalidWordAttemptStat;
+import com.beesagono.backend.dto.dictionary.InvalidWordAttemptStatResponse;
 import com.beesagono.backend.entity.DailyPuzzle;
 import com.beesagono.backend.entity.GameSession;
 import com.beesagono.backend.entity.InvalidWordAttempt;
@@ -63,7 +64,7 @@ class InvalidWordAttemptRepositoryTest {
     // --- findByErrorReason ---
 
     @Test
-    @DisplayName("findByErrorReason - Should return aggregated stats grouped by attempted word for an error reason")
+    @DisplayName("findByErrorReason - Should return aggregated stats grouped by attempted word")
     void shouldFindByErrorReason() {
         entityManager.persist(createInvalidAttempt(defaultSession, "SOLO", ErrorTypeCode.NOT_IN_DICTIONARY));
         entityManager.persist(createInvalidAttempt(defaultSession, "SOLO", ErrorTypeCode.NOT_IN_DICTIONARY));
@@ -89,6 +90,23 @@ class InvalidWordAttemptRepositoryTest {
         List<InvalidWordAttemptStat> stats = invalidWordAttemptRepository.findByErrorReason(ErrorTypeCode.MISSING_CENTER);
 
         assertThat(stats).isEmpty();
+    }
+
+    // --- findWordAttemptStatsByReason ---
+
+    @Test
+    @DisplayName("findWordAttemptStatsByReason - Should return projections for given error reason")
+    void shouldFindWordAttemptStatsByReason() {
+        entityManager.persist(createInvalidAttempt(defaultSession, "APE", ErrorTypeCode.NOT_IN_PUZZLE));
+        entityManager.persist(createInvalidAttempt(defaultSession, "APE", ErrorTypeCode.NOT_IN_PUZZLE));
+        entityManager.flush();
+
+        List<InvalidWordAttemptStatResponse> stats = invalidWordAttemptRepository
+                .findWordAttemptStatsByReason(ErrorTypeCode.NOT_IN_PUZZLE);
+
+        assertThat(stats).isNotEmpty();
+        assertThat(stats.get(0).getWord()).isEqualTo("APE");
+        assertThat(stats.get(0).getAttemptCount()).isEqualTo(2L);
     }
 
     // --- Helper Methods ---

@@ -1,6 +1,7 @@
 package com.beesagono.backend.repository;
 
 import com.beesagono.backend.dto.dictionary.InvalidWordAttemptStat;
+import com.beesagono.backend.dto.dictionary.InvalidWordAttemptStatResponse;
 import com.beesagono.backend.entity.InvalidWordAttempt;
 import com.beesagono.backend.enums.ErrorTypeCode;
 
@@ -15,8 +16,16 @@ public interface InvalidWordAttemptRepository extends JpaRepository<InvalidWordA
     List<InvalidWordAttempt> findBySessionId(String sessionId);
 
     @Query("SELECT i.attemptedWord AS attemptedWord, COUNT(i) AS attemptCount " +
-           "FROM InvalidWordAttempt i " +
-           "WHERE i.errorReason = :errorReason " +
-           "GROUP BY i.attemptedWord")
+            "FROM InvalidWordAttempt i " +
+            "WHERE i.errorReason = :errorReason " +
+            "GROUP BY i.attemptedWord " +
+            "ORDER BY COUNT(i) DESC")
     List<InvalidWordAttemptStat> findByErrorReason(@Param("errorReason") ErrorTypeCode errorReason);
+
+    @Query("SELECT i.attemptedWord AS attemptedWord, COUNT(i) AS attemptCount " +
+            "FROM InvalidWordAttempt i " +
+            "WHERE i.errorReason = :errorTypeCode " +
+            "GROUP BY i.attemptedWord " +
+            "ORDER BY COUNT(i) DESC")
+    List<InvalidWordAttemptStatResponse> findWordAttemptStatsByReason(@Param("errorTypeCode") ErrorTypeCode errorTypeCode);
 }
