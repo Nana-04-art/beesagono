@@ -267,6 +267,7 @@ class PuzzleGeneratorServiceImplTest {
                 .outerLetters(new ArrayList<>())
                 .puzzleWords(new ArrayList<>())
                 .build();
+
     }
 
     private DictionaryWord createDictionaryWord(String word, int uniqueLetters) {

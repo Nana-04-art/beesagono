@@ -32,4 +32,7 @@ public interface PlayerSeasonRepository extends JpaRepository<PlayerSeason, Play
      */
     @Query("SELECT ps.highestTierAchieved, COUNT(ps) FROM PlayerSeason ps WHERE ps.id.seasonYear = :year GROUP BY ps.highestTierAchieved")
     List<Object[]> countPlayersByTierForYear(@Param("year") int year);
+
+    @Query("SELECT ps.highestTierAchieved FROM PlayerSeason ps WHERE ps.id.userId = :userId ORDER BY ps.id.seasonYear DESC LIMIT 1")
+    Optional<String> findLatestHighestTierByUserId(@Param("userId") String userId);
 }

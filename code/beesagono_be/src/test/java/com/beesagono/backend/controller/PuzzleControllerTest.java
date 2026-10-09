@@ -3,6 +3,7 @@ package com.beesagono.backend.controller;
 import com.beesagono.backend.dto.puzzle.DailyPuzzleResponse;
 import com.beesagono.backend.entity.User;
 import com.beesagono.backend.repository.UserRepository;
+import com.beesagono.backend.security.GlobalExceptionHandler;
 import com.beesagono.backend.security.JwtAuthenticationFilter;
 import com.beesagono.backend.security.JwtUtils;
 import com.beesagono.backend.security.TokenBlacklist;
@@ -18,6 +19,7 @@ import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Import;
 import org.springframework.core.MethodParameter;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -46,6 +48,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(PuzzleController.class)
+@Import(GlobalExceptionHandler.class)
 @AutoConfigureMockMvc(addFilters = false)
 class PuzzleControllerTest {
 
@@ -76,28 +79,23 @@ class PuzzleControllerTest {
         principal = createTestPrincipal(testUser);
 
         UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
-                principal, null, principal.getAuthorities());
+                principal, null, principal.getAuthorities()
+        );
         SecurityContextHolder.getContext().setAuthentication(auth);
     }
 
     // --- GET /api/puzzles/today ---
 
-    @Nested
+    @Nested 
     @DisplayName("GET /api/puzzles/today Tests")
     class GetTodayPuzzleTests {
 
         @Test
-        @DisplayName("Should return today's puzzle successfully with 200 OK")
-        void shouldReturnTodayPuzzleSuccessfully() throws Exception {
-            DailyPuzzleResponse response = DailyPuzzleResponse.builder()
-                    .id("puz-1")
-                    .puzzleDate(LocalDate.now())
-                    .centerLetter("A")
-                    .maxScore(100)
-                    .outerLetters(Set.of("B", "C", "D", "E", "F", "G"))
-                    .build();
+        @DisplayName("Should return 200 OK with puzzle data when puzzle exists or is generated")
+        void shouldReturnOkWithPuzzleDataWhenPuzzleExists() throws Exception {
+            DailyPuzzleResponse response = createDailyPuzzleResponse("puz-1", LocalDate.now(), "A", 100);
 
-            when(puzzleService.getTodayPuzzle()).thenReturn(response);
+        when(puzzleService.getTodayPuzzle()).thenReturn(response);
 
             mockMvc.perform(get("/api/puzzles/today")
                     .contentType(MediaType.APPLICATION_JSON))
@@ -106,8 +104,8 @@ class PuzzleControllerTest {
                     .andExpect(jsonPath("$.centerLetter").value("A"))
                     .andExpect(jsonPath("$.maxScore").value(100));
 
-            verify(puzzleService, times(1)).getTodayPuzzle();
-        }
+        verify(puzzleService, times(1)).getTodayPuzzle();
+    }
 
         @Test
         @DisplayName("Should return 404 Not Found when puzzle is missing")
@@ -156,6 +154,17 @@ class PuzzleControllerTest {
                 user.getEmail(),
                 "pwd",
                 List.of(new SimpleGrantedAuthority("ROLE_USER")));
+    }
+
+    private DailyPuzzleResponse createDailyPuzzleResponse(String id, LocalDate date, String centerLetter,
+            int maxScore) {
+        return DailyPuzzleResponse.builder()
+                .id(id)
+                .puzzleDate(date)
+                .centerLetter(centerLetter)
+                .maxScore(maxScore)
+                .outerLetters(Set.of("B", "C", "D", "E", "F", "G"))
+                .build();
     }
 
     @TestConfiguration

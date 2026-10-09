@@ -32,4 +32,10 @@ public interface InvalidWordAttemptRepository extends JpaRepository<InvalidWordA
             "GROUP BY i.attemptedWord " +
             "ORDER BY COUNT(i) DESC")
     List<InvalidWordAttemptStatResponse> findWordAttemptStatsByReason(@Param("errorTypeCode") ErrorTypeCode errorTypeCode);
+
+    /**
+     * Retrieve the unique incorrect words already attempted for a specific session.
+     */
+    @Query("SELECT DISTINCT i.attemptedWord FROM InvalidWordAttempt i WHERE i.session.id = :sessionId")
+    List<String> findDistinctAttemptedWordsBySessionId(@Param("sessionId") String sessionId);
 }

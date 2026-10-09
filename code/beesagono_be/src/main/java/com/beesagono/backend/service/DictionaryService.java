@@ -53,5 +53,12 @@ public interface DictionaryService {
      */
     Page<DictionaryWordResponse> getWords(DictionaryFilterRequest filterRequest, Pageable pageable);
 
+    /**
+     * Validates whether a given word is valid without
+     * requiring user authentication.
+     *
+     * @param rawWord    raw input word string submitted by the guest user
+     * @return {@link WordValidationResponse} detailing validity status, score, and error reason if invalid
+     */
     WordValidationResponse validateWordForGuest(String rawWord);
 }

@@ -2,12 +2,10 @@ package com.beesagono.backend.controller;
 
 import com.beesagono.backend.dto.dictionary.WordValidationRequest;
 import com.beesagono.backend.dto.dictionary.WordValidationResponse;
-import com.beesagono.backend.repository.UserRepository;
 import com.beesagono.backend.security.GlobalExceptionHandler;
 import com.beesagono.backend.security.JwtAuthenticationFilter;
 import com.beesagono.backend.security.JwtUtils;
 import com.beesagono.backend.security.TokenBlacklist;
-import com.beesagono.backend.service.AdminService;
 import com.beesagono.backend.service.DictionaryService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -23,7 +21,6 @@ import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
-
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -36,26 +33,20 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc(addFilters = false)
 class DictionaryControllerTest {
 
-    @Autowired
-    private MockMvc mockMvc;
+        @Autowired
+        private MockMvc mockMvc;
 
-    @Autowired
-    private ObjectMapper objectMapper;
+        @Autowired
+        private ObjectMapper objectMapper;
 
-    @MockitoBean
-    private DictionaryService dictionaryService;
+        @MockitoBean
+        private DictionaryService dictionaryService;
 
-    @MockitoBean
-    private UserRepository userRepository;
+        @MockitoBean
+        private JwtUtils jwtUtils;
 
-    @MockitoBean
-    private AdminService adminService;
-
-    @MockitoBean
-    private JwtUtils jwtUtils;
-
-    @MockitoBean
-    private JwtAuthenticationFilter jwtAuthenticationFilter;
+        @MockitoBean
+        private JwtAuthenticationFilter jwtAuthenticationFilter;
 
     @MockitoBean
     private TokenBlacklist tokenBlacklist;
@@ -116,9 +107,9 @@ class DictionaryControllerTest {
         }
     }
 
-    @TestConfiguration
+    @TestConfiguration 
     static class TestConfig {
-        @Bean
+        @Bean 
         public ObjectMapper objectMapper() {
             return new ObjectMapper();
         }

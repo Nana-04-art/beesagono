@@ -2,29 +2,33 @@ package com.beesagono.backend.service;
 
 import com.beesagono.backend.dto.stats.PlayerStatsResponse;
 import com.beesagono.backend.entity.PlayerStats;
+import com.beesagono.backend.entity.User;
+import com.beesagono.backend.repository.GameSessionRepository;
 import com.beesagono.backend.repository.PlayerStatsRepository;
+import com.beesagono.backend.repository.UserRepository;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDate;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
 public class PlayerStatsServiceImpl implements PlayerStatsService {
 
     private final PlayerStatsRepository playerStatsRepository;
+    private final GameSessionRepository gameSessionRepository;
+    private final UserRepository userRepository;
 
     @Override
-    @Transactional(readOnly = true)
+    @Transactional
     public PlayerStatsResponse getPlayerStats(String userId) {
-        PlayerStats stats = playerStatsRepository.findById(userId)
-                .orElseGet(() -> PlayerStats.builder()
-                        .userId(userId)
-                        .gamesPlayed(0)
-                        .gamesCompleted(0)
-                        .currentStreak(0)
-                        .maxStreak(0)
-                        .totalScoreEarned(0)
-                        .build());
+        PlayerStats stats = getOrCreatePlayerStats(userId);
+
+        refreshStreak(stats, userId);
+        playerStatsRepository.save(stats);
 
         return mapToResponse(stats);
     }
@@ -32,15 +36,7 @@ public class PlayerStatsServiceImpl implements PlayerStatsService {
     @Override
     @Transactional
     public void updatePlayerStatsAfterGame(String userId, int gameScore, String bestWordFound, boolean isCompleted) {
-        PlayerStats stats = playerStatsRepository.findById(userId)
-                .orElseGet(() -> PlayerStats.builder()
-                        .userId(userId)
-                        .gamesPlayed(0)
-                        .gamesCompleted(0)
-                        .currentStreak(0)
-                        .maxStreak(0)
-                        .totalScoreEarned(0)
-                        .build());
+        PlayerStats stats = getOrCreatePlayerStats(userId);
 
         int gamesPlayed = (stats.getGamesPlayed() != null ? stats.getGamesPlayed() : 0) + 1;
         stats.setGamesPlayed(gamesPlayed);
@@ -49,7 +45,8 @@ public class PlayerStatsServiceImpl implements PlayerStatsService {
         stats.setTotalScoreEarned(currentTotalScore + gameScore);
 
         if (isCompleted) {
-            stats.setGamesCompleted((stats.getGamesCompleted() != null ? stats.getGamesCompleted() : 0) + 1);
+            int gamesCompleted = (stats.getGamesCompleted() != null ? stats.getGamesCompleted() : 0) + 1;
+            stats.setGamesCompleted(gamesCompleted);
         }
 
         if (bestWordFound != null) {
@@ -59,7 +56,53 @@ public class PlayerStatsServiceImpl implements PlayerStatsService {
             }
         }
 
+        refreshStreak(stats, userId);
         playerStatsRepository.save(stats);
+    }
+
+    // -- Private Helper Methods --
+
+    /**
+     * Calculates the streak of consecutive days based on the dates of played
+     * puzzles.
+     */
+    private int calculateCurrentStreak(String userId) {
+        List<LocalDate> playedDates = gameSessionRepository.findDistinctPlayedPuzzleDatesByUserId(userId);
+
+        if (playedDates == null || playedDates.isEmpty()) {
+            return 0;
+        }
+
+        LocalDate today = LocalDate.now();
+        LocalDate yesterday = today.minusDays(1);
+
+        LocalDate mostRecentDate = playedDates.get(0);
+
+        // If the user has not played today's or yesterday's puzzle, the streak resets
+        // to 0
+        if (!mostRecentDate.equals(today) && !mostRecentDate.equals(yesterday)) {
+            return 0;
+        }
+
+        int streak = 1;
+        LocalDate previousDate = mostRecentDate;
+
+        for (int i = 1; i < playedDates.size(); i++) {
+            LocalDate currentDate = playedDates.get(i);
+            // Check if the previous puzzle date is exactly consecutive
+            if (currentDate.equals(previousDate.minusDays(1))) {
+                streak++;
+                previousDate = currentDate;
+            } else if (currentDate.equals(previousDate)) {
+                // Skip duplicate dates
+                continue;
+            } else {
+                // Found a break in day continuity
+                break;
+            }
+        }
+
+        return streak;
     }
 
     private PlayerStatsResponse mapToResponse(PlayerStats stats) {
@@ -81,5 +124,31 @@ public class PlayerStatsServiceImpl implements PlayerStatsService {
                 .averageScorePerGame(Math.round(averageScore * 100.0) / 100.0)
                 .completionRate(Math.round(completionRate * 100.0) / 100.0)
                 .build();
+    }
+
+    private PlayerStats getOrCreatePlayerStats(String userId) {
+        return playerStatsRepository.findById(userId)
+                .orElseGet(() -> {
+                    User userReference = userRepository.getReferenceById(userId);
+                    return PlayerStats.builder()
+                            .userId(userId)
+                            .user(userReference)
+                            .gamesPlayed(0)
+                            .gamesCompleted(0)
+                            .currentStreak(0)
+                            .maxStreak(0)
+                            .totalScoreEarned(0)
+                            .build();
+                });
+    }
+
+    private void refreshStreak(PlayerStats stats, String userId) {
+        int calculatedStreak = calculateCurrentStreak(userId);
+        stats.setCurrentStreak(calculatedStreak);
+
+        int maxStreak = stats.getMaxStreak() != null ? stats.getMaxStreak() : 0;
+        if (calculatedStreak > maxStreak) {
+            stats.setMaxStreak(calculatedStreak);
+        }
     }
 }
