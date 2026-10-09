@@ -7,6 +7,9 @@ import lombok.NoArgsConstructor;
 
 import java.util.Date;
 
+/**
+ * Data Transfer Object representing detailed information about a single dictionary word entry.
+ */
 @Data
 @Builder
 @NoArgsConstructor

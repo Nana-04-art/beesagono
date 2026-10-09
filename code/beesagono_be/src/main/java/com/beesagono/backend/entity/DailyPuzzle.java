@@ -19,6 +19,11 @@ import lombok.experimental.SuperBuilder;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UuidGenerator;
 
+/**
+ * Entity representing a daily word puzzle challenge.
+ * Contains configuration rules like target letters, maximum possible score, and
+ * unique daily seeds.
+ */
 @Getter
 @Setter
 @NoArgsConstructor

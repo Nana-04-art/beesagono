@@ -20,6 +20,7 @@ import com.beesagono.backend.repository.FoundWordRepository;
 import com.beesagono.backend.repository.GameSessionRepository;
 import com.beesagono.backend.repository.InvalidWordAttemptRepository;
 import com.beesagono.backend.repository.PuzzleWordRepository;
+import com.beesagono.backend.repository.RankHistogramRepository;
 import com.beesagono.backend.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -40,6 +41,9 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -66,6 +70,12 @@ class GameServiceImplTest {
     private PuzzleGeneratorService puzzleService;
     @Mock
     private ScoringService scoringService;
+    @Mock
+    private PlayerSeasonService playerSeasonService;
+    @Mock
+    private RankHistogramRepository rankHistogramRepository;
+    @Mock
+    private PlayerStatsService playerStatsService;
 
     @InjectMocks
     private GameServiceImpl gameService;
@@ -94,7 +104,7 @@ class GameServiceImplTest {
                 .user(user)
                 .puzzle(puzzle)
                 .currentScore(0)
-                .currentRankLabel(RankTier.BEGINNER.getLabel())
+                .currentRankLabel(RankTier.INITIAL.getLabel())
                 .isCompleted(false)
                 .startTime(new Date())
                 .lastUpdated(new Date())
@@ -125,6 +135,7 @@ class GameServiceImplTest {
             verify(puzzleService, times(1)).generateAndSavePuzzleForDate(today);
             verify(userRepository, never()).findById(any());
             verify(gameSessionRepository, never()).save(any());
+            verify(playerSeasonService, never()).updateSeasonProgress(anyString(), anyInt(), anyBoolean());
         }
 
         @Test
@@ -145,8 +156,10 @@ class GameServiceImplTest {
             assertThat(response.getId()).isEqualTo(session.getId());
 
             verify(puzzleService, times(1)).generateAndSavePuzzleForDate(today);
+            verify(playerSeasonService, times(1)).updateSeasonProgress(user.getId(), 0, false);
             verify(userRepository, times(1)).findById(user.getId());
             verify(gameSessionRepository, times(1)).save(any(GameSession.class));
+            verify(playerSeasonService, times(1)).updateSeasonProgress(user.getId(), 0, false);
         }
 
         @Test
@@ -244,6 +257,7 @@ class GameServiceImplTest {
             when(puzzleWordRepository.findByIdPuzzleIdAndIdWord(puzzle.getId(), "CASA"))
                     .thenReturn(Optional.of(puzzleWord));
             when(scoringService.calculateWordScore("CASA", false)).thenReturn(1);
+            when(scoringService.calculateCurrentRank(1, puzzle.getMaxScore())).thenReturn(RankTier.BEGINNER);
 
             SubmitWordResponse response = gameService.validateAndScoreWord(request, user.getId());
 
@@ -255,6 +269,7 @@ class GameServiceImplTest {
 
             verify(foundWordRepository, times(1)).save(any(FoundWord.class));
             verify(gameSessionRepository, times(1)).save(session);
+            verify(playerSeasonService, times(1)).updateSeasonProgress(user.getId(), 1, false);
         }
 
         @Test
@@ -268,12 +283,14 @@ class GameServiceImplTest {
             when(puzzleWordRepository.findByIdPuzzleIdAndIdWord(puzzle.getId(), "ALBERGO"))
                     .thenReturn(Optional.of(puzzleWord));
             when(scoringService.calculateWordScore("ALBERGO", true)).thenReturn(14);
+            when(scoringService.calculateCurrentRank(14, puzzle.getMaxScore())).thenReturn(RankTier.BEGINNER);
 
             SubmitWordResponse response = gameService.validateAndScoreWord(request, user.getId());
 
             assertThat(response.isSuccess()).isTrue();
-            assertThat(response.getPointsEarned()).isEqualTo(14); // 7 length + 7 bonus
+            assertThat(response.getPointsEarned()).isEqualTo(14);
             assertThat(response.isMielegramma()).isTrue();
+            verify(playerSeasonService, times(1)).updateSeasonProgress(user.getId(), 14, false);
         }
 
         @Test
@@ -350,6 +367,7 @@ class GameServiceImplTest {
 
             when(scoringService.calculateWordScore("CASA", false)).thenReturn(1);
             when(scoringService.calculateWordScore("ALBERO", true)).thenReturn(13);
+            when(scoringService.calculateCurrentRank(14, puzzle.getMaxScore())).thenReturn(RankTier.BEGINNER);
 
             FoundWord fw1 = FoundWord.builder().id(new FoundWordId(session.getId(), "CASA")).build();
             FoundWord fw2 = FoundWord.builder().id(new FoundWordId(session.getId(), "ALBERO")).build();
@@ -363,6 +381,7 @@ class GameServiceImplTest {
 
             verify(foundWordRepository, times(2)).save(any(FoundWord.class));
             verify(gameSessionRepository, times(1)).save(session);
+            verify(playerSeasonService, times(1)).updateSeasonProgress(user.getId(), 14, false);
         }
 
         @Test

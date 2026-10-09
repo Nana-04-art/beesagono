@@ -9,6 +9,9 @@ import java.util.Set;
 
 import com.beesagono.backend.validation.DistinctPuzzleLetters;
 
+/**
+ * Data Transfer Object representing administrative requests to update the central and outer letter configurations of a daily puzzle.
+ */
 @Data
 @DistinctPuzzleLetters
 public class UpdatePuzzleLettersRequest {

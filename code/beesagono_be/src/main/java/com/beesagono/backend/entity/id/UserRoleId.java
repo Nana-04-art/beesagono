@@ -7,6 +7,9 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+/**
+ * Composite primary key mapping system security roles to individual users.
+ */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor

@@ -10,8 +10,10 @@ import com.beesagono.backend.entity.FoundWord;
 import com.beesagono.backend.entity.GameSession;
 import com.beesagono.backend.entity.InvalidWordAttempt;
 import com.beesagono.backend.entity.PuzzleWord;
+import com.beesagono.backend.entity.RankHistogram;
 import com.beesagono.backend.entity.User;
 import com.beesagono.backend.entity.id.FoundWordId;
+import com.beesagono.backend.entity.id.RankHistogramId;
 import com.beesagono.backend.enums.ErrorTypeCode;
 import com.beesagono.backend.enums.RankTier;
 import com.beesagono.backend.repository.DailyPuzzleRepository;
@@ -20,6 +22,7 @@ import com.beesagono.backend.repository.FoundWordRepository;
 import com.beesagono.backend.repository.GameSessionRepository;
 import com.beesagono.backend.repository.InvalidWordAttemptRepository;
 import com.beesagono.backend.repository.PuzzleWordRepository;
+import com.beesagono.backend.repository.RankHistogramRepository;
 import com.beesagono.backend.repository.UserRepository;
 
 import lombok.RequiredArgsConstructor;
@@ -49,8 +52,11 @@ public class GameServiceImpl implements GameService {
     private final InvalidWordAttemptRepository invalidWordAttemptRepository;
     private final UserRepository userRepository;
     private final DictionaryWordRepository dictionaryRepository;
+    private final RankHistogramRepository rankHistogramRepository;
+    private final PlayerStatsService playerStatsService;
     private final PuzzleGeneratorService puzzleService;
     private final ScoringService scoringService;
+    private final PlayerSeasonService playerSeasonService;
 
     @Override
     @Transactional
@@ -100,7 +106,7 @@ public class GameServiceImpl implements GameService {
 
         String word = rawWord.trim().toUpperCase();
 
-        // Duplicate word check in session (Prevents invalid points accumulation)
+        // Duplicate word check in session
         if (foundWordRepository.existsByIdSessionIdAndIdWord(session.getId(), word)) {
             recordInvalidAttempt(session, word, ErrorTypeCode.ALREADY_FOUND);
             return buildErrorResponse(word, session, ErrorTypeCode.ALREADY_FOUND, "Hai già trovato questa parola!");
@@ -141,8 +147,15 @@ public class GameServiceImpl implements GameService {
             int updatedScore = session.getCurrentScore() + pointsEarned;
             session.setCurrentScore(updatedScore);
 
+            boolean isCompletedNow = !Boolean.TRUE.equals(session.getIsCompleted())
+                    && updatedScore >= session.getPuzzle().getMaxScore();
+
             updateSessionRankAndCompletion(session, updatedScore);
             gameSessionRepository.save(session);
+
+            // Atomic season update (annual career, streak, points, and completion)
+            playerSeasonService.updateSeasonProgress(userId, pointsEarned, isCompletedNow);
+            playerStatsService.updatePlayerStatsAfterGame(userId, pointsEarned, word, isCompletedNow);
 
             return SubmitWordResponse.builder()
                     .success(true)
@@ -202,7 +215,10 @@ public class GameServiceImpl implements GameService {
             GameSession session = gameSessionRepository.findByUserIdAndPuzzleId(userId, puzzle.getId())
                     .orElseGet(() -> createNewSession(userId, puzzle));
 
-            // Process and validate words submitted by FE (invalid words discarded silently)
+            int newPointsEarnedInSync = 0;
+            String longestWordInSync = null;
+
+            // Process and validate words submitted by FE
             if (singleSync.getFoundWords() != null && !singleSync.getFoundWords().isEmpty()) {
                 for (String rawWord : singleSync.getFoundWords()) {
                     if (rawWord == null || rawWord.isBlank()) {
@@ -211,9 +227,18 @@ public class GameServiceImpl implements GameService {
                     String word = rawWord.trim().toUpperCase();
 
                     if (!foundWordRepository.existsByIdSessionIdAndIdWord(session.getId(), word)) {
-                        puzzleWordRepository.findByIdPuzzleIdAndIdWord(puzzle.getId(), word).ifPresent(pw -> {
+                        Optional<PuzzleWord> pwOpt = puzzleWordRepository.findByIdPuzzleIdAndIdWord(puzzle.getId(),
+                                word);
+                        if (pwOpt.isPresent()) {
+                            PuzzleWord pw = pwOpt.get();
                             boolean isMiele = Boolean.TRUE.equals(pw.getIsMielegramma());
+
                             int pointsEarned = scoringService.calculateWordScore(word, isMiele);
+                            newPointsEarnedInSync += pointsEarned;
+
+                            if (longestWordInSync == null || word.length() > longestWordInSync.length()) {
+                                longestWordInSync = word;
+                            }
 
                             FoundWord foundWord = FoundWord.builder()
                                     .id(new FoundWordId(session.getId(), word))
@@ -224,12 +249,21 @@ public class GameServiceImpl implements GameService {
                             foundWordRepository.save(foundWord);
 
                             session.setCurrentScore(session.getCurrentScore() + pointsEarned);
-                        });
+                        }
                     }
                 }
 
+                boolean isCompletedNow = !Boolean.TRUE.equals(session.getIsCompleted())
+                        && session.getCurrentScore() >= puzzle.getMaxScore();
+
                 updateSessionRankAndCompletion(session, session.getCurrentScore());
                 gameSessionRepository.save(session);
+
+                if (newPointsEarnedInSync > 0 || isCompletedNow) {
+                    playerSeasonService.updateSeasonProgress(userId, newPointsEarnedInSync, isCompletedNow);
+                    playerStatsService.updatePlayerStatsAfterGame(userId, newPointsEarnedInSync, longestWordInSync,
+                            isCompletedNow);
+                }
             }
 
             responses.add(buildGameSessionResponse(session));
@@ -242,8 +276,14 @@ public class GameServiceImpl implements GameService {
 
     private GameSession createNewSession(String userId, DailyPuzzle puzzle) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResponseStatusException(
+                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "Utente non trovato con ID: " + userId));
+
+        // Record that the user started today's match
+        playerSeasonService.updateSeasonProgress(userId, 0, false);
+
+        // Record that the user started today's match
+        playerSeasonService.updateSeasonProgress(userId, 0, false);
 
         Date now = new Date();
 
@@ -251,7 +291,7 @@ public class GameServiceImpl implements GameService {
                 .puzzle(puzzle)
                 .user(user)
                 .currentScore(0)
-                .currentRankLabel(RankTier.BEGINNER.getLabel())
+                .currentRankLabel(RankTier.INITIAL.getLabel())
                 .isCompleted(false)
                 .lastUpdated(now)
                 .build();
@@ -259,12 +299,27 @@ public class GameServiceImpl implements GameService {
         return gameSessionRepository.save(newSession);
     }
 
-    private void updateSessionRankAndCompletion(GameSession session, int score) {
-        double percentage = ((double) score / session.getPuzzle().getMaxScore()) * 100.0;
-        RankTier rank = RankTier.getRankForPercentage(percentage);
-        session.setCurrentRankLabel(rank.getLabel());
+    private void updateSessionRankAndCompletion(GameSession session, int newScore) {
+        RankTier newRank = scoringService.calculateCurrentRank(newScore, session.getPuzzle().getMaxScore());
 
-        if (percentage >= 100.0) {
+        // If the user has moved up a rank (label different from the current one),
+        // increment the RankHistogram
+        if (!newRank.getLabel().equals(session.getCurrentRankLabel())) {
+            session.setCurrentRankLabel(newRank.getLabel());
+
+            RankHistogramId rankId = new RankHistogramId(session.getUser().getId(), newRank.name());
+            RankHistogram rankHistogram = rankHistogramRepository.findById(rankId)
+                    .orElseGet(() -> RankHistogram.builder()
+                            .id(rankId)
+                            .user(session.getUser())
+                            .count(0)
+                            .build());
+
+            rankHistogram.setCount(rankHistogram.getCount() + 1);
+            rankHistogramRepository.save(rankHistogram);
+        }
+
+        if (newScore >= session.getPuzzle().getMaxScore()) {
             session.setIsCompleted(true);
         }
     }
