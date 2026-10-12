@@ -99,13 +99,12 @@ public class GameServiceImpl implements GameService {
                     HttpStatus.FORBIDDEN, "Non sei autorizzato a modificare questa sessione di gioco.");
         }
 
-        // Every word submission attempt (valid or invalid) records today's play for the
-        // streak
+        // Every word submission attempt (valid or invalid) records today's play for the streak
         session.setLastUpdated(new Date());
         gameSessionRepository.save(session);
 
         String rawWord = request.getWord();
-        
+
         // Minimum Length Validation
         if (rawWord == null || rawWord.isBlank() || rawWord.trim().length() < 4) {
             recordInvalidAttempt(session, rawWord, ErrorTypeCode.TOO_SHORT);
@@ -115,7 +114,7 @@ public class GameServiceImpl implements GameService {
 
         String word = rawWord.trim().toUpperCase();
 
-        // Duplicate word check in session (Prevents invalid points accumulation)
+        // Duplicate word check in session
         if (foundWordRepository.existsByIdSessionIdAndIdWord(session.getId(), word)) {
             recordInvalidAttempt(session, word, ErrorTypeCode.ALREADY_FOUND);
             return buildErrorResponse(word, session, ErrorTypeCode.ALREADY_FOUND, "Hai già trovato questa parola!");
@@ -136,7 +135,6 @@ public class GameServiceImpl implements GameService {
             PuzzleWord pw = puzzleWord.get();
             boolean isMiele = Boolean.TRUE.equals(pw.getIsMielegramma());
 
-            // Centralized scoring calculation using ScoringService
             int pointsEarned = scoringService.calculateWordScore(word, isMiele);
 
             FoundWord foundWord = FoundWord.builder()
@@ -175,7 +173,7 @@ public class GameServiceImpl implements GameService {
                     .build();
         }
 
-        // Global Dictionary check 
+        // Global Dictionary check (Distinguishes between missing from puzzle vs missing from dictionary)
         boolean existsInDictionary = dictionaryRepository.existsByWord(word);
 
         if (existsInDictionary) {
@@ -211,20 +209,17 @@ public class GameServiceImpl implements GameService {
 
         for (GameSyncRequest singleSync : sortedGames) {
 
-            // Retrieve or generate the official BE puzzle for that date
             puzzleService.generateAndSavePuzzleForDate(singleSync.getPuzzleDate());
             DailyPuzzle puzzle = dailyPuzzleRepository.findByPuzzleDate(singleSync.getPuzzleDate())
                     .orElseThrow(() -> new ResponseStatusException(
                             HttpStatus.NOT_FOUND,
                             "Errore nel recupero del puzzle per la data: " + singleSync.getPuzzleDate()));
 
-            // Check Inconsistencies
             if (StringUtils.hasText(singleSync.getCenterLetter()) &&
                     !singleSync.getCenterLetter().trim().equalsIgnoreCase(puzzle.getCenterLetter())) {
                 continue;
             }
 
-            // Retrieve or create user session in DB
             GameSession session = gameSessionRepository.findByUserIdAndPuzzleId(userId, puzzle.getId())
                     .orElseGet(() -> createNewSession(userId, puzzle));
 
@@ -348,6 +343,7 @@ public class GameServiceImpl implements GameService {
                 .currentScore(0)
                 .currentRankLabel(RankTier.INITIAL.getLabel())
                 .isCompleted(false)
+                .startTime(now)
                 .lastUpdated(now)
                 .build();
 
@@ -357,8 +353,6 @@ public class GameServiceImpl implements GameService {
     private void updateSessionRankAndCompletion(GameSession session, int newScore) {
         RankTier newRank = scoringService.calculateCurrentRank(newScore, session.getPuzzle().getMaxScore());
 
-        // If the user has moved up a rank (label different from the current one),
-        // increment the RankHistogram
         if (!newRank.getLabel().equals(session.getCurrentRankLabel())) {
             session.setCurrentRankLabel(newRank.getLabel());
 

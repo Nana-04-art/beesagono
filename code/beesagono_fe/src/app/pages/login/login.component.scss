@@ -1,0 +1,115 @@
+.beesagono-card {
+    border: 2px solid #ffc107;
+    border-radius: 16px;
+}
+
+// Styles for the centered hexagon icon + bee
+.beesagono-wrapper {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1em;
+    height: 1em;
+
+    .beesagono-icon {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        color: #ffc107;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .beesagono-emoji {
+        position: relative;
+        z-index: 1;
+        font-size: 0.5em;
+        line-height: 1;
+        display: inline-block;
+        // Required to ensure CSS transformations consistently function properly
+
+        // Active animation
+        animation: bounce-subtle 2.5s ease-in-out infinite;
+    }
+}
+
+// Animation keyframe definitions
+@keyframes bounce-subtle {
+
+    0%,
+    100% {
+        transform: translateY(-1px);
+    }
+
+    50% {
+        transform: translateY(-5px);
+    }
+}
+
+.beesagono-btn {
+    background-color: #ffc107;
+    border: none;
+    transition: all 0.2s ease-in-out;
+
+    &:hover:not(:disabled) {
+        background-color: #e0a800;
+        transform: translateY(-1px);
+    }
+}
+
+.input-group.has-validation>.form-control.is-invalid {
+    z-index: 2;
+}
+
+// Custom Modal Backdrop & Wrapper Styles
+.modal-backdrop-custom {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100dvh;
+    background-color: rgba(15, 23, 42, 0.75);
+    backdrop-filter: blur(0.25rem);
+    z-index: 10000;
+    pointer-events: auto;
+}
+
+.modal-wrapper-custom {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100dvh;
+    z-index: 10001;
+    pointer-events: auto;
+}
+
+.modal-card {
+    background-color: #ffffff !important;
+    opacity: 1 !important;
+    position: relative;
+    z-index: 10002;
+}
+
+button:focus-visible,
+input:focus-visible {
+    outline: 0.1875rem solid #ffc107 !important;
+    outline-offset: 0.125rem;
+}
+
+a {
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+
+    &:hover {
+        filter: brightness(0.8);
+    }
+}
+
+.text-muted {
+    font-size: 0.85rem;
+}

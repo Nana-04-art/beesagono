@@ -4,8 +4,8 @@ import { vi } from 'vitest';
 
 import { WordsByLetterComponent } from './words-by-letter.component';
 import { GameService } from '../../services/game/game.service';
-import { GameBoard } from '../../models/game-board.model';
-import { WordMapItem } from '../../models/word-map-item.model';
+import { GameBoard } from '../../models/game/game-board.model';
+import { WordMapItem } from '../../models/game/word-map-item.model';
 
 class MockGameService {
   readonly board: WritableSignal<GameBoard | null> = signal<GameBoard | null>(null);

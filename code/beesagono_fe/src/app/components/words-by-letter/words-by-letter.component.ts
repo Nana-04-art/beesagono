@@ -1,9 +1,9 @@
 import { Component, computed, effect, inject, signal } from '@angular/core';
 import { GameService } from '../../services/game/game.service';
-import { LetterGroup } from '../../models/letter-group.model';
+import { LetterGroup } from '../../models/game/letter-group.model'; 
 import { NgClass } from '@angular/common';
 import { WordMapComponent } from '../word-map/word-map.component';
-import { WordMapItem } from '../../models/word-map-item.model';
+import { WordMapItem } from '../../models/game/word-map-item.model';
 
 @Component({
   selector: 'app-words-by-letter',

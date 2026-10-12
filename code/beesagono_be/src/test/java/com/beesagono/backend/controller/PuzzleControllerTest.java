@@ -104,37 +104,37 @@ class PuzzleControllerTest {
                     .andExpect(jsonPath("$.centerLetter").value("A"))
                     .andExpect(jsonPath("$.maxScore").value(100));
 
+            verify(puzzleService, times(1)).getTodayPuzzle();
+        }
+    }
+
+    @Test
+    @DisplayName("Should return 404 Not Found when puzzle is missing")
+    void shouldReturnNotFoundWhenPuzzleDoesNotExist() throws Exception {
+        when(puzzleService.getTodayPuzzle())
+                .thenThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "Puzzle del giorno non trovato"));
+
+        mockMvc.perform(get("/api/puzzles/today")
+                .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status").value(404))
+                .andExpect(jsonPath("$.message").value("Puzzle del giorno non trovato"));
+
         verify(puzzleService, times(1)).getTodayPuzzle();
     }
 
-        @Test
-        @DisplayName("Should return 404 Not Found when puzzle is missing")
-        void shouldReturnNotFoundWhenPuzzleDoesNotExist() throws Exception {
-            when(puzzleService.getTodayPuzzle())
-                    .thenThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "Puzzle del giorno non trovato"));
+    @Test
+    @DisplayName("Should return 500 Internal Server Error when generic exception occurs")
+    void shouldReturnInternalServerErrorWhenGenericErrorOccurs() throws Exception {
+        when(puzzleService.getTodayPuzzle())
+                .thenThrow(new RuntimeException("Database connection failure"));
 
-            mockMvc.perform(get("/api/puzzles/today")
-                    .contentType(MediaType.APPLICATION_JSON))
-                    .andExpect(status().isNotFound())
-                    .andExpect(jsonPath("$.status").value(404))
-                    .andExpect(jsonPath("$.message").value("Puzzle del giorno non trovato"));
+        mockMvc.perform(get("/api/puzzles/today"))
+                .andExpect(status().isInternalServerError())
+                .andExpect(jsonPath("$.status").value(500))
+                .andExpect(jsonPath("$.message").value("Si è verificato un errore interno al server."));
 
-            verify(puzzleService, times(1)).getTodayPuzzle();
-        }
-
-        @Test
-        @DisplayName("Should return 500 Internal Server Error when generic exception occurs")
-        void shouldReturnInternalServerErrorWhenGenericErrorOccurs() throws Exception {
-            when(puzzleService.getTodayPuzzle())
-                    .thenThrow(new RuntimeException("Database connection failure"));
-
-            mockMvc.perform(get("/api/puzzles/today"))
-                    .andExpect(status().isInternalServerError())
-                    .andExpect(jsonPath("$.status").value(500))
-                    .andExpect(jsonPath("$.message").value("Si è verificato un errore interno al server."));
-
-            verify(puzzleService, times(1)).getTodayPuzzle();
-        }
+        verify(puzzleService, times(1)).getTodayPuzzle();
     }
 
     // --- Private Helper Methods ---

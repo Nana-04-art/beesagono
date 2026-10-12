@@ -1,4 +1,4 @@
-import { CareerTier } from '../models/stats.model';
+import { CareerTier } from '../models/stats/stats.model';
 
 export const CAREER_TIERS: CareerTier[] = [
     { name: 'Uovo d\'Ape', minPercentage: 0 },

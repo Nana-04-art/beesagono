@@ -3,7 +3,7 @@ import { ComponentRef, signal, WritableSignal } from '@angular/core';
 import { describe, beforeEach, it, expect } from 'vitest';
 import { ScoreboardComponent } from './scoreboard.component';
 import { GameService } from '../../../services/game/game.service';
-import { RankTier } from '../../../models/rank.model';
+import { RankTier } from '../../../models/game/rank.model';
 
 class MockGameService {
   readonly maxScore: WritableSignal<number> = signal<number>(100);

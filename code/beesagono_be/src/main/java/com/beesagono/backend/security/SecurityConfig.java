@@ -66,7 +66,7 @@ public class SecurityConfig {
 
     /**
      * Configures the main Spring Security filter chain, enabling CORS, disabling
-     * CSRF,setting session management to stateless, mapping endpoint authorization
+     * CSRF, setting session management to stateless, mapping endpoint authorization
      * rules, and configuring Swagger UI public endpoints.
      */
     @Bean
@@ -103,6 +103,8 @@ public class SecurityConfig {
         config.setAllowedOrigins(allowedOrigins);
         config.setAllowedMethods(allowedMethods);
         config.setAllowedHeaders(List.of("*"));
+        config.setAllowCredentials(true); // Allows credentials/cookies (requires explicit origins in allowedOrigins)
+        config.setExposedHeaders(List.of("Authorization", "Content-Type")); // Headers exposed to the client if necessary
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);

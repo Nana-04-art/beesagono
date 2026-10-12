@@ -1,5 +1,5 @@
 import { Component, inject, input, signal } from '@angular/core';
-import { WordMapItem } from '../../models/word-map-item.model';
+import { WordMapItem } from '../../models/game/word-map-item.model';
 import { GameService } from '../../services/game/game.service';
 
 @Component({
