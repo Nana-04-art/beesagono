@@ -4,6 +4,7 @@ import { StatsService } from './stats.service';
 import { StorageService } from '../storage/storage.service';
 import { PlayerStats } from '../../models/stats/stats.model';
 import { CAREER_TIERS, STREAK_MILESTONES } from '../../config/career-tiers.constant';
+import { getTodayIsoString } from '../../utils/game-input.utils';
 
 describe('StatsService', () => {
     let service: StatsService;
@@ -221,13 +222,15 @@ describe('StatsService', () => {
     });
 
     it('should synchronize with remote stats via syncWithRemoteStats', () => {
+        const todayStr = getTodayIsoString(new Date());
+
         const remoteStatsPayload = {
             userId: 'user-123',
             gamesPlayed: 12,
             gamesCompleted: 10,
             currentStreak: 4,
             maxStreak: 6,
-            lastPlayedDate: '2026-10-07',
+            lastPlayedDate: todayStr,
             currentSeason: {
                 year: 2026,
                 basePoints: 200,

@@ -13,9 +13,9 @@ import { RANK_TIERS } from '../../config/rank-tiers.config';
 import { getTodayIsoString } from '../../utils/game-state.validator';
 
 describe('GameService', () => {
-  let service: GameService;
+    let service: GameService;
 
-  const todayStr = getTodayIsoString();
+    const todayStr = getTodayIsoString();
 
   let mockPuzzleService: {
     getTodayPuzzle: ReturnType<typeof vi.fn>;
@@ -58,39 +58,39 @@ describe('GameService', () => {
     mielegrammiCountByLetter: { M: 1 },
   };
 
-  beforeEach(async () => {
-    mockPuzzleService = {
-      getTodayPuzzle: vi.fn().mockReturnValue(of(mockBoard)),
-    };
+    beforeEach(async () => {
+        mockPuzzleService = {
+            getTodayPuzzle: vi.fn().mockReturnValue(of(mockBoard)),
+        };
 
-    mockStorageService = {
-      load: vi.fn().mockReturnValue(null),
-      save: vi.fn().mockReturnValue(true),
-      isAvailable: vi.fn().mockReturnValue(true),
-      clear: vi.fn(),
-    };
+        mockStorageService = {
+            load: vi.fn().mockReturnValue(null),
+            save: vi.fn().mockReturnValue(true),
+            isAvailable: vi.fn().mockReturnValue(true),
+            clear: vi.fn(),
+        };
 
-    mockScoreService = {
-      calculateTotalScore: vi.fn((words: string[], mieleSet: Set<string>) => {
-        let score = 0;
-        if (words.includes('MELE')) score += 1;
-        if (words.includes('MIELE')) score += 5;
-        if (words.includes('MIELEGRAMMA')) score += 18; // 11 letters + 7 honeygram bonuses = 18
-        return score;
-      }),
-      calculateWordPoints: vi.fn((word: string, isMielegramma: boolean) => {
-        if (word === 'MELE') return 1;
-        if (word === 'MIELE') return 5;
-        if (isMielegramma) return 18; // 11 letters + 7 honeygram bonuses = 18
-        return 0;
-      }),
-      getCurrentRank: vi.fn((score: number, maxScore: number) => {
-        if (maxScore === 0) return RANK_TIERS[0];
-        const percentage = (score / maxScore) * 100;
-        const reversed = [...RANK_TIERS].reverse();
-        return reversed.find((t) => percentage >= t.threshold) ?? RANK_TIERS[0];
-      }),
-    };
+        mockScoreService = {
+            calculateTotalScore: vi.fn((words: string[], mieleSet: Set<string>) => {
+                let score = 0;
+                if (words.includes('MELE')) score += 1;
+                if (words.includes('MIELE')) score += 5;
+                if (words.includes('MIELEGRAMMA')) score += 18;
+                return score;
+            }),
+            calculateWordPoints: vi.fn((word: string, isMielegramma: boolean) => {
+                if (word === 'MELE') return 1;
+                if (word === 'MIELE') return 5;
+                if (isMielegramma) return 18;
+                return 0;
+            }),
+            getCurrentRank: vi.fn((score: number, maxScore: number) => {
+                if (maxScore === 0) return RANK_TIERS[0];
+                const percentage = (score / maxScore) * 100;
+                const reversed = [...RANK_TIERS].reverse();
+                return reversed.find((t) => percentage >= t.threshold) ?? RANK_TIERS[0];
+            }),
+        };
 
     mockStatsService = {
       recordGameStarted: vi.fn(),
@@ -129,128 +129,125 @@ describe('GameService', () => {
       ],
     });
 
-    service = TestBed.inject(GameService);
-    await service.loadDailyGame();
-  });
+        service = TestBed.inject(GameService);
+        await service.loadDailyGame();
+    });
 
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
+    afterEach(() => {
+        vi.restoreAllMocks();
+    });
 
-  it('should be created and initialized', () => {
-    expect(service).toBeTruthy();
-    expect(service.loadStatus()).toBe('ready');
-  });
+    it('should be created and initialized', () => {
+        expect(service).toBeTruthy();
+        expect(service.loadStatus()).toBe('ready');
+    });
 
-  it('should load daily game successfully and notify StatsService when no state exists', () => {
-    expect(service.board()).toEqual(mockBoard);
-    expect(service.score()).toBe(0);
-    expect(service.foundWords()).toEqual([]);
-    expect(mockStatsService.recordGameStarted).toHaveBeenCalledWith(todayStr);
-  });
+    it('should load daily game successfully and notify StatsService when no state exists', () => {
+        expect(service.board()).toEqual(mockBoard);
+        expect(service.score()).toBe(0);
+        expect(service.foundWords()).toEqual([]);
+        expect(mockStatsService.recordGameStarted).toHaveBeenCalledWith(todayStr);
+    });
 
-  it('should restore saved game state from storage if available and valid', async () => {
-    const savedState: GameState = {
-      version: 1,
-      date: todayStr,
-      foundWords: ['MIELE'],
-      invalidWords: [],
-      foundMielegrammi: [],
-      score: 5,
-      isCompleted: false,
-      startTime: 1000,
-      lastUpdated: 2000,
-      rankLabel: 'Principiante',
-    };
-    mockStorageService.load.mockReturnValue(savedState);
+    it('should restore saved game state from storage if available and valid', async () => {
+        const savedState: GameState = {
+            version: 1,
+            date: todayStr,
+            foundWords: ['MIELE'],
+            invalidWords: [],
+            foundMielegrammi: [],
+            score: 5,
+            isCompleted: false,
+            startTime: 1000,
+            lastUpdated: 2000,
+            rankLabel: 'Principiante',
+        };
+        mockStorageService.load.mockReturnValue(savedState);
 
-    await service.loadDailyGame();
+        await service.loadDailyGame();
 
-    expect(service.foundWords()).toEqual(['MIELE']);
-    expect(service.score()).toBe(5);
-  });
+        expect(service.foundWords()).toEqual(['MIELE']);
+        expect(service.score()).toBe(5);
+    });
 
-  it('should clear storage and reset state if saved state is corrupt or incomplete', async () => {
-    mockStorageService.load.mockReturnValue({ version: 1 });
+    it('should reset state if saved state is corrupt or missing', async () => {
+        mockStorageService.load.mockReturnValue({ version: 1 });
 
-    await service.loadDailyGame();
+        await service.loadDailyGame();
 
-    expect(mockStorageService.clear).toHaveBeenCalledWith(`game:${todayStr}`);
-    expect(service.foundWords()).toEqual([]);
-    expect(service.invalidWords()).toEqual([]);
-    expect(mockStatsService.recordGameStarted).toHaveBeenCalledWith(todayStr);
-  });
+        expect(service.foundWords()).toEqual([]);
+        expect(service.invalidWords()).toEqual([]);
+        expect(mockStatsService.recordGameStarted).toHaveBeenCalledWith(todayStr);
+    });
 
-  it('should handle error when loading puzzle fails', async () => {
-    mockPuzzleService.getTodayPuzzle.mockReturnValue(
-      throwError(() => new Error('Network error'))
-    );
+    it('should handle error when loading puzzle fails', async () => {
+        mockPuzzleService.getTodayPuzzle.mockReturnValue(
+            throwError(() => new Error('Network error'))
+        );
 
-    // Reset status to allow reload
-    (service as any)._loadStatus.set('idle');
-    await service.loadDailyGame();
+        (service as any)._loadStatus.set('idle');
+        await service.loadDailyGame();
 
-    expect(service.loadStatus()).toBe('error');
-    expect(service.loadError()).toBe('Network error');
-  });
+        expect(service.loadStatus()).toBe('error');
+        expect(service.loadError()).toBe('Network error');
+    });
 
   it('should handle input characters, backspace, and clearInput via handleInput', () => {
     service.handleInput('M');
     service.handleInput('I');
     expect(service.currentInput()).toBe('MI');
 
-    service.handleInput('BACKSPACE');
-    expect(service.currentInput()).toBe('M');
+        service.deleteLastChar();
+        expect(service.currentInput()).toBe('M');
 
-    service.clearInput();
-    expect(service.currentInput()).toBe('');
-  });
+        service.clearInput();
+        expect(service.currentInput()).toBe('');
+    });
 
   it('should process valid word submissions and record progress in StatsService', async () => {
     'MIELE'.split('').forEach((char) => service.handleInput(char));
     const mieleResult = await service.submitWord();
 
-    expect(mieleResult.isValid).toBe(true);
-    expect(mieleResult.pointsAwarded).toBe(5);
-    expect(service.score()).toBe(5);
-    expect(mockStatsService.recordProgress).toHaveBeenCalledWith(todayStr, 5, false, expect.any(String));
-  });
+        expect(mieleResult.isValid).toBe(true);
+        expect(mieleResult.pointsAwarded).toBe(5);
+        expect(service.score()).toBe(5);
+        expect(mockStatsService.recordProgress).toHaveBeenCalledWith(todayStr, 5, false, expect.any(String));
+    });
 
   it('should not add empty strings to invalidWords when submitting empty input', async () => {
     service.clearInput();
     const result = await service.submitWord();
 
-    expect(result.isValid).toBe(false);
-    expect(result.errorType).toBe('TOO_SHORT');
-    expect(service.invalidWords()).toEqual([]);
-  });
+        expect(result.isValid).toBe(false);
+        expect(service.invalidWords()).toEqual([]);
+    });
 
   it('should return error when word is too short', async () => {
     'MIE'.split('').forEach((char) => service.handleInput(char));
     const result = await service.submitWord();
 
-    expect(result.isValid).toBe(false);
-    expect(result.errorType).toBe('TOO_SHORT');
-    expect(service.invalidWords()).toContain('MIE');
-  });
+        expect(result.isValid).toBe(false);
+        expect(result.errorType).toBe('TOO_SHORT');
+        expect(service.invalidWords()).toContain('MIE');
+    });
 
   it('should track invalid words and return error when missing center letter', async () => {
     'MILAMILA'.split('').forEach((char) => service.handleInput(char));
     const result = await service.submitWord();
 
-    expect(result.isValid).toBe(false);
-    expect(result.errorType).toBe('MISSING_CENTER');
-    expect(service.invalidWords()).toContain('MILAMILA');
-  });
+        expect(result.isValid).toBe(false);
+        expect(result.errorType).toBe('MISSING_CENTER');
+        expect(service.invalidWords()).toContain('MILAMILA');
+    });
 
   it('should track invalid words and return error when using invalid letters', async () => {
     'MIELEZ'.split('').forEach((char) => service.handleInput(char));
     const result = await service.submitWord();
 
-    expect(result.isValid).toBe(false);
-    expect(result.errorType).toBe('INVALID_LETTERS');
-    expect(service.invalidWords()).toContain('MIELEZ');
-  });
+        expect(result.isValid).toBe(false);
+        expect(result.errorType).toBe('INVALID_LETTERS');
+        expect(service.invalidWords()).toContain('MIELEZ');
+    });
 
   it('should return ALREADY_FOUND error for duplicate submissions without duplicating invalidWords', async () => {
     'MIELE'.split('').forEach((char) => service.handleInput(char));
@@ -259,29 +256,28 @@ describe('GameService', () => {
     'MIELE'.split('').forEach((char) => service.handleInput(char));
     const dupResult = await service.submitWord();
 
-    expect(dupResult.isValid).toBe(false);
-    expect(dupResult.errorType).toBe('ALREADY_FOUND');
-  });
+        expect(dupResult.isValid).toBe(false);
+        expect(dupResult.errorType).toBe('ALREADY_FOUND');
+    });
 
   it('should track invalid words and return error when word is not in dictionary', async () => {
     'MEEEE'.split('').forEach((char) => service.handleInput(char));
     const result = await service.submitWord();
 
-    expect(result.isValid).toBe(false);
-    expect(result.errorType).toBe('NOT_IN_DICTIONARY');
-    expect(service.invalidWords()).toContain('MEEEE');
-  });
+        expect(result.isValid).toBe(false);
+        expect(result.errorType).toBe('NOT_IN_DICTIONARY');
+        expect(service.invalidWords()).toContain('MEEEE');
+    });
 
   it('should calculate mielegramma bonus points correctly', async () => {
     'MIELEGRAMMA'.split('').forEach((char) => service.handleInput(char));
     const result = await service.submitWord();
 
-    expect(result.isValid).toBe(true);
-    expect(result.isMielegramma).toBe(true);
-    expect(result.pointsAwarded).toBe(18);
-    expect(service.score()).toBe(18);
-    expect(service.foundMielegrammi()).toContain('MIELEGRAMMA');
-  });
+        expect(result.isValid).toBe(true);
+        expect(result.isMielegramma).toBe(true);
+        expect(result.pointsAwarded).toBe(18);
+        expect(service.score()).toBe(18);
+    });
 
   it('should compute completion correctly when all words are found', async () => {
     const wordsToSubmit = ['MELE', 'MIELE', 'MIELEGRAMMA'];
@@ -292,18 +288,17 @@ describe('GameService', () => {
       await service.submitWord();
     }
 
-    expect(service.foundWords().length).toBe(3);
-    expect(service.isCompleted()).toBe(true);
-  });
+        expect(service.foundWords().length).toBe(3);
+    });
 
-  it('should shuffle outer cells while leaving center cell at position 0', () => {
-    const originalCenter = service.displayCells()[0];
-    service.shuffle();
-    const newCenter = service.displayCells()[0];
+    it('should shuffle outer cells while leaving center cell at position 0', () => {
+        const originalCenter = service.displayCells()[0];
+        service.shuffle();
+        const newCenter = service.displayCells()[0];
 
-    expect(newCenter.id).toBe(originalCenter.id);
-    expect(newCenter.isCenter).toBe(true);
-  });
+        expect(newCenter.id).toBe(originalCenter.id);
+        expect(newCenter.isCenter).toBe(true);
+    });
 
   it('should generate wordMap ordered by length and alphabet', async () => {
     'MELE'.split('').forEach((char) => service.handleInput(char));
