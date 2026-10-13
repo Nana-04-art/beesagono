@@ -5,6 +5,7 @@ import { vi, describe, beforeEach, afterEach, it, expect } from 'vitest';
 import { PuzzleService } from './puzzle.service';
 import { DailyPuzzleResponse } from '../../models/puzzle/daily-puzzle-response.model';
 import { GameBoard } from '../../models/game/game-board.model';
+import { environment } from '../../environments/environment';
 
 describe('PuzzleService', () => {
   let service: PuzzleService;
@@ -15,8 +16,6 @@ describe('PuzzleService', () => {
     puzzleDate: '2026-09-30',
     centerLetter: 'a',
     outerLetters: ['b', 'c', 'd', 'e', 'f', 'g'],
-    possibleWords: ['ABBA', 'CABA', 'BABE'],
-    mielegrammi: ['BABCADEG'],
     maxScore: 100,
   };
 
@@ -34,7 +33,7 @@ describe('PuzzleService', () => {
   });
 
   afterEach(() => {
-    // Verifica che non ci siano chiamate HTTP pendenti o non gestite
+    // Verify that there are no outstanding HTTP requests after each test
     httpMock.verify();
   });
 
@@ -50,34 +49,32 @@ describe('PuzzleService', () => {
         resultBoard = board;
       });
 
-      // Intercetta la chiamata GET
-      const req = httpMock.expectOne('http://localhost:8080/api/puzzles/today');
+      // Intercept the GET call
+      const req = httpMock.expectOne(`${environment.apiBaseUrl}/today`);
       expect(req.request.method).toBe('GET');
 
-      // Risponde con il DTO mockato
+      // Respond with the mocked DTO
       req.flush(mockPuzzleResponse);
 
-      // Verifiche sul GameBoard trasformato
+      // Verifications on the transformed GameBoard
       expect(resultBoard).toBeDefined();
       expect(resultBoard?.date).toBe('2026-09-30');
       expect(resultBoard?.seed).toBe('puzzle-123');
       expect(resultBoard?.maxScore).toBe(100);
-      expect(resultBoard?.possibleWords).toEqual(['ABBA', 'CABA', 'BABE']);
-      expect(resultBoard?.mielegrammi).toEqual(['BABCADEG']);
 
-      // Verifica mappatura delle celle (7 celle totali: 1 centrale + 6 esterne)
+      // Verify cell mapping (7 total cells: 1 center + 6 outer)
       expect(resultBoard?.cells).toHaveLength(7);
 
-      // Cella centrale (hex-0)
+      // Center cell (hex-0)
       const centerCell = resultBoard?.cells[0];
       expect(centerCell).toEqual({
         id: 'hex-0',
-        letter: 'A', // Deve essere maiuscola
+        letter: 'A', // Must be uppercase
         position: 0,
         isCenter: true,
       });
 
-      // Celle esterne (hex-1 a hex-6)
+      // Outer cells (hex-1 to hex-6)
       const outerCells = resultBoard?.cells.slice(1);
       expect(outerCells).toHaveLength(6);
 
@@ -103,7 +100,7 @@ describe('PuzzleService', () => {
         resultBoard = board;
       });
 
-      const req = httpMock.expectOne('http://localhost:8080/api/puzzles/today');
+      const req = httpMock.expectOne(`${environment.apiBaseUrl}/today`);
       req.flush(responseWithoutId);
 
       expect(resultBoard?.seed).toBe('2026-09-30');
@@ -115,8 +112,6 @@ describe('PuzzleService', () => {
         puzzleDate: '2026-09-30',
         centerLetter: 'x',
         outerLetters: [],
-        possibleWords: [],
-        mielegrammi: [],
         maxScore: 0,
       };
 
@@ -126,13 +121,11 @@ describe('PuzzleService', () => {
         resultBoard = board;
       });
 
-      const req = httpMock.expectOne('http://localhost:8080/api/puzzles/today');
+      const req = httpMock.expectOne(`${environment.apiBaseUrl}/today`);
       req.flush(emptyResponse);
 
-      expect(resultBoard?.cells).toHaveLength(1); // Solo la cella centrale
+      expect(resultBoard?.cells).toHaveLength(1); // only the center cell
       expect(resultBoard?.cells[0].letter).toBe('X');
-      expect(resultBoard?.possibleWords).toEqual([]);
-      expect(resultBoard?.mielegrammi).toEqual([]);
     });
 
     it('should handle HTTP error appropriately', () => {
@@ -145,7 +138,7 @@ describe('PuzzleService', () => {
         },
       });
 
-      const req = httpMock.expectOne('http://localhost:8080/api/puzzles/today');
+      const req = httpMock.expectOne(`${environment.apiBaseUrl}/today`);
       req.flush('Internal Server Error', {
         status: 500,
         statusText: 'Server Error',

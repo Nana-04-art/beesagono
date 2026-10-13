@@ -10,12 +10,11 @@ export class DictionaryService {
   private readonly baseUrl = `${environment.apiBaseUrl}/dictionary`;
 
   /**
-   * Sends the word to the backend for validation based on the puzzle date.
-   * The backend will check length, central letter, and presence in the DB.
+   * Sends the word to the backend for validation.
+   * The backend will check length, central letter, the puzzle date and presence in the DB.
    */
-  validateWord(puzzleDate: string, word: string): Observable<WordValidationResponse> {
+  validateWord(word: string): Observable<WordValidationResponse> {
     const payload: WordValidationRequest = {
-      puzzleDate,
       word: word.trim().toUpperCase()
     };
 

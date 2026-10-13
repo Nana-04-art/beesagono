@@ -36,7 +36,6 @@ describe('DictionaryService', () => {
 
   describe('validateWord', () => {
     it('should send a POST request with sanitized payload and return validation response', () => {
-      const puzzleDate = '2026-03-30';
       const inputWord = '  miele  ';
       const mockResponse: WordValidationResponse = {
         word: 'MIELE',
@@ -47,16 +46,14 @@ describe('DictionaryService', () => {
         errorMessage: ''
       };
 
-      service.validateWord(puzzleDate, inputWord).subscribe((response) => {
+      service.validateWord(inputWord).subscribe((response) => {
         expect(response).toEqual(mockResponse);
       });
 
       const req = httpMock.expectOne(`${mockBaseUrl}/validate`);
       expect(req.request.method).toBe('POST');
 
-      // Verifica che la parola inviata al backend sia stata formattata (trimmed & uppercased)
       const expectedPayload: WordValidationRequest = {
-        puzzleDate: '2026-03-30',
         word: 'MIELE'
       };
       expect(req.request.body).toEqual(expectedPayload);
@@ -65,11 +62,10 @@ describe('DictionaryService', () => {
     });
 
     it('should propagate error when HTTP request fails', () => {
-      const puzzleDate = '2026-03-30';
       const word = 'APE';
 
-      service.validateWord(puzzleDate, word).subscribe({
-        next: () => expect.fail('Dovrebbe fallire con un errore HTTP'),
+      service.validateWord(word).subscribe({
+        next: () => expect.fail('Should have failed with an error'),
         error: (error) => {
           expect(error.status).toBe(500);
         }

@@ -1,5 +1,4 @@
 export interface WordValidationRequest {
-    puzzleDate: string;
     word: string;
 }
 

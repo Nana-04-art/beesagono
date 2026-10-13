@@ -5,13 +5,14 @@ import { DailyPuzzleResponse } from '../../models/puzzle/daily-puzzle-response.m
 import { GameBoard } from '../../models/game/game-board.model';
 import { Cell } from '../../models/game/cell.model';
 import { HexPosition } from '../../models/game/hex-position.type';
+import { environment } from '../../environments/environment';
 
 @Injectable({
   providedIn: 'root',
 })
 export class PuzzleService {
   private readonly http = inject(HttpClient);
-  private readonly baseUrl = 'http://localhost:8080/api/puzzles';
+  private readonly baseUrl = `${environment.apiBaseUrl}/puzzles`;
 
   /**
    * Fetches today's puzzle from the backend and converts it into a GameBoard model.
@@ -43,11 +44,9 @@ export class PuzzleService {
     ];
 
     return {
-      date: dto.puzzleDate,
-      seed: dto.id || dto.puzzleDate,
+      date: dto.puzzleDate.toString(),
+      seed: dto.id || dto.puzzleDate.toString(),
       cells,
-      possibleWords: dto.possibleWords || [],
-      mielegrammi: dto.mielegrammi || [],
       maxScore: dto.maxScore,
     };
   }
