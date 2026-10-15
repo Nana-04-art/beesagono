@@ -1,11 +1,12 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { signal, WritableSignal } from '@angular/core';
-import { vi } from 'vitest';
+import { describe, beforeEach, it, expect } from 'vitest';
 
 import { WordsByLetterComponent } from './words-by-letter.component';
 import { GameService } from '../../services/game/game.service';
 import { GameBoard } from '../../models/game/game-board.model';
 import { WordMapItem } from '../../models/game/word-map-item.model';
+import { getTodayIsoString } from '../../utils/game-state.validator';
 
 class MockGameService {
   readonly board: WritableSignal<GameBoard | null> = signal<GameBoard | null>(null);
@@ -17,21 +18,25 @@ class MockGameService {
 }
 
 describe('WordsByLetterComponent', () => {
+  const todayStr = getTodayIsoString(new Date());
+
   let component: WordsByLetterComponent;
   let fixture: ComponentFixture<WordsByLetterComponent>;
   let mockGameService: MockGameService;
 
   const sampleBoard: GameBoard = {
-    date: '2026-08-07',
+    date: todayStr,
     seed: 'test-seed',
     cells: [
       { id: '0', letter: 'A', isCenter: true, position: 0 },
       { id: '1', letter: 'B', isCenter: false, position: 1 },
       { id: '2', letter: 'C', isCenter: false, position: 2 }
     ],
-    possibleWords: ['APE', 'AMORE', 'BARCA', 'CASA'],
-    mielegrammi: ['AMORE'],
-    maxScore: 100
+    maxScore: 100,
+    totalWordsCount: 4,
+    totalMielegrammiCount: 1,
+    wordsCountByLetter: { A: 2, B: 1, C: 1 },
+    mielegrammiCountByLetter: { A: 1, B: 0, C: 0 }
   };
 
   beforeEach(async () => {
@@ -55,7 +60,7 @@ describe('WordsByLetterComponent', () => {
     it('should reflect total counters from GameService', () => {
       mockGameService.foundWords.set(['APE', 'BARCA']);
       mockGameService.totalPossibleWords.set(10);
-      mockGameService.foundMielegrammi.set(['AMORE']);
+      mockGameService.foundMielegrammi.set(['MIELEGRAMMA']);
       mockGameService.totalMielegrammi.set(2);
 
       fixture.detectChanges();
@@ -88,15 +93,14 @@ describe('WordsByLetterComponent', () => {
       const groupA = groups.find((g) => g.letter === 'A');
       expect(groupA).toBeDefined();
       expect(groupA?.isCenter).toBe(true);
-      expect(groupA?.totalCount).toBe(2); // 'APE', 'AMORE'
+      expect(groupA?.totalCount).toBe(2); // Dalle mappe del board
       expect(groupA?.foundCount).toBe(2); // 'APE', 'AMORE'
-      expect(groupA?.totalPangrams).toBe(1); // 'AMORE'
-      expect(groupA?.foundPangrams).toBe(1); // 'AMORE'
+      expect(groupA?.totalPangrams).toBe(1);
+      expect(groupA?.foundPangrams).toBe(1);
       expect(groupA?.foundWords).toEqual(['APE', 'AMORE']);
 
-      // Gruppo 'B'
       const groupB = groups.find((g) => g.letter === 'B');
-      expect(groupB?.totalCount).toBe(1); // 'BARCA'
+      expect(groupB?.totalCount).toBe(1);
       expect(groupB?.foundCount).toBe(0);
       expect(groupB?.foundWords).toEqual([]);
     });
@@ -149,19 +153,14 @@ describe('WordsByLetterComponent', () => {
   });
 
   describe('isMielegramma Helper Method', () => {
-    it('should return false if board or board.mielegrammi is null', () => {
-      mockGameService.board.set(null);
-      fixture.detectChanges();
-
+    it('should return false for words with fewer than 7 unique letters', () => {
       expect(component.isMielegramma('AMORE')).toBe(false);
+      expect(component.isMielegramma('APE')).toBe(false);
     });
 
-    it('should return true for words present in board.mielegrammi (case-insensitive check)', () => {
-      mockGameService.board.set(sampleBoard);
-      fixture.detectChanges();
-
-      expect(component.isMielegramma('amore')).toBe(true);
-      expect(component.isMielegramma('APE')).toBe(false);
+    it('should return true for words with at least 7 unique letters', () => {
+      expect(component.isMielegramma('mielegramma')).toBe(true);
+      expect(component.isMielegramma('ABCDEFG')).toBe(true);
     });
   });
 });

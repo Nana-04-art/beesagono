@@ -38,6 +38,7 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import static org.mockito.Mockito.times;
@@ -164,6 +165,10 @@ class PuzzleControllerTest {
                 .centerLetter(centerLetter)
                 .maxScore(maxScore)
                 .outerLetters(Set.of("B", "C", "D", "E", "F", "G"))
+                .totalWordsCount(10)
+                .totalMielegrammiCount(1)
+                .wordsCountByLetter(Map.of("A", 5, "B", 5))
+                .mielegrammiCountByLetter(Map.of("A", 1))
                 .build();
     }
 

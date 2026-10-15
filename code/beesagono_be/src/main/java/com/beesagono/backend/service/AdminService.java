@@ -30,8 +30,7 @@ public interface AdminService {
     UserResponse createAdmin(CreateAdminRequest request);
 
     /**
-     * Retrieves a paginated list of system users, optionally filtered by username
-     * or email search term.
+     * Retrieves a paginated list of system users, optionally filtered by username or email search term.
      *
      * @param search   optional search query to filter users
      * @param pageable pagination and sorting parameters

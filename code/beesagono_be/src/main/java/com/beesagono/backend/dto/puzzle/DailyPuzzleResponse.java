@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -22,4 +23,10 @@ public class DailyPuzzleResponse {
     private String centerLetter;
     private Set<String> outerLetters;
     private Integer maxScore;
+    private Integer totalWordsCount;        // Number of total words
+    private Integer totalMielegrammiCount;  // Number of total mielegrammi
+
+    // Letter statistics for each letter in the puzzle, including counts of found words and pangrams.
+    private Map<String, Integer> wordsCountByLetter;        // E.g.: {"A": 5, "C": 3, ...}
+    private Map<String, Integer> mielegrammiCountByLetter;  // E.g.: {"A": 1, "C": 0, ...}
 }

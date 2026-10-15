@@ -1,5 +1,12 @@
 import { GameState } from '../models/game/game-state.model';
 
+export function getTodayIsoString(date = new Date()): string {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
 /**
  * Validates that a string is a valid ISO 8601 date (YYYY-MM-DD),
  * also checking the correctness of months, days, and leap years on the calendar.

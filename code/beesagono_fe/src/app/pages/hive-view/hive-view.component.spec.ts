@@ -13,6 +13,7 @@ import { ShareScorePayload } from '../../models/game/share-score.model';
 import { RankTier } from '../../models/game/rank.model';
 import { ValidationResult } from '../../models/game/validation.model';
 import { WordMapItem } from '../../models/game/word-map-item.model';
+import { getTodayIsoString } from '../../utils/game-state.validator';
 
 Object.defineProperty(window, 'matchMedia', {
     writable: true,
@@ -30,23 +31,30 @@ Object.defineProperty(window, 'matchMedia', {
 });
 
 describe('HiveViewComponent', () => {
+    const todayStr = getTodayIsoString(new Date());
+
     let component: HiveViewComponent;
     let fixture: ComponentFixture<HiveViewComponent>;
 
     const loadStatusSignal = signal<'idle' | 'loading' | 'ready' | 'error'>('ready');
     const loadErrorSignal = signal<string | null>(null);
-    const boardSignal = signal<GameBoard | null>({
-        date: '2026-08-12',
+
+    const initialBoard: GameBoard = {
+        date: todayStr,
         seed: 'test-seed',
         cells: [
             { id: '0', letter: 'A', isCenter: true, position: 0 },
             { id: '1', letter: 'P', isCenter: false, position: 1 },
             { id: '2', letter: 'E', isCenter: false, position: 2 }
         ],
-        possibleWords: ['APE'],
-        mielegrammi: [],
-        maxScore: 100
-    });
+        maxScore: 100,
+        totalWordsCount: 10,
+        totalMielegrammiCount: 1,
+        wordsCountByLetter: { A: 5, P: 3, E: 2 },
+        mielegrammiCountByLetter: { A: 1 }
+    };
+
+    const boardSignal = signal<GameBoard | null>(initialBoard);
     const isCompletedSignal = signal<boolean>(false);
     const currentInputSignal = signal<string>('');
     const displayCellsSignal = signal<Cell[]>([
@@ -71,7 +79,7 @@ describe('HiveViewComponent', () => {
     const isNoticeOpenSignal = signal<boolean>(false);
 
     const mockPayload: ShareScorePayload = {
-        date: '12/08/2026',
+        date: todayStr,
         score: 50,
         maxScore: 100,
         wordsFound: 5,
@@ -96,18 +104,7 @@ describe('HiveViewComponent', () => {
             { id: '1', letter: 'P', isCenter: false, position: 1 },
             { id: '2', letter: 'E', isCenter: false, position: 2 }
         ]);
-        boardSignal.set({
-            date: '2026-08-12',
-            seed: 'test-seed',
-            cells: [
-                { id: '0', letter: 'A', isCenter: true, position: 0 },
-                { id: '1', letter: 'P', isCenter: false, position: 1 },
-                { id: '2', letter: 'E', isCenter: false, position: 2 }
-            ],
-            possibleWords: ['APE'],
-            mielegrammi: [],
-            maxScore: 100
-        });
+        boardSignal.set(initialBoard);
         isCompletedSignal.set(false);
         foundWordsSignal.set([]);
         foundMielegrammiSignal.set([]);
@@ -145,7 +142,7 @@ describe('HiveViewComponent', () => {
             loadDailyGame: vi.fn(),
             retryLoadDailyGame: vi.fn(),
             checkDateRollover: vi.fn(),
-            submitWord: vi.fn().mockReturnValue({
+            submitWord: vi.fn().mockResolvedValue({
                 isValid: true,
                 pointsAwarded: 5,
                 isMielegramma: false
@@ -241,8 +238,11 @@ describe('HiveViewComponent', () => {
         });
 
         it('should format date correctly in Italian format', () => {
-            expect(component.formattedDate()).toContain('12');
-            expect(component.formattedDate()).toContain('2026');
+            const expectedDay = initialBoard.date.split('-')[2]; // E.g.: '15'
+            const expectedYear = initialBoard.date.split('-')[0]; // E.g.: '2026'
+
+            expect(component.formattedDate()).toContain(expectedDay);
+            expect(component.formattedDate()).toContain(expectedYear);
         });
 
         it('should return empty string for formattedDate if board is null', () => {
@@ -338,14 +338,14 @@ describe('HiveViewComponent', () => {
     });
 
     describe('Submit Logic & Feedback', () => {
-        it('should handle successful submit and display success message', () => {
-            mockGameService.submitWord = vi.fn().mockReturnValue({
+        it('should handle successful submit and display success message', async () => {
+            mockGameService.submitWord = vi.fn().mockResolvedValue({
                 isValid: true,
                 pointsAwarded: 3,
                 isMielegramma: false
             } as ValidationResult);
 
-            component.submit();
+            await component.submit();
 
             // @ts-expect-error Accessing protected property for testing
             expect(component.feedbackType()).toBe('success');
@@ -360,14 +360,14 @@ describe('HiveViewComponent', () => {
             expect(component.feedbackType()).toBeNull();
         });
 
-        it('should handle Mielegramma submit with special feedback message', () => {
-            mockGameService.submitWord = vi.fn().mockReturnValue({
+        it('should handle Mielegramma submit with special feedback message', async () => {
+            mockGameService.submitWord = vi.fn().mockResolvedValue({
                 isValid: true,
                 pointsAwarded: 15,
                 isMielegramma: true
             } as ValidationResult);
 
-            component.submit();
+            await component.submit();
 
             // @ts-expect-error Accessing protected property for testing
             expect(component.feedbackType()).toBe('success');
@@ -375,8 +375,8 @@ describe('HiveViewComponent', () => {
             expect(component.feedbackMessage()).toBe('🎉 MIELEGRAMMA!');
         });
 
-        it('should handle invalid submit and show error message from validation result', () => {
-            mockGameService.submitWord = vi.fn().mockReturnValue({
+        it('should handle invalid submit and show error message from validation result', async () => {
+            mockGameService.submitWord = vi.fn().mockResolvedValue({
                 isValid: false,
                 pointsAwarded: 0,
                 isMielegramma: false,
@@ -384,7 +384,7 @@ describe('HiveViewComponent', () => {
                 message: 'Parola troppo corta'
             } as ValidationResult);
 
-            component.submit();
+            await component.submit();
 
             // @ts-expect-error Accessing protected property for testing
             expect(component.feedbackType()).toBe('error');
@@ -397,8 +397,8 @@ describe('HiveViewComponent', () => {
             expect(component.feedbackMessage()).toBe('');
         });
 
-        it('should auto-open end game modal when puzzle is completed on submit', () => {
-            mockGameService.submitWord = vi.fn().mockReturnValue({
+        it('should auto-open end game modal when puzzle is completed on submit', async () => {
+            mockGameService.submitWord = vi.fn().mockResolvedValue({
                 isValid: true,
                 pointsAwarded: 5,
                 isMielegramma: false
@@ -407,7 +407,7 @@ describe('HiveViewComponent', () => {
 
             const openEndGameSpy = vi.spyOn(component, 'openEndGame');
 
-            component.submit();
+            await component.submit();
 
             vi.advanceTimersByTime(600);
 

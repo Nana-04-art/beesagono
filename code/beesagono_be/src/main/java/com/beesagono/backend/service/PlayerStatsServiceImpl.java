@@ -30,17 +30,6 @@ public class PlayerStatsServiceImpl implements PlayerStatsService {
         refreshStreak(stats, userId);
         playerStatsRepository.save(stats);
 
-        // Recalculates the streak on the fly whenever stats are requested
-        int calculatedStreak = calculateCurrentStreak(userId);
-        stats.setCurrentStreak(calculatedStreak);
-
-        int maxStreak = stats.getMaxStreak() != null ? stats.getMaxStreak() : 0;
-        if (calculatedStreak > maxStreak) {
-            stats.setMaxStreak(calculatedStreak);
-        }
-
-        playerStatsRepository.save(stats);
-
         return mapToResponse(stats);
     }
 
@@ -67,15 +56,6 @@ public class PlayerStatsServiceImpl implements PlayerStatsService {
             }
         }
 
-        // Dynamic Streak Recalculation
-        int calculatedStreak = calculateCurrentStreak(userId);
-        stats.setCurrentStreak(calculatedStreak);
-
-        int maxStreak = stats.getMaxStreak() != null ? stats.getMaxStreak() : 0;
-        if (calculatedStreak > maxStreak) {
-            stats.setMaxStreak(calculatedStreak);
-        }
-
         refreshStreak(stats, userId);
         playerStatsRepository.save(stats);
     }
@@ -98,8 +78,7 @@ public class PlayerStatsServiceImpl implements PlayerStatsService {
 
         LocalDate mostRecentDate = playedDates.get(0);
 
-        // If the user has not played today's or yesterday's puzzle, the streak resets
-        // to 0
+        // If the user has not played today's or yesterday's puzzle, the streak resets to 0
         if (!mostRecentDate.equals(today) && !mostRecentDate.equals(yesterday)) {
             return 0;
         }
