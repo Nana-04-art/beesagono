@@ -61,9 +61,11 @@
         <div class="d-flex flex-column align-items-center gap-3 w-100">
 
             <!-- Found Words (1024px x 60px) -->
-            <app-found-words [foundWords]="gameService.foundWords()" [foundMielegrammi]="gameService.foundMielegrammi()"
-                [totalPossibleWords]="gameService.totalPossibleWords()"
-                [totalPossibleMielegrammi]="gameService.totalMielegrammi()" />
+            <app-found-words 
+                [foundWords]="gameService.foundWords()" 
+                [foundMielegrammi]="gameService.foundMielegrammi()"
+                [totalPossibleWords]="gameService.board()?.totalWordsCount ?? 0"
+                [totalPossibleMielegrammi]="gameService.board()?.totalMielegrammiCount ?? 0" />
 
             <!-- Words By Letter (504px x 110px) -->
             <app-words-by-letter class="w-100" />

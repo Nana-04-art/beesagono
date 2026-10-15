@@ -6,17 +6,24 @@ import { PuzzleService } from './puzzle.service';
 import { DailyPuzzleResponse } from '../../models/puzzle/daily-puzzle-response.model';
 import { GameBoard } from '../../models/game/game-board.model';
 import { environment } from '../../environments/environment';
+import { getTodayIsoString } from '../../utils/game-state.validator'; 
 
 describe('PuzzleService', () => {
   let service: PuzzleService;
   let httpMock: HttpTestingController;
 
+  const todayStr = getTodayIsoString(new Date());
+
   const mockPuzzleResponse: DailyPuzzleResponse = {
     id: 'puzzle-123',
-    puzzleDate: '2026-09-30',
+    puzzleDate: todayStr,
     centerLetter: 'a',
     outerLetters: ['b', 'c', 'd', 'e', 'f', 'g'],
     maxScore: 100,
+    totalWordsCount: 25,
+    totalMielegrammiCount: 2,
+    wordsCountByLetter: { A: 10, B: 5, C: 10 },
+    mielegrammiCountByLetter: { A: 1, B: 1 },
   };
 
   beforeEach(() => {
@@ -50,7 +57,7 @@ describe('PuzzleService', () => {
       });
 
       // Intercept the GET call
-      const req = httpMock.expectOne(`${environment.apiBaseUrl}/today`);
+      const req = httpMock.expectOne(`${environment.apiBaseUrl}/puzzles/today`);
       expect(req.request.method).toBe('GET');
 
       // Respond with the mocked DTO
@@ -58,9 +65,13 @@ describe('PuzzleService', () => {
 
       // Verifications on the transformed GameBoard
       expect(resultBoard).toBeDefined();
-      expect(resultBoard?.date).toBe('2026-09-30');
+      expect(resultBoard?.date).toBe(todayStr);
       expect(resultBoard?.seed).toBe('puzzle-123');
       expect(resultBoard?.maxScore).toBe(100);
+      expect(resultBoard?.totalWordsCount).toBe(25);
+      expect(resultBoard?.totalMielegrammiCount).toBe(2);
+      expect(resultBoard?.wordsCountByLetter).toEqual({ A: 10, B: 5, C: 10 });
+      expect(resultBoard?.mielegrammiCountByLetter).toEqual({ A: 1, B: 1 });
 
       // Verify cell mapping (7 total cells: 1 center + 6 outer)
       expect(resultBoard?.cells).toHaveLength(7);
@@ -100,16 +111,16 @@ describe('PuzzleService', () => {
         resultBoard = board;
       });
 
-      const req = httpMock.expectOne(`${environment.apiBaseUrl}/today`);
+      const req = httpMock.expectOne(`${environment.apiBaseUrl}/puzzles/today`);
       req.flush(responseWithoutId);
 
-      expect(resultBoard?.seed).toBe('2026-09-30');
+      expect(resultBoard?.seed).toBe(todayStr);
     });
 
     it('should handle empty outerLetters, possibleWords, or mielegrammi gracefully', () => {
       const emptyResponse: DailyPuzzleResponse = {
         id: 'puzzle-456',
-        puzzleDate: '2026-09-30',
+        puzzleDate: todayStr,
         centerLetter: 'x',
         outerLetters: [],
         maxScore: 0,
@@ -121,7 +132,7 @@ describe('PuzzleService', () => {
         resultBoard = board;
       });
 
-      const req = httpMock.expectOne(`${environment.apiBaseUrl}/today`);
+      const req = httpMock.expectOne(`${environment.apiBaseUrl}/puzzles/today`);
       req.flush(emptyResponse);
 
       expect(resultBoard?.cells).toHaveLength(1); // only the center cell
@@ -138,7 +149,7 @@ describe('PuzzleService', () => {
         },
       });
 
-      const req = httpMock.expectOne(`${environment.apiBaseUrl}/today`);
+      const req = httpMock.expectOne(`${environment.apiBaseUrl}/puzzles/today`);
       req.flush('Internal Server Error', {
         status: 500,
         statusText: 'Server Error',

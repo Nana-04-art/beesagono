@@ -130,7 +130,7 @@ export class HiveViewComponent implements OnInit {
         this.feedbackTimeout = setTimeout(() => this.clearFeedback(), 2000);
         return;
       } catch (err) {
-        // Permission denied or write rejected, fallback to Share API or ExecCommand below
+        // Fallback
       }
     }
 
@@ -180,8 +180,9 @@ export class HiveViewComponent implements OnInit {
     this.feedbackTimeout = setTimeout(() => this.clearFeedback(), 2000);
   }
 
-  submit(): void {
-    const result = this.gameService.submitWord();
+  // Modified to async to await the response from the asynchronous validation 
+  async submit(): Promise<void> {
+    const result = await this.gameService.submitWord();
 
     if (this.feedbackTimeout) {
       clearTimeout(this.feedbackTimeout);

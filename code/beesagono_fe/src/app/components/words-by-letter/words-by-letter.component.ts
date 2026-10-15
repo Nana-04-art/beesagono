@@ -1,6 +1,6 @@
 import { Component, computed, effect, inject, signal } from '@angular/core';
 import { GameService } from '../../services/game/game.service';
-import { LetterGroup } from '../../models/game/letter-group.model'; 
+import { LetterGroup } from '../../models/game/letter-group.model';
 import { NgClass } from '@angular/common';
 import { WordMapComponent } from '../word-map/word-map.component';
 import { WordMapItem } from '../../models/game/word-map-item.model';
@@ -34,22 +34,18 @@ export class WordsByLetterComponent {
 
     const foundWords = this.gameService.foundWords();
     const foundMielegrammiSet = new Set(this.gameService.foundMielegrammi());
-    const possibleWords = board.possibleWords ?? [];
-    const mielegrammiSet = new Set(board.mielegrammi ?? []);
-
     // Retrieve the global item map from the service
     const globalWordMap = this.gameService.wordMap();
+
+    const wordsMap = board.wordsCountByLetter || {};
+    const mielegrammiMap = board.mielegrammiCountByLetter || {};
 
     return board.cells.map((cell) => {
       const letter = cell.letter.toUpperCase();
 
-      const totalWordsForLetter = possibleWords.filter((w) => w.startsWith(letter));
       const foundWordsForLetter = foundWords.filter((w) => w.startsWith(letter));
-
-      const totalPangramsForLetter = totalWordsForLetter.filter((w) => mielegrammiSet.has(w)).length;
       const foundPangramsForLetter = foundWordsForLetter.filter((w) => foundMielegrammiSet.has(w)).length;
 
-      // Filter the map items for this letter only
       const wordItemsForLetter = globalWordMap.filter((item: WordMapItem) => {
         const itemInitial = (item.initial || item.word[0]).toUpperCase();
         return itemInitial === letter;
@@ -59,9 +55,9 @@ export class WordsByLetterComponent {
         letter,
         isCenter: cell.isCenter,
         foundCount: foundWordsForLetter.length,
-        totalCount: totalWordsForLetter.length,
+        totalCount: wordsMap[letter] || 0, // Total words for letter from backend
         foundPangrams: foundPangramsForLetter,
-        totalPangrams: totalPangramsForLetter,
+        totalPangrams: mielegrammiMap[letter] || 0, // Total mielegrammi for letter from backend
         foundWords: foundWordsForLetter,
         wordItems: wordItemsForLetter
       };
@@ -108,8 +104,7 @@ export class WordsByLetterComponent {
   }
 
   isMielegramma(word: string): boolean {
-    const board = this.gameService.board();
-    if (!board || !board.mielegrammi) return false;
-    return board.mielegrammi.includes(word.toUpperCase());
+    const upperWord = word.toUpperCase();
+    return upperWord.length >= 7 && new Set(upperWord).size === 7;
   }
 }

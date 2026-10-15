@@ -3,7 +3,7 @@ import { firstValueFrom } from 'rxjs';
 import { GameBoard } from '../../models/game/game-board.model';
 import { GameState } from '../../models/game/game-state.model';
 import { RankTier } from '../../models/game/rank.model';
-import { ValidationResult } from '../../models/game/validation.model';
+import { ValidationErrorType, ValidationResult } from '../../models/game/validation.model';
 import { ShareScorePayload } from '../../models/game/share-score.model';
 import { Cell } from '../../models/game/cell.model';
 import { GAME_RULES } from '../../config/game-rules.config';
@@ -13,15 +13,8 @@ import { StorageService } from '../storage/storage.service';
 import { ScoreService } from '../score/score.service';
 import { StatsService } from '../stats/stats.service';
 import { RANK_TIERS } from '../../config/rank-tiers.config';
-import { WordMapItem } from '../../models/game/word-map-item.model';
-
-export function getTodayIsoString(date = new Date()): string {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-}
-
+import { DictionaryService } from '../dictionary/dictionary.service';
+import { getTodayIsoString } from '../../utils/game-state.validator';
 @Injectable({
     providedIn: 'root',
 })
@@ -30,17 +23,19 @@ export class GameService {
     private puzzleService = inject(PuzzleService);
     private scoreService = inject(ScoreService);
     private statsService = inject(StatsService);
+    private dictionaryService = inject(DictionaryService);
 
     /**
-    * Reference to the central rank tiers configuration.
-    * Cached in descending order for efficient rank resolution.
-    */
+     * Reference to the central rank tiers configuration.
+     * Cached in descending order for efficient rank resolution.
+     */
     private readonly reversedRankTiers: readonly RankTier[] = [...RANK_TIERS].reverse();
 
     /**
-    * Returns the current rank based on percentage of max score achieved.
-    * @param percentage - Score achieved relative to max possible score (0-100)
-    */
+     * Returns the current rank based on percentage of max score achieved.
+     * 
+     * @param percentageScore achieved relative to max possible score (0-100)
+     */
     getRankForPercentage(percentage: number): RankTier {
         // Find the highest unlocked rank for this percentage
         const currentRank = this.reversedRankTiers.find(
@@ -75,28 +70,17 @@ export class GameService {
     readonly isStorageAvailable: Signal<boolean> = this._isStorageAvailable.asReadonly();
     readonly invalidWords: Signal<string[]> = this._invalidWords.asReadonly();
 
-    // Pre-calculated Set of possible words for O(1) lookups during validation.
-    private readonly possibleWordsSet = computed<Set<string>>(() => {
-        const currentBoard = this._board();
-        return new Set(currentBoard?.possibleWords ?? []);
-    });
-
-    // Pre-calculated Set of mielegrammi for O(1) lookups.
-    private readonly mielegrammiSet = computed<Set<string>>(() => {
-        const currentBoard = this._board();
-        return new Set(currentBoard?.mielegrammi ?? []);
-    });
-
+    // Identification of found Mielegrammi (words with 7 unique letters)
     readonly foundMielegrammi = computed(() => {
-        const mSet = this.mielegrammiSet();
-        return this._foundWords().filter((word) => mSet.has(word));
+        return this._foundWords().filter((word) => new Set(word.toUpperCase()).size === 7);
     });
 
     // Score calculation delegated to ScoreService.
     readonly score = computed(() => {
         const currentBoard = this._board();
         if (!currentBoard) return 0;
-        return this.scoreService.calculateTotalScore(this._foundWords(), this.mielegrammiSet());
+        const mielegrammiSet = new Set(this.foundMielegrammi());
+        return this.scoreService.calculateTotalScore(this._foundWords(), mielegrammiSet);
     });
 
     // Maximum achievable score for the active game session
@@ -108,22 +92,19 @@ export class GameService {
     // Total possible count of valid words in the active puzzle
     readonly totalPossibleWords = computed<number>(() => {
         const currentBoard = this._board();
-        return currentBoard ? currentBoard.possibleWords.length : 0;
+        return currentBoard ? (currentBoard as any).totalWordsCount ?? 0 : 0;
     });
 
-    // Total possible count of mielegrammi in the active puzzle
+    // Total possible count of Mielegrammi in the active puzzle
     readonly totalMielegrammi = computed<number>(() => {
         const currentBoard = this._board();
-        return currentBoard ? currentBoard.mielegrammi.length : 0;
+        return currentBoard ? (currentBoard as any).totalMielegrammiCount ?? 0 : 0;
     });
 
     readonly isCompleted = computed(() => {
         const currentBoard = this._board();
-        if (!currentBoard) return false;
-        return (
-            currentBoard.possibleWords.length > 0 &&
-            this._foundWords().length === currentBoard.possibleWords.length
-        );
+        if (!currentBoard || currentBoard.maxScore === 0) return false;
+        return this.score() >= currentBoard.maxScore;
     });
 
     // Minimum points required to reach the current rank
@@ -229,12 +210,7 @@ export class GameService {
                 Array.isArray(savedState.invalidWords);
 
             if (isValidState) {
-                const validWordsSet = new Set(generatedBoard.possibleWords);
-                const sanitizedWords = Array.from(
-                    new Set((savedState.foundWords as string[]).filter((w) => validWordsSet.has(w)))
-                );
-                this._foundWords.set(sanitizedWords);
-
+                this._foundWords.set(savedState.foundWords);
                 this._invalidWords.set(savedState.invalidWords);
                 this._startTime.set(typeof savedState.startTime === 'number' ? savedState.startTime : Date.now());
             } else {
@@ -275,7 +251,8 @@ export class GameService {
         if (normalized === 'BACKSPACE') {
             this.deleteLastChar();
         } else if (normalized === 'ENTER') {
-            return this.submitWord();
+            // Note: submitWord now handles asynchronous validation via API
+            this.submitWord();
         } else if (/^[A-Z]$/.test(normalized)) {
             this._currentInput.update((prev) => prev + normalized);
         }
@@ -298,7 +275,10 @@ export class GameService {
         this._shuffleOrder.set(currentOrder);
     }
 
-    submitWord(): ValidationResult {
+    /**
+     * Validates and submits the word using the server-side `/validate` endpoint
+     */
+    async submitWord(): Promise<ValidationResult> {
         const inputWord = this._currentInput().trim().toUpperCase();
         const currentBoard = this._board();
 
@@ -365,53 +345,54 @@ export class GameService {
             };
         }
 
-        if (!this.possibleWordsSet().has(inputWord)) {
+        try {
+            // Secure backend call for word validation
+            const validationResponse = await firstValueFrom(this.dictionaryService.validateWord(inputWord));
+
+            const validationResult: ValidationResult = {
+                isValid: validationResponse.valid,
+                pointsAwarded: validationResponse.pointsEarned ?? 0,
+                isMielegramma: validationResponse.isMielegramma ?? false,
+                errorType: validationResponse.errorCode as any,
+                message: validationResponse.errorMessage
+            };
+
+            if (!validationResult.isValid) {
+                trackInvalid(inputWord);
+                return validationResult;
+            }
+
+            const updatedWords = [...this._foundWords(), inputWord];
+            this._foundWords.set(updatedWords);
+            this.clearInput();
+
+            const newTotalScore = this.score();
+
+            this.statsService.recordProgress(
+                currentBoard.date,
+                newTotalScore,
+                this.isCompleted(),
+                this.rank().label
+            );
+
+            return validationResult;
+        } catch (err: any) {
             trackInvalid(inputWord);
             return {
                 isValid: false,
                 pointsAwarded: 0,
                 isMielegramma: false,
-                errorType: 'NOT_IN_DICTIONARY',
-                message: 'Non è nella lista delle parole',
+                errorType: 'NOT_IN_DICTIONARY' as ValidationErrorType,
+                message: 'Errore di validazione',
             };
         }
-
-        const isMielegramma = this.mielegrammiSet().has(inputWord);
-        const points = this.scoreService.calculateWordPoints(inputWord, isMielegramma);
-
-        // Calculate NEW list and NEW total score before updating
-        const updatedWords = [...this._foundWords(), inputWord];
-
-        // Update found words Signal
-        this._foundWords.set(updatedWords);
-        this.clearInput();
-
-        // Calculate new total score atomically and safely
-        const newTotalScore = this.scoreService.calculateTotalScore(
-            updatedWords,
-            this.mielegrammiSet()
-        );
-
-        // Notify StatsService with updated score
-        this.statsService.recordProgress(
-            currentBoard.date,
-            newTotalScore,
-            this.isCompleted(),
-            this.rank().label
-        );
-
-        return {
-            isValid: true,
-            pointsAwarded: points,
-            isMielegramma,
-        };
     }
 
     checkDateRollover(): void {
         const currentBoard = this._board();
         if (!currentBoard) return;
 
-        const todayIsoDate = this.getTodayIsoString();
+        const todayIsoDate = getTodayIsoString();
         if (currentBoard.date !== todayIsoDate) {
             this.loadDailyGame();
         }
@@ -419,7 +400,7 @@ export class GameService {
 
     getShareScorePayload(): ShareScorePayload {
         const currentBoard = this._board();
-        const todayIsoDate = currentBoard ? currentBoard.date : this.getTodayIsoString();
+        const todayIsoDate = currentBoard ? currentBoard.date :getTodayIsoString();
 
         const [year, month, day] = todayIsoDate.split('-');
         const formattedDate = `${day}/${month}/${year}`;
@@ -429,31 +410,27 @@ export class GameService {
             score: this.score(),
             maxScore: currentBoard ? currentBoard.maxScore : 0,
             wordsFound: this._foundWords().length,
-            totalWords: currentBoard ? currentBoard.possibleWords.length : 0,
+            totalWords: currentBoard ? (currentBoard as any).totalWordsCount ?? 0 : 0,
             mielegrammiFound: this.foundMielegrammi().length,
-            totalMielegrammi: currentBoard ? currentBoard.mielegrammi.length : 0,
+            totalMielegrammi: currentBoard ? (currentBoard as any).totalMielegrammiCount ?? 0 : 0,
         };
     }
 
-    private getTodayIsoString(): string {
-        return getTodayIsoString();
-    }
-
     readonly wordMap = computed(() => {
-        const currentBoard = this._board();
-        if (!currentBoard) return [];
-
-        const validWords = currentBoard.possibleWords;
-        const mSet = this.mielegrammiSet();
         const found = this._foundWords();
 
-        return validWords.map((word: string) => ({
-            word: word,
-            length: word.length,
-            initial: word.toUpperCase()[0],
-            isFound: found.includes(word),
-            isPangram: mSet.has(word)
-        })).sort((a, b) => {
+        return found.map((word: string) => {
+            const upperWord = word.toUpperCase();
+            const isPangram = upperWord.length >= 7 && new Set(upperWord).size === 7;
+
+            return {
+                word: upperWord,
+                length: upperWord.length,
+                initial: upperWord[0],
+                isFound: true,
+                isPangram: isPangram
+            };
+        }).sort((a, b) => {
             if (a.length !== b.length) {
                 return a.length - b.length;
             }

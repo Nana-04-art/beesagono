@@ -48,6 +48,10 @@ export class PuzzleService {
       seed: dto.id || dto.puzzleDate.toString(),
       cells,
       maxScore: dto.maxScore,
+      totalWordsCount: dto.totalWordsCount ?? 0,
+      totalMielegrammiCount: dto.totalMielegrammiCount ?? 0,
+      wordsCountByLetter: dto.wordsCountByLetter ?? {},
+      mielegrammiCountByLetter: dto.mielegrammiCountByLetter ?? {},
     };
   }
 }

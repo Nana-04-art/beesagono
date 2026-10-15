@@ -4,4 +4,8 @@ export interface DailyPuzzleResponse {
     centerLetter: string;
     outerLetters: string[];
     maxScore: number;
+    totalWordsCount?: number;
+    totalMielegrammiCount?: number;
+    wordsCountByLetter?: Record<string, number>;
+    mielegrammiCountByLetter?: Record<string, number>;
 }

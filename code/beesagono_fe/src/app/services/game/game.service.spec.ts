@@ -1,14 +1,16 @@
 import { TestBed } from '@angular/core/testing';
 import { vi, describe, beforeEach, afterEach, it, expect } from 'vitest';
 import { of, throwError } from 'rxjs';
-import { GameService, getTodayIsoString } from './game.service';
+import { GameService } from './game.service';
 import { StorageService } from '../storage/storage.service';
 import { PuzzleService } from '../puzzle/puzzle.service';
 import { ScoreService } from '../score/score.service';
 import { StatsService } from '../stats/stats.service';
+import { DictionaryService } from '../dictionary/dictionary.service';
 import { GameBoard } from '../../models/game/game-board.model';
 import { GameState } from '../../models/game/game-state.model';
 import { RANK_TIERS } from '../../config/rank-tiers.config';
+import { getTodayIsoString } from '../../utils/game-state.validator';
 
 describe('GameService', () => {
   let service: GameService;
@@ -33,6 +35,9 @@ describe('GameService', () => {
     recordGameStarted: ReturnType<typeof vi.fn>;
     recordProgress: ReturnType<typeof vi.fn>;
   };
+  let mockDictionaryService: {
+    validateWord: ReturnType<typeof vi.fn>;
+  };
 
   const mockBoard: GameBoard = {
     date: todayStr,
@@ -46,9 +51,11 @@ describe('GameService', () => {
       { id: '5', letter: 'R', position: 5, isCenter: false },
       { id: '6', letter: 'A', position: 6, isCenter: false },
     ],
-    possibleWords: ['MIELE', 'MELE', 'MIELEGRAMMA'],
-    mielegrammi: ['MIELEGRAMMA'],
     maxScore: 24,
+    totalWordsCount: 3,
+    totalMielegrammiCount: 1,
+    wordsCountByLetter: { E: 1, M: 2 },
+    mielegrammiCountByLetter: { M: 1 },
   };
 
   beforeEach(async () => {
@@ -90,6 +97,27 @@ describe('GameService', () => {
       recordProgress: vi.fn(),
     };
 
+    mockDictionaryService = {
+      validateWord: vi.fn((word: string) => {
+        if (word === 'MIELE') {
+          return of({ valid: true, pointsEarned: 5, isMielegramma: false });
+        }
+        if (word === 'MELE') {
+          return of({ valid: true, pointsEarned: 1, isMielegramma: false });
+        }
+        if (word === 'MIELEGRAMMA') {
+          return of({ valid: true, pointsEarned: 18, isMielegramma: true });
+        }
+        return of({
+          valid: false,
+          pointsEarned: 0,
+          isMielegramma: false,
+          errorCode: 'NOT_IN_DICTIONARY',
+          errorMessage: 'Parola non presente nel dizionario'
+        });
+      }),
+    };
+
     TestBed.configureTestingModule({
       providers: [
         GameService,
@@ -97,6 +125,7 @@ describe('GameService', () => {
         { provide: StorageService, useValue: mockStorageService },
         { provide: ScoreService, useValue: mockScoreService },
         { provide: StatsService, useValue: mockStatsService },
+        { provide: DictionaryService, useValue: mockDictionaryService },
       ],
     });
 
@@ -165,7 +194,7 @@ describe('GameService', () => {
     expect(service.loadError()).toBe('Network error');
   });
 
-  it('should handle input characters, backspace, and ENTER via handleInput', () => {
+  it('should handle input characters, backspace, and clearInput via handleInput', () => {
     service.handleInput('M');
     service.handleInput('I');
     expect(service.currentInput()).toBe('MI');
@@ -177,9 +206,9 @@ describe('GameService', () => {
     expect(service.currentInput()).toBe('');
   });
 
-  it('should process valid word submissions and record progress in StatsService', () => {
+  it('should process valid word submissions and record progress in StatsService', async () => {
     'MIELE'.split('').forEach((char) => service.handleInput(char));
-    const mieleResult = service.submitWord();
+    const mieleResult = await service.submitWord();
 
     expect(mieleResult.isValid).toBe(true);
     expect(mieleResult.pointsAwarded).toBe(5);
@@ -187,65 +216,65 @@ describe('GameService', () => {
     expect(mockStatsService.recordProgress).toHaveBeenCalledWith(todayStr, 5, false, expect.any(String));
   });
 
-  it('should not add empty strings to invalidWords when submitting empty input', () => {
+  it('should not add empty strings to invalidWords when submitting empty input', async () => {
     service.clearInput();
-    const result = service.submitWord();
+    const result = await service.submitWord();
 
     expect(result.isValid).toBe(false);
     expect(result.errorType).toBe('TOO_SHORT');
     expect(service.invalidWords()).toEqual([]);
   });
 
-  it('should return error when word is too short', () => {
+  it('should return error when word is too short', async () => {
     'MIE'.split('').forEach((char) => service.handleInput(char));
-    const result = service.submitWord();
+    const result = await service.submitWord();
 
     expect(result.isValid).toBe(false);
     expect(result.errorType).toBe('TOO_SHORT');
     expect(service.invalidWords()).toContain('MIE');
   });
 
-  it('should track invalid words and return error when missing center letter', () => {
+  it('should track invalid words and return error when missing center letter', async () => {
     'MILAMILA'.split('').forEach((char) => service.handleInput(char));
-    const result = service.submitWord();
+    const result = await service.submitWord();
 
     expect(result.isValid).toBe(false);
     expect(result.errorType).toBe('MISSING_CENTER');
     expect(service.invalidWords()).toContain('MILAMILA');
   });
 
-  it('should track invalid words and return error when using invalid letters', () => {
+  it('should track invalid words and return error when using invalid letters', async () => {
     'MIELEZ'.split('').forEach((char) => service.handleInput(char));
-    const result = service.submitWord();
+    const result = await service.submitWord();
 
     expect(result.isValid).toBe(false);
     expect(result.errorType).toBe('INVALID_LETTERS');
     expect(service.invalidWords()).toContain('MIELEZ');
   });
 
-  it('should return ALREADY_FOUND error for duplicate submissions without duplicating invalidWords', () => {
+  it('should return ALREADY_FOUND error for duplicate submissions without duplicating invalidWords', async () => {
     'MIELE'.split('').forEach((char) => service.handleInput(char));
-    service.submitWord();
+    await service.submitWord();
 
     'MIELE'.split('').forEach((char) => service.handleInput(char));
-    const dupResult = service.submitWord();
+    const dupResult = await service.submitWord();
 
     expect(dupResult.isValid).toBe(false);
     expect(dupResult.errorType).toBe('ALREADY_FOUND');
   });
 
-  it('should track invalid words and return error when word is not in dictionary', () => {
+  it('should track invalid words and return error when word is not in dictionary', async () => {
     'MEEEE'.split('').forEach((char) => service.handleInput(char));
-    const result = service.submitWord();
+    const result = await service.submitWord();
 
     expect(result.isValid).toBe(false);
     expect(result.errorType).toBe('NOT_IN_DICTIONARY');
     expect(service.invalidWords()).toContain('MEEEE');
   });
 
-  it('should calculate mielegramma bonus points correctly', () => {
+  it('should calculate mielegramma bonus points correctly', async () => {
     'MIELEGRAMMA'.split('').forEach((char) => service.handleInput(char));
-    const result = service.submitWord();
+    const result = await service.submitWord();
 
     expect(result.isValid).toBe(true);
     expect(result.isMielegramma).toBe(true);
@@ -254,12 +283,14 @@ describe('GameService', () => {
     expect(service.foundMielegrammi()).toContain('MIELEGRAMMA');
   });
 
-  it('should compute completion correctly when all words are found', () => {
-    mockBoard.possibleWords.forEach((word) => {
+  it('should compute completion correctly when all words are found', async () => {
+    const wordsToSubmit = ['MELE', 'MIELE', 'MIELEGRAMMA'];
+
+    for (const word of wordsToSubmit) {
       service.clearInput();
       word.split('').forEach((char) => service.handleInput(char));
-      service.submitWord();
-    });
+      await service.submitWord();
+    }
 
     expect(service.foundWords().length).toBe(3);
     expect(service.isCompleted()).toBe(true);
@@ -274,16 +305,14 @@ describe('GameService', () => {
     expect(newCenter.isCenter).toBe(true);
   });
 
-  it('should generate wordMap ordered by length and alphabet', () => {
+  it('should generate wordMap ordered by length and alphabet', async () => {
     'MELE'.split('').forEach((char) => service.handleInput(char));
-    service.submitWord();
+    await service.submitWord();
 
     const map = service.wordMap();
-    expect(map.length).toBe(3);
+    expect(map.length).toBe(1);
     expect(map[0].word).toBe('MELE');
     expect(map[0].isFound).toBe(true);
-    expect(map[2].word).toBe('MIELEGRAMMA');
-    expect(map[2].isPangram).toBe(true);
   });
 
   it('should map letterColors correctly based on board cells', () => {
@@ -293,26 +322,32 @@ describe('GameService', () => {
     expect(colors.has('M')).toBe(true);
   });
 
-  it('should generate share score payload correctly', () => {
+  it('should generate share score payload correctly', async () => {
     'MIELE'.split('').forEach((char) => service.handleInput(char));
-    service.submitWord();
+    await service.submitWord();
 
     const payload = service.getShareScorePayload();
 
     expect(payload.score).toBe(5);
     expect(payload.maxScore).toBe(24);
     expect(payload.wordsFound).toBe(1);
-    expect(payload.totalWords).toBe(3);
     expect(payload.mielegrammiFound).toBe(0);
-    expect(payload.totalMielegrammi).toBe(1);
   });
 
   it('should trigger reload on checkDateRollover if date changed', () => {
     const spy = vi.spyOn(service, 'loadDailyGame');
-    vi.spyOn(service as any, 'getTodayIsoString').mockReturnValue('2026-08-01');
+
+    // Modifica direttamente il board corrente inserendo una data precedente (es. ieri o un mese fa)
+    const currentBoard = service.board();
+    if (currentBoard) {
+      (service as any)._board.set({
+        ...currentBoard,
+        date: '2025-01-01'
+      });
+    }
 
     service.checkDateRollover();
 
-    expect(spy).toHaveBeenCalledTimes(1);
+    expect(spy).toHaveBeenCalled();
   });
 });

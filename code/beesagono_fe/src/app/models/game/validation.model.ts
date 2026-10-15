@@ -4,7 +4,8 @@ export type ValidationErrorType =
     | 'MISSING_CENTER'
     | 'INVALID_LETTERS'
     | 'ALREADY_FOUND'
-    | 'NOT_IN_DICTIONARY';
+    | 'NOT_IN_DICTIONARY'
+    | 'NOT_IN_PUZZLE';
 
 export interface ValidationResult {
     isValid: boolean;
