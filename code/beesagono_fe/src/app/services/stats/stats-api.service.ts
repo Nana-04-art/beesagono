@@ -24,6 +24,7 @@ export class StatsApiService {
   readonly currentSeason = signal<PlayerSeasonResponse | null>(null);
   readonly leaderboard = signal<LeaderboardEntryDto[]>([]);
   readonly rankDistribution = signal<RankDistributionResponse | null>(null);
+  readonly seasonHistory = signal<PlayerSeasonResponse[]>([]);
   readonly isLoading = signal<boolean>(false);
 
   // -- GET MY STATS METHOD --
@@ -87,6 +88,13 @@ export class StatsApiService {
   getRankDistribution(): Observable<RankDistributionResponse> {
     return this.http.get<RankDistributionResponse>(`${this.seasonsUrl}/rank-distribution`).pipe(
       tap((data) => this.rankDistribution.set(data))
+    );
+  }
+
+  // -- GET SEASON HISTORY METHOD --
+  getSeasonHistory(): Observable<PlayerSeasonResponse[]> {
+    return this.http.get<PlayerSeasonResponse[]>(`${this.seasonsUrl}/history`).pipe(
+      tap((history) => this.seasonHistory.set(history))
     );
   }
 }

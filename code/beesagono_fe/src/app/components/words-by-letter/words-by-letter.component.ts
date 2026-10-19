@@ -1,18 +1,20 @@
 import { Component, computed, effect, inject, signal } from '@angular/core';
-import { GameService } from '../../services/game/game.service';
-import { LetterGroup } from '../../models/game/letter-group.model';
 import { NgClass } from '@angular/common';
+import { LetterGroup } from '../../models/game/letter-group.model';
 import { WordMapComponent } from '../word-map/word-map.component';
 import { WordMapItem } from '../../models/game/word-map-item.model';
+import { GameFacadeService } from '../../services/game/game-facade.service';
+import { buildWordMapForLetter } from '../../utils/word-map.utils';
 
 @Component({
   selector: 'app-words-by-letter',
+  standalone: true,
   imports: [NgClass, WordMapComponent],
   templateUrl: './words-by-letter.component.html',
   styleUrl: './words-by-letter.component.scss',
 })
 export class WordsByLetterComponent {
-  gameService = inject(GameService);
+  readonly gameFacade = inject(GameFacadeService);
 
   private readonly _expandedLetters = signal<Set<string>>(new Set());
   readonly expandedLetters = this._expandedLetters.asReadonly();
@@ -20,44 +22,44 @@ export class WordsByLetterComponent {
   private readonly _showMapLetters = signal<Set<string>>(new Set());
   readonly showMapLetters = this._showMapLetters.asReadonly();
 
-  // Flag to prevent overwriting user preferences after the first launch.
-  private isInitialized = false;
+  // Track the signature of the last-loaded board to reset the accordion when the game changes
+  private lastBoardKey = '';
 
-  readonly totalFound = computed(() => this.gameService.foundWords().length);
-  readonly totalPossible = computed(() => this.gameService.totalPossibleWords());
-  readonly pangramsFound = computed(() => this.gameService.foundMielegrammi().length);
-  readonly totalPangrams = computed(() => this.gameService.totalMielegrammi());
+  readonly totalFound = computed(() => this.gameFacade.foundWords().length);
+  readonly totalPossible = computed(() => this.gameFacade.totalPossibleWords());
+  readonly pangramsFound = computed(() => this.gameFacade.foundMielegrammi().length);
+  readonly totalPangrams = computed(() => this.gameFacade.totalMielegrammi());
 
   readonly letterGroups = computed<LetterGroup[]>(() => {
-    const board = this.gameService.board();
+    const board = this.gameFacade.board();
     if (!board) return [];
 
-    const foundWords = this.gameService.foundWords();
-    const foundMielegrammiSet = new Set(this.gameService.foundMielegrammi());
-    // Retrieve the global item map from the service
-    const globalWordMap = this.gameService.wordMap();
+    const foundWords = this.gameFacade.foundWords();
+    const foundMielegrammiSet = new Set(this.gameFacade.foundMielegrammi());
 
     const wordsMap = board.wordsCountByLetter || {};
     const mielegrammiMap = board.mielegrammiCountByLetter || {};
 
     return board.cells.map((cell) => {
       const letter = cell.letter.toUpperCase();
+      const totalCount = wordsMap[letter] || 0;
 
       const foundWordsForLetter = foundWords.filter((w) => w.startsWith(letter));
       const foundPangramsForLetter = foundWordsForLetter.filter((w) => foundMielegrammiSet.has(w)).length;
 
-      const wordItemsForLetter = globalWordMap.filter((item: WordMapItem) => {
-        const itemInitial = (item.initial || item.word[0]).toUpperCase();
-        return itemInitial === letter;
-      });
+      const wordItemsForLetter = buildWordMapForLetter(
+        letter,
+        totalCount,
+        foundWordsForLetter
+      );
 
       return {
         letter,
         isCenter: cell.isCenter,
         foundCount: foundWordsForLetter.length,
-        totalCount: wordsMap[letter] || 0, // Total words for letter from backend
+        totalCount: totalCount,
         foundPangrams: foundPangramsForLetter,
-        totalPangrams: mielegrammiMap[letter] || 0, // Total mielegrammi for letter from backend
+        totalPangrams: mielegrammiMap[letter] || 0,
         foundWords: foundWordsForLetter,
         wordItems: wordItemsForLetter
       };
@@ -66,10 +68,17 @@ export class WordsByLetterComponent {
 
   constructor() {
     effect(() => {
+      const board = this.gameFacade.board();
       const groups = this.letterGroups();
-      if (!this.isInitialized && groups.length > 0) {
+
+      if (!board || groups.length === 0) return;
+
+      const currentBoardKey = board.date ?? groups.map((g) => g.letter).join('');
+
+      if (this.lastBoardKey !== currentBoardKey) {
+        this.lastBoardKey = currentBoardKey;
         this._expandedLetters.set(new Set(groups.map((g) => g.letter)));
-        this.isInitialized = true;
+        this._showMapLetters.set(new Set());
       }
     });
   }

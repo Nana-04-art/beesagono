@@ -1,6 +1,6 @@
 import { Component, OnInit, inject, HostListener, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { GameService } from '../../services/game/game.service';
+import { GameFacadeService } from '../../services/game/game-facade.service'; // <-- Aggiornato al Facade
 import { HoneycombGridComponent } from '../../components/honeycomb-grid/honeycomb-grid.component';
 import { WordDisplayComponent } from '../../components/word-display/word-display.component';
 import { HiveControlsComponent } from '../../components/hive-controls/hive-controls.component';
@@ -32,7 +32,7 @@ import { WelcomeModalComponent } from '../../components/welcome-modal/welcome-mo
   styleUrl: './hive-view.component.scss',
 })
 export class HiveViewComponent implements OnInit {
-  protected readonly gameService = inject(GameService);
+  protected readonly gameFacade = inject(GameFacadeService);
   private readonly welcomeService = inject(WelcomeNoticeService);
 
   // Signal controlling end game modal visibility 
@@ -40,9 +40,9 @@ export class HiveViewComponent implements OnInit {
   protected readonly isHelpModalOpen = signal<boolean>(false);
   protected readonly isStatsModalOpen = signal<boolean>(false);
 
-  // Computed payload for EndGameModal delegated to GameService
+  // Computed payload for EndGameModal delegated to GameFacade
   protected readonly endGamePayload = computed<ShareScorePayload>(() => {
-    return this.gameService.getShareScorePayload();
+    return this.gameFacade.getShareScorePayload();
   });
 
   protected readonly feedbackMessage = signal<string>('');
@@ -50,15 +50,15 @@ export class HiveViewComponent implements OnInit {
 
   // Computed signal to extract the center letter from the active board
   protected readonly centerLetter = computed(() => {
-    const board = this.gameService.board();
-    if (!board) return '';
+    const board = this.gameFacade.board();
+    if (!board || !board.cells) return '';
     const centerCell = board.cells.find((c) => c.isCenter);
     return centerCell ? centerCell.letter : '';
   });
 
   readonly formattedDate = computed(() => {
-    const board = this.gameService.board();
-    if (!board) return '';
+    const board = this.gameFacade.board();
+    if (!board || !board.date) return '';
 
     const [year, month, day] = board.date.split('-');
     const dateObj = new Date(Number(year), Number(month) - 1, Number(day));
@@ -75,20 +75,19 @@ export class HiveViewComponent implements OnInit {
   ngOnInit(): void {
     this.welcomeService.checkAndShowNotice();
 
-    if (this.gameService.loadStatus() === 'idle') {
-      this.gameService.loadDailyGame();
+    if (this.gameFacade.loadStatus() === 'idle') {
+      this.gameFacade.loadDailyGame();
     } else {
-      this.gameService.checkDateRollover();
+      this.gameFacade.checkDateRollover();
     }
   }
 
   // Checks for date rollover whenever the window regains focus or becomes visible.
-
   @HostListener('window:focus')
   @HostListener('document:visibilitychange')
   onWindowFocusOrVisibilityChange(): void {
     if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
-      this.gameService.checkDateRollover();
+      this.gameFacade.checkDateRollover();
     }
   }
 
@@ -182,15 +181,15 @@ export class HiveViewComponent implements OnInit {
 
   // Modified to async to await the response from the asynchronous validation 
   async submit(): Promise<void> {
-    const result = await this.gameService.submitWord();
+    const result = await this.gameFacade.submitWord();
 
     if (this.feedbackTimeout) {
       clearTimeout(this.feedbackTimeout);
     }
 
-    if (!result.isValid) {
+    if (!result || !result.isValid) {
       this.feedbackType.set('error');
-      this.feedbackMessage.set(result.message || 'Parola non valida');
+      this.feedbackMessage.set(result?.message || 'Parola non valida');
 
       this.feedbackTimeout = setTimeout(() => {
         this.clearFeedback();
@@ -202,7 +201,7 @@ export class HiveViewComponent implements OnInit {
       );
 
       // Auto-open modal if all words are found
-      if (this.gameService.isCompleted()) {
+      if (this.gameFacade.isCompleted()) {
         setTimeout(() => {
           this.openEndGame();
         }, 600);
@@ -216,7 +215,7 @@ export class HiveViewComponent implements OnInit {
 
   @HostListener('window:keydown', ['$event'])
   handleKeyboardEvent(event: KeyboardEvent): void {
-    if (this.gameService.loadStatus() !== 'ready') return;
+    if (this.gameFacade.loadStatus() !== 'ready') return;
     if (this.welcomeService.isNoticeOpen() || this.isHelpModalOpen() || this.isStatsModalOpen() || this.isEndGameModalOpen()) {
       return;
     }
@@ -234,10 +233,10 @@ export class HiveViewComponent implements OnInit {
       this.submit();
     } else if (event.key === 'Backspace') {
       event.preventDefault();
-      this.gameService.deleteLastChar();
+      this.gameFacade.deleteLastChar();
     } else if (/^[a-zA-Z]$/.test(event.key)) {
       event.preventDefault();
-      this.gameService.handleInput(event.key);
+      this.gameFacade.handleInput(event.key);
     }
   }
 

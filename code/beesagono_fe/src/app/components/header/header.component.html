@@ -42,7 +42,8 @@
             <!-- Right Section: Action Buttons -->
             <div class="d-flex align-items-center gap-1 flex-shrink-0">
 
-                <!-- Button 1: Rules -->
+                <!-- Button 1: Rules (Visible only for Guest) -->
+                @if (!authService.isLoggedIn()) {
                 <div class="position-relative rules-popover-wrapper">
                     <button type="button" class="header-btn px-1 px-sm-2 py-1"
                         [class.active]="activePopover() === 'rules'" title="Come si gioca"
@@ -62,8 +63,10 @@
                     </div>
                     }
                 </div>
+                }
 
-                <!-- Button 2: Statistics -->
+                <!-- Button 2: Statistics (Visible only for Guest) -->
+                @if (!authService.isLoggedIn()) {
                 <div class="position-relative stats-popover-wrapper">
                     <button type="button" class="header-btn px-1 px-sm-2 py-1"
                         [class.active]="activePopover() === 'stats'" title="Le tue statistiche"
@@ -83,6 +86,7 @@
                     </div>
                     }
                 </div>
+                }
 
                 <!-- Button 3: Share -->
                 <button type="button" class="header-btn header-btn-primary px-1 px-sm-2 py-1"

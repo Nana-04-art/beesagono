@@ -6,6 +6,7 @@ import { RankTier } from '../../models/game/rank.model';
 import { ValidationErrorType, ValidationResult } from '../../models/game/validation.model';
 import { ShareScorePayload } from '../../models/game/share-score.model';
 import { Cell } from '../../models/game/cell.model';
+import { WordMapItem } from '../../models/game/word-map-item.model';
 import { GAME_RULES } from '../../config/game-rules.config';
 import { getCenterLetter, getAvailableLetters } from '../../models/game/game-board.selectors';
 import { PuzzleService } from '../puzzle/puzzle.service';
@@ -15,9 +16,12 @@ import { StatsService } from '../stats/stats.service';
 import { RANK_TIERS } from '../../config/rank-tiers.config';
 import { DictionaryService } from '../dictionary/dictionary.service';
 import { getTodayIsoString } from '../../utils/game-state.validator';
+import { buildLetterColorsMap, buildWordMapForLetter, LETTER_PALETTE } from '../../utils/word-map.utils';
+
 @Injectable({
     providedIn: 'root',
 })
+/** Service for the game logic only for the guest mode (strictly client-side) */
 export class GameService {
     private storageService = inject(StorageService);
     private puzzleService = inject(PuzzleService);
@@ -33,8 +37,7 @@ export class GameService {
 
     /**
      * Returns the current rank based on percentage of max score achieved.
-     * 
-     * @param percentageScore achieved relative to max possible score (0-100)
+     * @param percentage achieved relative to max possible score (0-100)
      */
     getRankForPercentage(percentage: number): RankTier {
         // Find the highest unlocked rank for this percentage
@@ -69,6 +72,7 @@ export class GameService {
     readonly foundWords: Signal<string[]> = this._foundWords.asReadonly();
     readonly isStorageAvailable: Signal<boolean> = this._isStorageAvailable.asReadonly();
     readonly invalidWords: Signal<string[]> = this._invalidWords.asReadonly();
+    readonly wordsCountByLetter = computed(() => this._board()?.wordsCountByLetter ?? {});
 
     // Identification of found Mielegrammi (words with 7 unique letters)
     readonly foundMielegrammi = computed(() => {
@@ -89,16 +93,16 @@ export class GameService {
         return currentBoard ? currentBoard.maxScore : 0;
     });
 
-    // Total possible count of valid words in the active puzzle
+    // Total possible count of valid words in crystalline board DTO
     readonly totalPossibleWords = computed<number>(() => {
         const currentBoard = this._board();
-        return currentBoard ? (currentBoard as any).totalWordsCount ?? 0 : 0;
+        return currentBoard ? currentBoard.totalWordsCount ?? 0 : 0;
     });
 
     // Total possible count of Mielegrammi in the active puzzle
     readonly totalMielegrammi = computed<number>(() => {
         const currentBoard = this._board();
-        return currentBoard ? (currentBoard as any).totalMielegrammiCount ?? 0 : 0;
+        return currentBoard ? currentBoard.totalMielegrammiCount ?? 0 : 0;
     });
 
     readonly isCompleted = computed(() => {
@@ -400,7 +404,7 @@ export class GameService {
 
     getShareScorePayload(): ShareScorePayload {
         const currentBoard = this._board();
-        const todayIsoDate = currentBoard ? currentBoard.date :getTodayIsoString();
+        const todayIsoDate = currentBoard ? currentBoard.date : getTodayIsoString();
 
         const [year, month, day] = todayIsoDate.split('-');
         const formattedDate = `${day}/${month}/${year}`;
@@ -410,47 +414,45 @@ export class GameService {
             score: this.score(),
             maxScore: currentBoard ? currentBoard.maxScore : 0,
             wordsFound: this._foundWords().length,
-            totalWords: currentBoard ? (currentBoard as any).totalWordsCount ?? 0 : 0,
+            totalWords: currentBoard ? currentBoard.totalWordsCount ?? 0 : 0,
             mielegrammiFound: this.foundMielegrammi().length,
-            totalMielegrammi: currentBoard ? (currentBoard as any).totalMielegrammiCount ?? 0 : 0,
+            totalMielegrammi: currentBoard ? currentBoard.totalMielegrammiCount ?? 0 : 0,
         };
     }
 
-    readonly wordMap = computed(() => {
+    readonly letterColors = computed(() => buildLetterColorsMap(this._board()));
+
+    readonly wordMap = computed<WordMapItem[]>(() => {
+        const counts = this.wordsCountByLetter();
         const found = this._foundWords();
+        const colors = this.letterColors();
 
-        return found.map((word: string) => {
-            const upperWord = word.toUpperCase();
-            const isPangram = upperWord.length >= 7 && new Set(upperWord).size === 7;
-
-            return {
-                word: upperWord,
-                length: upperWord.length,
-                initial: upperWord[0],
-                isFound: true,
-                isPangram: isPangram
-            };
-        }).sort((a, b) => {
-            if (a.length !== b.length) {
-                return a.length - b.length;
+        const foundByLetter: Record<string, string[]> = {};
+        for (const word of found) {
+            const initial = word.charAt(0).toUpperCase();
+            if (!foundByLetter[initial]) {
+                foundByLetter[initial] = [];
             }
-            return a.word.localeCompare(b.word);
-        });
-    });
+            foundByLetter[initial].push(word);
+        }
 
-    private readonly letterPalette = [
-        '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4',
-        '#FFEEAD', '#D4A5A5', '#9B59B6'
-    ];
+        let allItems: WordMapItem[] = [];
+        const letters = Object.keys(counts).sort();
 
-    readonly letterColors = computed(() => {
-        const board = this.board();
-        if (!board) return new Map<string, string>();
+        for (const letter of letters) {
+            const totalCount = counts[letter] ?? 0;
+            const foundForLetter = foundByLetter[letter] ?? [];
 
-        const map = new Map<string, string>();
-        board.cells.forEach((cell, index) => {
-            map.set(cell.letter, this.letterPalette[index % this.letterPalette.length]);
-        });
-        return map;
+            const letterItems = buildWordMapForLetter(letter, totalCount, foundForLetter);
+
+            const color = colors.get(letter);
+            if (color) {
+                letterItems.forEach(item => item.color = color);
+            }
+
+            allItems = allItems.concat(letterItems);
+        }
+
+        return allItems;
     });
 }

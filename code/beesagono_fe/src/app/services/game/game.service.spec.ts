@@ -305,9 +305,11 @@ describe('GameService', () => {
     await service.submitWord();
 
     const map = service.wordMap();
-    expect(map.length).toBe(1);
-    expect(map[0].word).toBe('MELE');
-    expect(map[0].isFound).toBe(true);
+    expect(map.length).toBe(3); //
+    
+    const foundItem = map.find(item => item.word === 'MELE');
+    expect(foundItem).toBeDefined();
+    expect(foundItem?.isFound).toBe(true);
   });
 
   it('should map letterColors correctly based on board cells', () => {

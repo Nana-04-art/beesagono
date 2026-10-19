@@ -2,12 +2,11 @@ import { Injectable, Signal, computed, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, firstValueFrom } from 'rxjs';
 import { GameSessionResponse, SubmitWordRequest, SubmitWordResponse } from '../../models/game/game-dto.model';
-import { GameBulkSyncRequest } from '../../models/sync/game-sync.model';
 import { ValidationErrorType, ValidationResult } from '../../models/game/validation.model';
 import { WordMapItem } from '../../models/game/word-map-item.model';
 import { GameBoard } from '../../models/game/game-board.model';
 import { PuzzleService } from '../puzzle/puzzle.service';
-import { buildWordMap, buildLetterColorsMap } from '../../utils/word-map.utils';
+import { buildLetterColorsMap, buildWordMapForLetter } from '../../utils/word-map.utils';
 import { processInput, deleteLastChar, clearInput, shuffleOrder } from '../../utils/game-input.utils';
 import { environment } from '../../environments/environment';
 import { Cell } from '../../models/game/cell.model';
@@ -15,7 +14,7 @@ import { Cell } from '../../models/game/cell.model';
 @Injectable({
   providedIn: 'root'
 })
-/** Service for the game logic aligned with GameServiceImpl Spring Boot Backend */
+/** Service for the game logic aligned with GameServiceImpl Spring Boot Backend (Logged-in users) */
 export class GameApiService {
   private readonly http = inject(HttpClient);
   private readonly puzzleService = inject(PuzzleService);
@@ -37,21 +36,52 @@ export class GameApiService {
   readonly foundWords = computed(() => Array.from(this._session()?.foundWords ?? []));
   readonly invalidWords = computed(() => Array.from(this._session()?.invalidWords ?? []));
 
-  private readonly possibleWords = computed(() => this._board()?.possibleWords ?? []);
-  private readonly mielegrammiSet = computed(() => new Set<string>(this._board()?.mielegrammi ?? []));
+  readonly wordsCountByLetter = computed(() => this._board()?.wordsCountByLetter ?? {});
+
+  // Identificazione dei mielegrammi trovati basata sulla regola delle 7 lettere uniche
+  readonly foundMielegrammi = computed(() => {
+    return this.foundWords().filter((word) => new Set(word.toUpperCase()).size === 7);
+  });
 
   readonly letterColors = computed(() => buildLetterColorsMap(this._board()));
 
   readonly wordMap: Signal<WordMapItem[]> = computed(() => {
-    return buildWordMap(
-      this.possibleWords(),
-      this.foundWords(),
-      this.mielegrammiSet(),
-      this.letterColors()
-    );
+    const counts = this.wordsCountByLetter();
+    const found = this.foundWords();
+    const colors = this.letterColors();
+
+    // Raggruppa le parole trovate per lettera iniziale
+    const foundByLetter: Record<string, string[]> = {};
+    for (const word of found) {
+      const initial = word.charAt(0).toUpperCase();
+      if (!foundByLetter[initial]) {
+        foundByLetter[initial] = [];
+      }
+      foundByLetter[initial].push(word);
+    }
+
+    let allItems: WordMapItem[] = [];
+    const letters = Object.keys(counts).sort();
+
+    for (const letter of letters) {
+      const totalCount = counts[letter] ?? 0;
+      const foundForLetter = foundByLetter[letter] ?? [];
+      
+      // Utilizzo diretto del metodo esistente nelle utility
+      const letterItems = buildWordMapForLetter(letter, totalCount, foundForLetter);
+
+      const color = colors.get(letter);
+      if (color) {
+        letterItems.forEach(item => item.color = color);
+      }
+
+      allItems = allItems.concat(letterItems);
+    }
+
+    return allItems;
   });
 
-  // ---  HTTP Backend Calls ---
+  // --- HTTP Backend Calls ---
 
   // --- GET TODAY SESSION ---
   getTodaySessionApi(): Observable<GameSessionResponse> {

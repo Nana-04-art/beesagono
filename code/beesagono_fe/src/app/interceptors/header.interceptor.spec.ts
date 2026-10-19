@@ -13,7 +13,6 @@ describe('HeaderInterceptor & AuthService Integration (401 Handling)', () => {
     let authService: AuthService;
     let routerMock: { navigate: ReturnType<typeof vi.fn> };
 
-    // Complete helper object to comply with the LoginResponse interface
     const mockLoginResponse: LoginResponse = {
         accessToken: 'fake-jwt-token',
         refreshToken: 'fake-refresh-token',
@@ -46,6 +45,11 @@ describe('HeaderInterceptor & AuthService Integration (401 Handling)', () => {
     });
 
     afterEach(() => {
+        // Handles any remaining pending requests (e.g., /api/stats/me or /api/puzzles/today)
+        // before performing the final check, to avoid unexpected failures.
+        const pendingRequests = httpMock.match(() => true);
+        pendingRequests.forEach(req => req.flush({}));
+
         httpMock.verify();
         localStorage.clear();
     });

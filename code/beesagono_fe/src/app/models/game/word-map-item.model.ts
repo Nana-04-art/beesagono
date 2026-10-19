@@ -4,4 +4,5 @@ export interface WordMapItem {
     initial: string;
     isFound: boolean;
     isPangram: boolean;
+    color?: string;
 }

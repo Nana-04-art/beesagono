@@ -63,7 +63,7 @@
 
             @if (showMap()) {
             <div class="py-1">
-                <app-word-map [items]="gameService.wordMap()" [letterColors]="gameService.letterColors()">
+                <app-word-map [items]="wordMap()" [letterColors]="gameFacade.letterColors()">
                 </app-word-map>
             </div>
             } @else {

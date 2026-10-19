@@ -30,13 +30,13 @@
             <div class="progress-bar scoreboard-bar" [style.width.%]="progressPercentage()"></div>
 
             <!-- Current level emoji "walking" along the bar -->
-            <span class="tier-emoji-marker current" [style.left.%]="progressPercentage()">
+            <span class="tier-emoji-marker current" [style.left.%]="progressPercentage()" [attr.aria-hidden]="true">
                 {{ currentRankEmoji() }}
             </span>
 
             <!-- Emoji for the next level to reach -->
             @if (nextRankEmoji()) {
-            <span class="tier-emoji-marker next" [style.left.%]="nextRankThreshold()">
+            <span class="tier-emoji-marker next" [style.left.%]="nextRankThreshold()" [attr.aria-hidden]="true">
                 {{ nextRankEmoji() }}
             </span>
             }

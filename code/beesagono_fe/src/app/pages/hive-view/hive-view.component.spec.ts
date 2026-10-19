@@ -1,6 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { HiveViewComponent } from './hive-view.component';
-import { GameService } from '../../services/game/game.service';
+import { GameFacadeService } from '../../services/game/game-facade.service';
 import { WelcomeNoticeService } from '../../services/welcome-notice/welcome-notice.service';
 import { AuthService } from '../../services/auth/auth.service';
 import { ThemeService } from '../../services/theme/theme.service';
@@ -88,7 +88,7 @@ describe('HiveViewComponent', () => {
         totalMielegrammi: 1
     };
 
-    let mockGameService: Partial<GameService>;
+    let mockGameFacade: Partial<GameFacadeService>;
     let mockWelcomeNoticeService: Partial<WelcomeNoticeService>;
     let mockAuthService: { currentUser: WritableSignal<{ username: string } | null>; isLoggedIn: WritableSignal<boolean>; logout: ReturnType<typeof vi.fn> };
     let mockThemeService: { currentTheme: WritableSignal<'light' | 'dark'>; isDarkMode: ReturnType<typeof vi.fn>; toggleTheme: ReturnType<typeof vi.fn> };
@@ -122,7 +122,7 @@ describe('HiveViewComponent', () => {
 
         isNoticeOpenSignal.set(false);
 
-        mockGameService = {
+        mockGameFacade = {
             loadStatus: loadStatusSignal as any,
             loadError: loadErrorSignal as any,
             board: boardSignal as any,
@@ -140,7 +140,6 @@ describe('HiveViewComponent', () => {
             wordMap: wordMapSignal as any,
             letterColors: letterColorsSignal as any,
             loadDailyGame: vi.fn(),
-            retryLoadDailyGame: vi.fn(),
             checkDateRollover: vi.fn(),
             submitWord: vi.fn().mockResolvedValue({
                 isValid: true,
@@ -175,7 +174,7 @@ describe('HiveViewComponent', () => {
             imports: [HiveViewComponent],
             providers: [
                 provideRouter([]),
-                { provide: GameService, useValue: mockGameService },
+                { provide: GameFacadeService, useValue: mockGameFacade },
                 { provide: WelcomeNoticeService, useValue: mockWelcomeNoticeService },
                 { provide: AuthService, useValue: mockAuthService },
                 { provide: ThemeService, useValue: mockThemeService }
@@ -203,7 +202,7 @@ describe('HiveViewComponent', () => {
             component.ngOnInit();
 
             expect(mockWelcomeNoticeService.checkAndShowNotice).toHaveBeenCalled();
-            expect(mockGameService.loadDailyGame).toHaveBeenCalled();
+            expect(mockGameFacade.loadDailyGame).toHaveBeenCalled();
         });
 
         it('should check date rollover on ngOnInit if loadStatus is NOT idle', () => {
@@ -211,7 +210,7 @@ describe('HiveViewComponent', () => {
             component.ngOnInit();
 
             expect(mockWelcomeNoticeService.checkAndShowNotice).toHaveBeenCalled();
-            expect(mockGameService.checkDateRollover).toHaveBeenCalled();
+            expect(mockGameFacade.checkDateRollover).toHaveBeenCalled();
         });
 
         it('should check date rollover on window focus / document visibility change', () => {
@@ -219,7 +218,7 @@ describe('HiveViewComponent', () => {
 
             component.onWindowFocusOrVisibilityChange();
 
-            expect(mockGameService.checkDateRollover).toHaveBeenCalled();
+            expect(mockGameFacade.checkDateRollover).toHaveBeenCalled();
         });
     });
 
@@ -252,7 +251,7 @@ describe('HiveViewComponent', () => {
             expect(component.formattedDate()).toBe('');
         });
 
-        it('should obtain endGamePayload from gameService', () => {
+        it('should obtain endGamePayload from gameFacade', () => {
             // @ts-expect-error Accessing protected property for unit testing
             expect(component.endGamePayload()).toEqual(mockPayload);
         });
@@ -293,7 +292,7 @@ describe('HiveViewComponent', () => {
 
             component.handleKeyboardEvent(event);
 
-            expect(mockGameService.deleteLastChar).toHaveBeenCalled();
+            expect(mockGameFacade.deleteLastChar).toHaveBeenCalled();
         });
 
         it('should pass single alphabetic key to handleInput', () => {
@@ -301,7 +300,7 @@ describe('HiveViewComponent', () => {
 
             component.handleKeyboardEvent(event);
 
-            expect(mockGameService.handleInput).toHaveBeenCalledWith('a');
+            expect(mockGameFacade.handleInput).toHaveBeenCalledWith('a');
         });
 
         it('should ignore keyboard input if a modal or notice is open', () => {
@@ -321,8 +320,8 @@ describe('HiveViewComponent', () => {
 
             component.handleKeyboardEvent(event);
 
-            expect(mockGameService.handleInput).not.toHaveBeenCalled();
-            expect(mockGameService.deleteLastChar).not.toHaveBeenCalled();
+            expect(mockGameFacade.handleInput).not.toHaveBeenCalled();
+            expect(mockGameFacade.deleteLastChar).not.toHaveBeenCalled();
         });
 
         it('should ignore keyboard events if target is an input field', () => {
@@ -339,7 +338,7 @@ describe('HiveViewComponent', () => {
 
     describe('Submit Logic & Feedback', () => {
         it('should handle successful submit and display success message', async () => {
-            mockGameService.submitWord = vi.fn().mockResolvedValue({
+            mockGameFacade.submitWord = vi.fn().mockResolvedValue({
                 isValid: true,
                 pointsAwarded: 3,
                 isMielegramma: false
@@ -361,7 +360,7 @@ describe('HiveViewComponent', () => {
         });
 
         it('should handle Mielegramma submit with special feedback message', async () => {
-            mockGameService.submitWord = vi.fn().mockResolvedValue({
+            mockGameFacade.submitWord = vi.fn().mockResolvedValue({
                 isValid: true,
                 pointsAwarded: 15,
                 isMielegramma: true
@@ -376,7 +375,7 @@ describe('HiveViewComponent', () => {
         });
 
         it('should handle invalid submit and show error message from validation result', async () => {
-            mockGameService.submitWord = vi.fn().mockResolvedValue({
+            mockGameFacade.submitWord = vi.fn().mockResolvedValue({
                 isValid: false,
                 pointsAwarded: 0,
                 isMielegramma: false,
@@ -398,7 +397,7 @@ describe('HiveViewComponent', () => {
         });
 
         it('should auto-open end game modal when puzzle is completed on submit', async () => {
-            mockGameService.submitWord = vi.fn().mockResolvedValue({
+            mockGameFacade.submitWord = vi.fn().mockResolvedValue({
                 isValid: true,
                 pointsAwarded: 5,
                 isMielegramma: false

@@ -8,6 +8,7 @@ import { PuzzleService } from '../puzzle/puzzle.service';
 import { GameBoard } from '../../models/game/game-board.model';
 import { GameSessionResponse, SubmitWordResponse } from '../../models/game/game-dto.model';
 import { environment } from '../../environments/environment';
+import { getTodayIsoString } from '../../utils/game-state.validator';
 
 describe('GameApiService', () => {
   let service: GameApiService;
@@ -17,8 +18,10 @@ describe('GameApiService', () => {
     getTodayPuzzle: ReturnType<typeof vi.fn>;
   };
 
+  const todayStr = getTodayIsoString();
+
   const mockBoard: GameBoard = {
-    date: '2026-10-12',
+    date: todayStr,
     seed: '123_0',
     cells: [
       { id: '0', letter: 'E', position: 0, isCenter: true },
@@ -29,9 +32,11 @@ describe('GameApiService', () => {
       { id: '5', letter: 'R', position: 5, isCenter: false },
       { id: '6', letter: 'A', position: 6, isCenter: false },
     ],
-    possibleWords: ['MIELE', 'MELE', 'MIELEGRAMMA'],
-    mielegrammi: ['MIELEGRAMMA'],
     maxScore: 24,
+    totalWordsCount: 3,
+    totalMielegrammiCount: 1,
+    wordsCountByLetter: { E: 1, M: 2 },
+    mielegrammiCountByLetter: { M: 1 },
   };
 
   const mockSession: GameSessionResponse = {
@@ -105,12 +110,10 @@ describe('GameApiService', () => {
   });
 
   it('should submit a valid word and update session state', async () => {
-    // Carica la sessione
     const loadPromise = service.loadTodaySession();
     httpTesting.expectOne(`${environment.apiBaseUrl}/game/session/today`).flush(mockSession);
     await loadPromise;
 
-    // Digita la parola
     'MIELE'.split('').forEach((char) => service.handleInput(char));
     expect(service.currentInput()).toBe('MIELE');
 

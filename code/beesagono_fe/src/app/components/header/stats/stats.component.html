@@ -5,18 +5,20 @@
         </h6>
     </div>
 
-    <!-- Career Level -->
+    <!-- Career Level / Highest Tier -->
     <div class="p-2 bg-light rounded border mb-2 text-center">
         <div class="extra-small-text text-muted text-uppercase fw-bold mb-1" style="font-size: 0.65rem;">
             Livello Carriera Attuale
         </div>
-        <div class="fw-bold text-warning-emphasis">{{ stats().currentSeason.highestTierAchieved }}</div>
+        <div class="fw-bold text-warning-emphasis">
+            {{ currentSeason()?.highestTierAchieved ?? currentTier() }}
+        </div>
     </div>
 
     <!-- KPI Grid -->
     <div class="kpi-grid mb-2">
         <div class="kpi-card">
-            <span class="kpi-value">{{ stats().gamesPlayed }}</span>
+            <span class="kpi-value">{{ gamesPlayed() }}</span>
             <span class="kpi-label">Giocate</span>
         </div>
         <div class="kpi-card">
@@ -24,32 +26,35 @@
             <span class="kpi-label">Completate</span>
         </div>
         <div class="kpi-card">
-            <span class="kpi-value">{{ stats().currentStreak }}</span>
+            <span class="kpi-value">{{ currentStreak() }}</span>
             <span class="kpi-label">Serie</span>
         </div>
         <div class="kpi-card">
-            <span class="kpi-value">{{ stats().maxStreak }}</span>
+            <span class="kpi-value">{{ maxStreak() }}</span>
             <span class="kpi-label">Record</span>
         </div>
     </div>
 
     <!-- Detail Season -->
+    @if (currentSeason(); as season) {
     <div class="p-2 bg-light rounded border mb-2">
         <div class="d-flex justify-content-between align-items-center mb-1">
-            <span class="fw-semibold text-dark" style="font-size: 0.7rem;">Stagione {{ stats().currentSeason.year
-                }}</span>
+            <span class="fw-semibold text-dark" style="font-size: 0.7rem;">
+                Stagione {{ season.year }}
+            </span>
             <span class="badge bg-warning text-dark py-0.5 px-1.5" style="font-size: 0.6rem;">
-                {{ stats().currentSeason.highestTierAchieved }}
+                {{ season.highestTierAchieved }}
             </span>
         </div>
         <div class="d-flex justify-content-between text-muted mb-1" style="font-size: 0.65rem;">
-            <span>Punti Base: <strong>{{ stats().currentSeason.basePointsEarned }}</strong></span>
-            <span>Bonus Serie: <strong>{{ stats().currentSeason.bonusStreakPoints }}</strong></span>
+            <span>Punti Base: <strong>{{ season.basePointsEarned }}</strong></span>
+            <span>Bonus Serie: <strong>{{ season.bonusStreakPoints }}</strong></span>
         </div>
         <div class="fw-bold text-warning-emphasis text-end pt-1 border-top" style="font-size: 0.7rem;">
-            Totale Punti Stagionali: {{ stats().currentSeason.totalSeasonPoints }}
+            Totale Punti Stagionali: {{ season.totalSeasonPoints }}
         </div>
     </div>
+    }
 
     <!-- Warning Local Save -->
     <div

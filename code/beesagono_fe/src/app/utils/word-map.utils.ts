@@ -20,39 +20,41 @@ export function buildLetterColorsMap(board: GameBoard | null): Map<string, strin
 }
 
 /**
- * Constructs an ordered list of WordMapItems, assigning the initial letter's color if the word has been found.
+ * Constructs an ordered list of WordMapItems from found words safely.
  */
-export function buildWordMap(
-    possibleWords: string[],
-    foundWords: string[],
-    mielegrammiSet: Set<string>,
-    letterColorsMap?: Map<string, string>
+export function buildWordMapForLetter(
+    letter: string,
+    totalCount: number,
+    foundWordsForLetter: string[]
 ): WordMapItem[] {
-    if (!possibleWords || possibleWords.length === 0) {
-        return [];
+    const items: WordMapItem[] = [];
+    const upperLetter = letter.toUpperCase();
+    const sortedFound = [...foundWordsForLetter].sort();
+
+    // Aggiunge prima le parole trovate
+    sortedFound.forEach((word) => {
+        const upperWord = word.toUpperCase();
+        const isPangram = upperWord.length >= 7 && new Set(upperWord).size === 7;
+        items.push({
+            word: upperWord,
+            length: upperWord.length,
+            initial: upperLetter,
+            isFound: true,
+            isPangram
+        });
+    });
+
+    // Aggiunge i segnaposto grigi per le parole non ancora trovate fino a raggiungere il totalCount
+    const missingCount = Math.max(0, totalCount - sortedFound.length);
+    for (let i = 0; i < missingCount; i++) {
+        items.push({
+            word: `HIDDEN_${upperLetter}_${i}`,
+            length: 4, // Lunghezza indicativa per il segnaposto
+            initial: upperLetter,
+            isFound: false,
+            isPangram: false
+        });
     }
 
-    const foundSet = new Set(foundWords.map((w) => w.toUpperCase()));
-
-    return possibleWords
-        .map((word) => {
-            const upperWord = word.toUpperCase();
-            const initial = upperWord[0];
-            const isFound = foundSet.has(upperWord);
-
-            return {
-                word: upperWord,
-                length: upperWord.length,
-                initial,
-                isFound,
-                isPangram: mielegrammiSet.has(upperWord),
-                color: isFound && letterColorsMap ? letterColorsMap.get(initial) : undefined,
-            };
-        })
-        .sort((a, b) => {
-            if (a.length !== b.length) {
-                return a.length - b.length;
-            }
-            return a.word.localeCompare(b.word);
-        });
+    return items;
 }

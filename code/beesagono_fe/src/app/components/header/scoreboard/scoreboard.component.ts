@@ -1,8 +1,8 @@
 import { Component, computed, inject, input } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { GameService } from '../../../services/game/game.service';
 import { ScoreService } from '../../../services/score/score.service';
 import { RANK_TIERS } from '../../../config/rank-tiers.config';
+import { GameFacadeService } from '../../../services/game/game-facade.service';
 
 @Component({
   selector: 'app-scoreboard',
@@ -12,34 +12,28 @@ import { RANK_TIERS } from '../../../config/rank-tiers.config';
   styleUrl: './scoreboard.component.scss',
 })
 export class ScoreboardComponent {
-  private readonly gameService = inject(GameService);
+  private readonly gameFacade = inject(GameFacadeService);
   private readonly scoreService = inject(ScoreService);
 
-  // Inputs received from the parent (with fallback to GameService signals)
+  // Optional Signal Inputs (permette l'uso sia isolato/custom che integrato con Facade)
   scoreInput = input<number | undefined>(undefined, { alias: 'score' });
   rankNameInput = input<string | undefined>(undefined, { alias: 'rankName' });
 
-  // Actual score
-  score = computed(() => {
-    const inputVal = this.scoreInput();
-    return inputVal !== undefined ? inputVal : this.gameService.score();
-  });
+  // Effective Score & MaxScore
+  readonly score = computed(() => this.scoreInput() ?? this.gameFacade.score());
+  readonly maxScore = computed(() => this.gameFacade.maxScore());
 
-  // Actual rank name
-  rankName = computed(() => {
-    const inputVal = this.rankNameInput();
-    return inputVal !== undefined ? inputVal : this.gameService.rank().label;
-  });
+  // Current Rank info
+  readonly currentRank = computed(() => this.gameFacade.rank());
+  readonly rankName = computed(() => this.rankNameInput() ?? this.currentRank().label);
 
-  maxScore = computed(() => this.gameService.maxScore());
-
-  // Calculation of the fill percentage (0% - 100%)
-  progressPercentage = computed(() =>
+  // Progress Percentage (0% - 100%)
+  readonly progressPercentage = computed(() =>
     this.scoreService.calculatePercentage(this.score(), this.maxScore())
   );
 
-  // Find the next level to reach
-  nextRankTier = computed(() =>
+  // Next Rank calculations
+  readonly nextRankTier = computed(() =>
     this.scoreService.getNextRank(this.score(), this.maxScore())
   );
 
@@ -49,17 +43,15 @@ export class ScoreboardComponent {
   );
 
   // Current rank emoji
-  currentRankEmoji = computed(() => {
-    const label = this.rankName();
-    return label ? label.split(' ')[0] : '🐝';
-  });
+  readonly currentRankEmoji = computed(() => this.rankName().split(' ')[0] ?? '🐝');
 
-  nextRankEmoji = computed(() => {
+  readonly nextRankEmoji = computed(() => {
     const next = this.nextRankTier();
     return next ? next.label.split(' ')[0] : null;
   });
 
-  nextRankThreshold = computed(() => {
+  // Percentage threshold for the next level
+  readonly nextRankThreshold = computed(() => {
     const next = this.nextRankTier();
     return next ? next.threshold : 100;
   });
@@ -68,6 +60,7 @@ export class ScoreboardComponent {
   rankTiersWithPoints = computed(() => {
     const max = this.maxScore();
     const currentScore = this.score();
+    const currentRankLabel = this.rankName();
 
     return RANK_TIERS.map((tier) => {
       const requiredPoints = Math.ceil((max * tier.threshold) / 100);
@@ -75,8 +68,7 @@ export class ScoreboardComponent {
         ...tier,
         requiredPoints,
         isUnlocked: currentScore >= requiredPoints,
-        isCurrent: this.rankName().includes(tier.label.split(' ').slice(1).join(' ')) ||
-          this.rankName() === tier.label,
+        isCurrent: currentRankLabel === tier.label || currentRankLabel.includes(tier.label),
       };
     });
   });

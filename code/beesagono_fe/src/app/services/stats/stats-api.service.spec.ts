@@ -13,6 +13,7 @@ import {
   RankDistributionResponse
 } from '../../models/stats/stats-dto.model';
 import { PlayerStats } from '../../models/stats/stats.model';
+import { getTodayIsoString } from '../../utils/game-state.validator';
 
 describe('StatsApiService', () => {
   let service: StatsApiService;
@@ -40,7 +41,7 @@ describe('StatsApiService', () => {
     gamesCompleted: 8,
     currentStreak: 3,
     maxStreak: 5,
-    lastPlayedDate: '2026-03-30',
+    lastPlayedDate: getTodayIsoString(new Date()),
     dailyRankDistribution: { APPRENDISTA: 2, GENIO: 6 },
     totalScoreEarned: 500
   };
@@ -223,6 +224,34 @@ describe('StatsApiService', () => {
       req.flush(mockDistribution);
 
       expect(service.rankDistribution()).toEqual(mockDistribution);
+    });
+  });
+  describe('getSeasonHistory', () => {
+    it('should fetch season history and update seasonHistory signal', () => {
+      const mockHistory: PlayerSeasonResponse[] = [
+        {
+          year: 2025,
+          highestTierAchieved: 'GOLD',
+          gamesPlayed: 30,
+          gamesCompleted: 25,
+          currentStreak: 0,
+          maxStreak: 10,
+          basePoints: 2000,
+          bonusPoints: 400,
+          totalPoints: 2400
+        }
+      ];
+
+      service.getSeasonHistory().subscribe((history) => {
+        expect(history).toEqual(mockHistory);
+      });
+
+      const req = httpMock.expectOne(`${seasonsUrl}/history`);
+      expect(req.request.method).toBe('GET');
+
+      req.flush(mockHistory);
+
+      expect(service.seasonHistory()).toEqual(mockHistory);
     });
   });
 });

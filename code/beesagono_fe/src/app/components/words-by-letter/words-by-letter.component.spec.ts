@@ -3,12 +3,12 @@ import { signal, WritableSignal } from '@angular/core';
 import { describe, beforeEach, it, expect } from 'vitest';
 
 import { WordsByLetterComponent } from './words-by-letter.component';
-import { GameService } from '../../services/game/game.service';
+import { GameFacadeService } from '../../services/game/game-facade.service';
 import { GameBoard } from '../../models/game/game-board.model';
 import { WordMapItem } from '../../models/game/word-map-item.model';
 import { getTodayIsoString } from '../../utils/game-state.validator';
 
-class MockGameService {
+class MockGameFacadeService {
   readonly board: WritableSignal<GameBoard | null> = signal<GameBoard | null>(null);
   readonly foundWords: WritableSignal<string[]> = signal<string[]>([]);
   readonly foundMielegrammi: WritableSignal<string[]> = signal<string[]>([]);
@@ -22,7 +22,7 @@ describe('WordsByLetterComponent', () => {
 
   let component: WordsByLetterComponent;
   let fixture: ComponentFixture<WordsByLetterComponent>;
-  let mockGameService: MockGameService;
+  let mockGameFacade: MockGameFacadeService;
 
   const sampleBoard: GameBoard = {
     date: todayStr,
@@ -40,11 +40,11 @@ describe('WordsByLetterComponent', () => {
   };
 
   beforeEach(async () => {
-    mockGameService = new MockGameService();
+    mockGameFacade = new MockGameFacadeService();
 
     await TestBed.configureTestingModule({
       imports: [WordsByLetterComponent],
-      providers: [{ provide: GameService, useValue: mockGameService }]
+      providers: [{ provide: GameFacadeService, useValue: mockGameFacade }]
     }).compileComponents();
 
     fixture = TestBed.createComponent(WordsByLetterComponent);
@@ -57,11 +57,11 @@ describe('WordsByLetterComponent', () => {
   });
 
   describe('Computed Counters', () => {
-    it('should reflect total counters from GameService', () => {
-      mockGameService.foundWords.set(['APE', 'BARCA']);
-      mockGameService.totalPossibleWords.set(10);
-      mockGameService.foundMielegrammi.set(['MIELEGRAMMA']);
-      mockGameService.totalMielegrammi.set(2);
+    it('should reflect total counters from GameFacadeService', () => {
+      mockGameFacade.foundWords.set(['APE', 'BARCA']);
+      mockGameFacade.totalPossibleWords.set(10);
+      mockGameFacade.foundMielegrammi.set(['MIELEGRAMMA']);
+      mockGameFacade.totalMielegrammi.set(2);
 
       fixture.detectChanges();
 
@@ -74,16 +74,16 @@ describe('WordsByLetterComponent', () => {
 
   describe('Letter Groups Computation', () => {
     it('should return empty array when board is null', () => {
-      mockGameService.board.set(null);
+      mockGameFacade.board.set(null);
       fixture.detectChanges();
 
       expect(component.letterGroups()).toEqual([]);
     });
 
     it('should compute letter groups, filtering words and pangrams by starting letter', () => {
-      mockGameService.board.set(sampleBoard);
-      mockGameService.foundWords.set(['APE', 'AMORE']);
-      mockGameService.foundMielegrammi.set(['AMORE']);
+      mockGameFacade.board.set(sampleBoard);
+      mockGameFacade.foundWords.set(['APE', 'AMORE']);
+      mockGameFacade.foundMielegrammi.set(['AMORE']);
 
       fixture.detectChanges();
 
@@ -93,8 +93,8 @@ describe('WordsByLetterComponent', () => {
       const groupA = groups.find((g) => g.letter === 'A');
       expect(groupA).toBeDefined();
       expect(groupA?.isCenter).toBe(true);
-      expect(groupA?.totalCount).toBe(2); // Dalle mappe del board
-      expect(groupA?.foundCount).toBe(2); // 'APE', 'AMORE'
+      expect(groupA?.totalCount).toBe(2);
+      expect(groupA?.foundCount).toBe(2);
       expect(groupA?.totalPangrams).toBe(1);
       expect(groupA?.foundPangrams).toBe(1);
       expect(groupA?.foundWords).toEqual(['APE', 'AMORE']);
@@ -108,7 +108,7 @@ describe('WordsByLetterComponent', () => {
 
   describe('Expansion Logic & Effect Initializer', () => {
     it('should expand all letters on initial board load', async () => {
-      mockGameService.board.set(sampleBoard);
+      mockGameFacade.board.set(sampleBoard);
 
       fixture.detectChanges();
       await fixture.whenStable();
@@ -120,7 +120,7 @@ describe('WordsByLetterComponent', () => {
     });
 
     it('should toggle expanded state when toggleExpand is called', async () => {
-      mockGameService.board.set(sampleBoard);
+      mockGameFacade.board.set(sampleBoard);
       fixture.detectChanges();
       await fixture.whenStable();
 
@@ -134,7 +134,7 @@ describe('WordsByLetterComponent', () => {
     });
 
     it('should preserve custom user toggles when board updates after initialization', async () => {
-      mockGameService.board.set(sampleBoard);
+      mockGameFacade.board.set(sampleBoard);
       fixture.detectChanges();
       await fixture.whenStable();
 
@@ -143,7 +143,7 @@ describe('WordsByLetterComponent', () => {
       expect(component.expandedLetters().has('A')).toBe(false);
 
       // We update the words found in the GameService (triggering the effect).
-      mockGameService.foundWords.set(['APE']);
+      mockGameFacade.foundWords.set(['APE']);
       fixture.detectChanges();
       await fixture.whenStable();
 

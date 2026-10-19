@@ -8,7 +8,6 @@ import { WordMapItem } from '../../models/game/word-map-item.model';
 import { ValidationResult } from '../../models/game/validation.model';
 import { ShareScorePayload } from '../../models/game/share-score.model';
 import { RankTier } from '../../models/game/rank.model';
-import { DictionaryService } from '../dictionary/dictionary.service';
 
 @Injectable({
   providedIn: 'root'
@@ -26,7 +25,7 @@ export class GameFacadeService {
 
   readonly isLoggedIn = this.authService.isLoggedIn;
 
-  // --- RECTIVE STATE SIGNALS ---
+  // --- REACTIVE STATE SIGNALS ---
   readonly board: Signal<GameBoard | null> = computed(() =>
     this.isLoggedIn() ? this.apiGame.board() : this.guestGame.board()
   );
@@ -82,17 +81,18 @@ export class GameFacadeService {
     return this.scoreService.getCurrentRank(currentScore, currentBoard?.maxScore ?? 0);
   });
 
-  readonly totalPossibleWords = computed(() => this.board()?.possibleWords?.length ?? 0);
-  readonly totalMielegrammi = computed(() => this.board()?.mielegrammi?.length ?? 0);
+  // Utilizziamo i totali aggregati sicuri forniti dal GameBoard anziché possibleWords
+  readonly totalPossibleWords = computed(() => this.board()?.totalWordsCount ?? 0);
+  readonly totalMielegrammi = computed(() => this.board()?.totalMielegrammiCount ?? 0);
 
   readonly foundMielegrammi = computed(() => {
-    const mieleSet = new Set(this.board()?.mielegrammi ?? []);
-    return this.foundWords().filter((w) => mieleSet.has(w.toUpperCase()));
+    return this.foundWords().filter((word) => new Set(word.toUpperCase()).size === 7);
   });
 
   readonly isCompleted = computed(() => {
-    const possible = this.totalPossibleWords();
-    return possible > 0 && this.foundWords().length === possible;
+    const currentBoard = this.board();
+    if (!currentBoard || currentBoard.maxScore === 0) return false;
+    return this.score() >= currentBoard.maxScore;
   });
 
   // --- ACTIONS & EVENTS ---
@@ -114,7 +114,7 @@ export class GameFacadeService {
     if (this.isLoggedIn()) {
       return await this.apiGame.submitWord();
     }
-    return this.guestGame.submitWord();
+    return await this.guestGame.submitWord();
   }
 
   async handleInput(rawChar: string): Promise<ValidationResult | void> {

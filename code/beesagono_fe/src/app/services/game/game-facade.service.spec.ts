@@ -9,21 +9,26 @@ import { ScoreService } from '../score/score.service';
 import { GameBoard } from '../../models/game/game-board.model';
 import { RankTier } from '../../models/game/rank.model';
 import { ValidationResult } from '../../models/game/validation.model';
+import { getTodayIsoString } from '../../utils/game-state.validator';
 
 describe('GameFacadeService', () => {
   let service: GameFacadeService;
+
+  const todayStr = getTodayIsoString();
 
   // Signal per simulare lo stato di autenticazione
   const isLoggedInSignal = signal<boolean>(false);
 
   // Mock Boards
   const mockBoard: GameBoard = {
-    date: '2026-10-12',
+    date: todayStr,
     seed: 'seed_1',
     cells: [],
-    possibleWords: ['CASA', 'ALBERO', 'MIELEGRAMMA'],
-    mielegrammi: ['MIELEGRAMMA'],
     maxScore: 30,
+    totalWordsCount: 3,
+    totalMielegrammiCount: 1,
+    wordsCountByLetter: { C: 2, A: 1 },
+    mielegrammiCountByLetter: { M: 1 }
   };
 
   // Mock Services
@@ -218,16 +223,17 @@ describe('GameFacadeService', () => {
       expect(service.isCompleted()).toBe(false);
 
       mockGuestGame['foundWords'].set(['CASA', 'ALBERO', 'MIELEGRAMMA']);
+      mockGuestGame['score'].set(30);
       expect(service.isCompleted()).toBe(true);
     });
 
-    it('should construct ShareScorePayload correctly', () => {
+    it('should construct ShareScorePayload correctly with dynamic date', () => {
       mockGuestGame['foundWords'].set(['CASA', 'MIELEGRAMMA']);
 
       const payload = service.getShareScorePayload();
 
       expect(payload).toEqual({
-        date: '2026-10-12',
+        date: todayStr,
         score: 5,
         maxScore: 30,
         wordsFound: 2,
